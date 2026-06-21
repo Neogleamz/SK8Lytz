@@ -97,7 +97,11 @@ export default function HardwareSetupWizardScreen({
   const [groupName, setGroupName] = useState('');
   const [deviceConfigsState, setDeviceConfigsState] = useState<Record<string, WizardDeviceConfig>>({});
 
+  const isProcessingRef = useRef(false);
+
   const fireOrientationTest = async (configsOverride?: Record<string, WizardDeviceConfig>) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
       if (selected.length !== 2) return;
@@ -124,6 +128,8 @@ export default function HardwareSetupWizardScreen({
       }
     } catch (e: unknown) {
       AppLogger.error('HardwareSetupWizard orientation test operation failed', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -670,10 +676,13 @@ export default function HardwareSetupWizardScreen({
             style={[styles.primaryBtn, (!groupName.trim() || isClaiming) && styles.primaryBtnDisabled]} 
             disabled={!groupName.trim() || isClaiming}
             onPress={async () => {
-               AppLogger.log('FTUE_PHASE_3_COMPLETE', { action: 'transition_to_phase_4' });
-               setActionStatus('claiming');
-               setErrorMsg('');
+               if (isProcessingRef.current) return;
+               isProcessingRef.current = true;
                try {
+                 AppLogger.log('FTUE_PHASE_3_COMPLETE', { action: 'transition_to_phase_4' });
+                 setActionStatus('claiming');
+                 setErrorMsg('');
+                 try {
                  const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
                  const hwAdapter = getDefaultProtocol();
                  
@@ -734,6 +743,9 @@ export default function HardwareSetupWizardScreen({
                } finally {
                  // Do not reset actionStatus('idle') on success because screen unmounts,
                  // but if we are here it's an error.
+               }
+               } finally {
+                 isProcessingRef.current = false;
                }
             }}
           >

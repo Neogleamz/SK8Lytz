@@ -87,6 +87,7 @@ export function useDashboardGroups({
   const { user } = useAuth();
 
   const repo = DeviceRepository.getInstance();
+  const isProcessingRef = useRef(false);
 
   // ─── Group state (derived from useRegistration, kept as display SSOT) ─────
   const [customGroups, setCustomGroups] = useState<CustomGroup[]>([]);
@@ -303,6 +304,9 @@ export function useDashboardGroups({
     devices: RegisteredDevice[],
     _allBleDevices: DisplayDevice[]
   ): Promise<void> => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
     // [Ghost Injection Fix]: We completely remove `migrateLegacyGroups` which was re-injecting 
     // mismatched lower-case MACs from local cache alongside fresh upper-case MACs, bypassing DB UNIQUE constraints.
     try {
@@ -315,6 +319,9 @@ export function useDashboardGroups({
     // Devices carry the correct group_id from the wizard — no manual group creation needed.
     clearPendingRegistrations();
     onRegistrationComplete();
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   // ─── Group CRUD: save and delete handlers ───────────────────────────────────
@@ -323,6 +330,9 @@ export function useDashboardGroups({
    * Prompts the user: Forget Group Only or Deregister Hardware?
    */
   const handleGroupDelete = async (id: string): Promise<void> => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
     const groupToDelete = customGroups.find(g => g.id === id);
     if (!groupToDelete) { closeGroupModal(); return; }
 
@@ -364,6 +374,9 @@ export function useDashboardGroups({
         }
       ]
     );
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   const _scrubGhostGroupFromLocal = async (groupToDelete: CustomGroup) => {
@@ -398,6 +411,9 @@ export function useDashboardGroups({
    * the group. Persists group membership changes atomically via DeviceRepository RPC.
    */
   const saveGroup = async (name: string, deviceIds: string[]): Promise<void> => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
     let finalGroupId = `group-${Date.now()}`;
     let previousDeviceIds: string[] = [];
 
@@ -458,6 +474,9 @@ export function useDashboardGroups({
       }
     } catch (e: unknown) {
       AppLogger.warn('Failed to sync group cache changes', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
+    }
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 

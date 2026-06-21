@@ -76,30 +76,6 @@ at useBLESweeper.ts:145
 > **Worktree**: Individual per-cluster · **Type**: Parallel (4 clusters) · **Prerequisite**: Wave 1 fully merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — Wave 2 of deep-dive synthesis sweep
 
-- [ ] **`sweep/memory-leaks`**
-  - **Tags:** `[✅ READY]` `[UI]` `[⚠️ M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w2]` `[WAVE:2]`
-  - **Goal:** Add useEffect cleanup return functions for event listeners and animation loops.
-  - **Decision Log:** R-22 found 6 HIGH severity memory leaks in UI components.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C08-memory-leaks.md](./plans/PLAN-sweep-C08-memory-leaks.md)
-  - **Source of Truth:** 📖 [AccountModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/AccountModal.tsx)
-  - **Details:** 6 component files. Prerequisite: Wave 1 fully merged.
-
-- [ ] **`sweep/accessibility-i18n`**
-  - **Tags:** `[✅ READY]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 ROUTINE]` `[BATCH:sweep/deep-dive-w2]` `[WAVE:2]`
-  - **Goal:** Wrap all hardcoded accessibilityLabel strings with t() from i18n.
-  - **Decision Log:** 9 UI components have hardcoded English accessibility labels.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C11-accessibility-i18n.md](./plans/PLAN-sweep-C11-accessibility-i18n.md)
-  - **Source of Truth:** 📖 [AdminToolsModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/AdminToolsModal.tsx)
-  - **Details:** 8 files. Prerequisite: Wave 1 fully merged.
-
-- [ ] **`sweep/flatlist-perf`**
-  - **Tags:** `[✅ READY]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 ROUTINE]` `[BATCH:sweep/deep-dive-w2]` `[WAVE:2]`
-  - **Goal:** Extract inline FlatList components to stable useCallback/useMemo references.
-  - **Decision Log:** R-28 found 3 FlatList bottlenecks with inline components causing re-renders.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C15-flatlist-perf.md](./plans/PLAN-sweep-C15-flatlist-perf.md)
-  - **Source of Truth:** 📖 [AdminToolsModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/AdminToolsModal.tsx)
-  - **Details:** 2 files. Prerequisite: Wave 1 fully merged.
-
 ---
 
 ### ⏳ [BATCH:sweep/deep-dive-w3] — `sweep/deep-dive-w3` — BLOCKED

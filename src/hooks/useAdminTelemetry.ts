@@ -79,6 +79,7 @@ export function useAdminTelemetry(visible: boolean) {
   const [isUploading, setIsUploading] = useState(false);
   const isMountedRef = useRef(true);
   const loadingRef = useRef(false);
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -111,11 +112,15 @@ export function useAdminTelemetry(visible: boolean) {
   }, [visible, load]);
 
   const clearLogs = useCallback(async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       await AppLogger.clearLogs();
       await load();
     } catch (err: unknown) {
       AppLogger.warn('[AdminTelemetry] Failed to clear logs', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+    } finally {
+      isProcessingRef.current = false;
     }
   }, [load]);
 
@@ -133,12 +138,16 @@ export function useAdminTelemetry(visible: boolean) {
   }, [isUploading]);
 
   const exportLogs = useCallback(async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       const json = await AppLogger.exportJSON();
       await Share.share({ message: json, title: 'SK8Lytz Logs' });
     } catch (e: unknown) {
       Alert.alert('Export failed', (e instanceof Error ? e.message : String(e)));
       AppLogger.error('[AdminTelemetry] Failed to export logs', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+    } finally {
+      isProcessingRef.current = false;
     }
   }, []);
 

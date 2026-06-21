@@ -73,8 +73,11 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
   const [builderFillMode, setBuilderFillMode] = useState<'GRADIENT' | 'SOLID'>('GRADIENT');
   const [builderTransitionType, setBuilderTransitionType] = useState<number>(2);
   const [builderDirection, setBuilderDirection] = useState<number>(1);
+  const isProcessingRef = useRef(false);
 
   const handleCreatePick = async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     if (!createName.trim()) {
       Alert.alert('Validation Error', 'Pick must have a name.');
       return;
@@ -112,6 +115,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       Alert.alert('Create Error', msg);
     } finally {
       setStatus('idle');
+      isProcessingRef.current = false;
     }
   };
 
@@ -122,6 +126,8 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
         text: 'Delete', 
         style: 'destructive', 
         onPress: async () => {
+          if (isProcessingRef.current) return;
+          isProcessingRef.current = true;
           setStatus('loading');
           try {
             const { error } = await supabase.from('sk8lytz_picks').delete().eq('id', pickId);
@@ -132,6 +138,8 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
             AppLogger.error('Failed to delete pick', err instanceof Error ? err : new Error(msg), { payload_size: 0, ssi: 0 });
             Alert.alert('Delete Error', msg);
             setStatus('idle');
+          } finally {
+            isProcessingRef.current = false;
           }
         }
       }
@@ -143,6 +151,8 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
   }, [visible]);
 
   const fetchPicks = async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setStatus('loading');
     setError(null);
     try {
@@ -155,14 +165,18 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       if (!isMountedRef.current) return;
       if (data) setPicks(data as Sk8LytzPick[]);
       setStatus('success');
-    } catch (err: unknown) {
+    } catch {
       if (!isMountedRef.current) return;
       setError('Failed to load. Tap to retry.');
       setStatus('error');
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
   const handleToggleActive = async (pickId: string, currentStatus: boolean) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       // Optimistic update
       setPicks(prev => prev.map(p => p.id === pickId ? { ...p, is_active: !currentStatus } : p));
@@ -181,6 +195,8 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       Alert.alert('Update Error', msg);
       // Rollback
       fetchPicks();
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -199,6 +215,8 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
   };
 
   const onDateChanged = async (event: { type?: string }, selectedDate?: Date) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     if (Platform.OS === 'android') {
        // Android closes immediately after selection
        setDatePickerConfig(null);
@@ -227,10 +245,14 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       const msg = err instanceof Error ? err.message : String(err);
       Alert.alert('Save Error', msg);
       fetchPicks();
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
   const clearDate = async (pickId: string, field: 'active_from' | 'active_until') => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       setPicks(prev => prev.map(p => p.id === pickId ? { ...p, [field]: null } : p));
 
@@ -247,6 +269,8 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
     } catch (err: unknown) {
        Alert.alert('Error clearing time', err instanceof Error ? err.message : String(err));
        fetchPicks();
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
