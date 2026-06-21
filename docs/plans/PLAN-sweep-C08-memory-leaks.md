@@ -7,12 +7,12 @@ Add useEffect cleanup return functions for all event listeners and animation loo
 - R-22: Memory Leak Patterns (6 HIGH findings)
 
 ## Files to Create/Modify
-- `src/components/AccountModal.tsx`
-- `src/components/CrewMemberDashboard.tsx`
-- `src/components/ProductVisualizer.tsx`
-- `src/components/PatternCard.tsx`
-- `src/components/MarqueeText.tsx`
-- `src/components/CommunityModal.tsx`
+- `src/components/AccountModal.tsx` // SKIPPED: already addressed by fix/memory-leak-sweep
+- `src/components/CrewMemberDashboard.tsx` // SKIPPED: intervals properly cleaned up
+- `src/components/ProductVisualizer.tsx` // SKIPPED: already addressed by fix/memory-leak-sweep
+- `src/components/PatternCard.tsx` // SKIPPED: already addressed by fix/memory-leak-sweep
+- `src/components/MarqueeText.tsx` // SKIPPED: already addressed by fix/memory-leak-sweep
+- `src/components/CommunityModal.tsx` // SKIPPED: already addressed by fix/memory-leak-sweep
 
 ## Implementation Steps
 1. View each file. Find useEffect hooks missing cleanup returns.
