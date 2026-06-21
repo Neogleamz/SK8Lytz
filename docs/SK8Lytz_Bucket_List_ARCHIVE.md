@@ -3917,4 +3917,13 @@ pm run verify which includes QA tests.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C10-storage-key-registry.md](./plans/PLAN-sweep-C10-storage-key-registry.md)
   - **Source of Truth:** 📖 [storageKeys.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/constants/storageKeys.ts)
   - **Details:** 3 files. Prerequisite: Wave 3 fully merged.
+
+
+- [x] **`sweep/type-safety`**
+  - **Tags:** `[✅ READY]` `[QUAL]` `[⚠️ M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w5]` `[WAVE:5]`
+  - **Goal:** Replace as unknown as double casts and JSON laundering with proper type guards.
+  - **Decision Log:** R-08 is #4 most-violated rule. 18 findings (10 HIGH). Type laundering masks runtime errors.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C13-type-safety.md](./plans/PLAN-sweep-C13-type-safety.md)
+  - **Source of Truth:** 📖 [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts)
+  - **Details:** ~8 files. Prerequisite: Wave 4 fully merged.
 

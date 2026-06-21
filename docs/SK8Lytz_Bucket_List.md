@@ -94,14 +94,6 @@ at useBLESweeper.ts:145
 > **Worktree**: Solo · **Type**: Solo · **Prerequisite**: Wave 4 fully merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — Wave 5 of deep-dive synthesis sweep
 
-- [ ] **`sweep/type-safety`**
-  - **Tags:** `[✅ READY]` `[QUAL]` `[⚠️ M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w5]` `[WAVE:5]`
-  - **Goal:** Replace as unknown as double casts and JSON laundering with proper type guards.
-  - **Decision Log:** R-08 is #4 most-violated rule. 18 findings (10 HIGH). Type laundering masks runtime errors.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C13-type-safety.md](./plans/PLAN-sweep-C13-type-safety.md)
-  - **Source of Truth:** 📖 [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts)
-  - **Details:** ~8 files. Prerequisite: Wave 4 fully merged.
-
 ---
 
 ### 🛡️ Epic: BLE Connection Excellence
