@@ -48,5 +48,8 @@ export const STORAGE_LOCAL_SCENE_SYNC_QUEUE = '@Sk8lytz_Scene_Sync_Queue';
 export const STORAGE_REGISTERED_DEVICES = '@Sk8lytz_registered_devices';
 export const STORAGE_RECENT_SESSIONS_PREFIX = '@sk8lytz_recent_sessions_';
 export const STORAGE_LIFETIME_STATS_PREFIX = '@sk8lytz_lifetime_stats_';
+export const STORAGE_LEGACY_PROGRAMMER_PROFILES = 'ng_programmer_profiles';
+export const STORAGE_LEGACY_PRODUCT_CATALOG = 'ng_product_catalog';
 export const getHardwareConfigKey = (mac: string) => `@sk8_hw_${mac}`;
+
 

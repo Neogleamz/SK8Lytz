@@ -23,7 +23,7 @@ import { AppLogger } from '../../../services/appLogger';
 import { scrubPII } from '../../../utils/piiScrubber';
 import { Spacing, Typography } from '../../../theme/theme';
 import { useProtocolDispatch } from '../../../hooks/useProtocolDispatch';
-import { STORAGE_PROGRAMMER_PROFILES } from '../../../constants/storageKeys';
+import { STORAGE_PROGRAMMER_PROFILES, STORAGE_LEGACY_PROGRAMMER_PROFILES } from '../../../constants/storageKeys';
 import { BLE_TIMING } from '../../../constants/bleTimingConstants';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ export default function Sk8LytzProgrammer({
       const load = async () => {
           try {
               // One-time data migration from banned ng_ namespace
-              const legacyKey = 'ng_programmer_profiles'; // TODO: Move to storageKeys.ts
+              const legacyKey = STORAGE_LEGACY_PROGRAMMER_PROFILES;
               const old = await AsyncStorage.getItem(legacyKey);
               if (old) {
                   await AsyncStorage.setItem(STORAGE_PROGRAMMER_PROFILES, old);

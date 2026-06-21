@@ -20,7 +20,7 @@ import {
 } from '../constants/ProductCatalog';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/appLogger';
-import { STORAGE_PRODUCT_CATALOG } from '../constants/storageKeys';
+import { STORAGE_PRODUCT_CATALOG, STORAGE_LEGACY_PRODUCT_CATALOG } from '../constants/storageKeys';
 import type { ProductProfile, VizShape } from '../types/ProductCatalog';
 
 interface ProductCatalogRow {
@@ -98,10 +98,10 @@ export function useProductCatalog() {
   const loadCachedCatalog = async () => {
     try {
       // One-time data migration from banned ng_ namespace
-      const old = await AsyncStorage.getItem('ng_product_catalog');
+      const old = await AsyncStorage.getItem(STORAGE_LEGACY_PRODUCT_CATALOG);
       if (old) {
         await AsyncStorage.setItem(STORAGE_PRODUCT_CATALOG, old);
-        await AsyncStorage.removeItem('ng_product_catalog');
+        await AsyncStorage.removeItem(STORAGE_LEGACY_PRODUCT_CATALOG);
       }
       const raw = await AsyncStorage.getItem(STORAGE_PRODUCT_CATALOG);
       if (raw) {
