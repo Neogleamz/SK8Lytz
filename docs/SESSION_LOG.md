@@ -4800,3 +4800,8 @@ Files touched:
 - src/services/CrewService/CrewSessionManager.ts
 - src/services/SpeedTrackingService.ts
 TSC: ?  Jest: ?
+
+### [MERGE] 2026-06-21T13:10 — fix-audit-gaps -> master @ 20db04130526c4027447a2950180d3ead6ab07d7
+**What merged:** Fixes for R-24, R-20, R-29 (CrewSessionManager cycle), R-21 (SpeedTrackingService mutex).
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/constants/storageKeys.ts, src/screens/DashboardScreen.tsx, src/screens/Dashboard/DashboardCrewHub.tsx, app.config.js, src/services/CrewService/CrewSessionManager.ts, src/services/SpeedTrackingService.ts
