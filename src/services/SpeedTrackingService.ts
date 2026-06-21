@@ -141,7 +141,7 @@ class SpeedTrackingServiceClass {
           const queue: PendingSessionRecord[] = raw ? JSON.parse(raw) : [];
 
           if (queue.length >= PENDING_QUEUE_SOFT_CAP) {
-            AppLogger.warn('[SpeedTrackingService] Pending session queue at capacity', { count: queue.length });
+            AppLogger.warn('[SpeedTrackingService] Pending session queue at capacity', { count: queue.length, payload_size: 0, ssi: 0 });
           }
 
           const record: PendingSessionRecord = { ...snapshot, calories, queued_at: new Date().toISOString() };
@@ -152,6 +152,7 @@ class SpeedTrackingServiceClass {
         } catch (queueErr: unknown) {
           AppLogger.warn('[SpeedTrackingService] Failed to queue offline session', {
             error: queueErr instanceof Error ? queueErr.message : String(queueErr),
+            payload_size: 0, ssi: 0
           });
         }
 
@@ -195,7 +196,7 @@ class SpeedTrackingServiceClass {
           const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
           const queue: PendingSessionRecord[] = raw ? JSON.parse(raw) : [];
           if (queue.length >= PENDING_QUEUE_SOFT_CAP) {
-            AppLogger.warn('[SpeedTrackingService] Pending session queue at capacity', { count: queue.length });
+            AppLogger.warn('[SpeedTrackingService] Pending session queue at capacity', { count: queue.length, payload_size: 0, ssi: 0 });
           }
           const record: PendingSessionRecord = { ...snapshot, calories, queued_at: new Date().toISOString() };
           queue.push(record);
@@ -204,6 +205,7 @@ class SpeedTrackingServiceClass {
         } catch (queueErr: unknown) {
           AppLogger.warn('[SpeedTrackingService] Failed to queue offline session after save failure', {
             error: queueErr instanceof Error ? queueErr.message : String(queueErr),
+            payload_size: 0, ssi: 0
           });
         }
         return null;
@@ -225,7 +227,7 @@ class SpeedTrackingServiceClass {
         };
         await HealthSyncService.saveWorkout(enrichedSnapshot);
       } catch (healthErr: unknown) {
-        AppLogger.warn('HEALTH_TELEMETRY', { event: 'health_sync_delegation_failed', error: healthErr instanceof Error ? healthErr.message : String(healthErr) });
+        AppLogger.warn('HEALTH_TELEMETRY', { event: 'health_sync_delegation_failed', error: healthErr instanceof Error ? healthErr.message : String(healthErr), payload_size: 0, ssi: 0 });
       }
 
       // --- UPDATE LIFETIME STATS (DRIFT FIX) ---
@@ -237,6 +239,7 @@ class SpeedTrackingServiceClass {
     } catch (err: unknown) {
       AppLogger.warn('[SpeedTrackingService] saveSession exception', {
         error: err instanceof Error ? err.message : String(err),
+        payload_size: 0, ssi: 0
       });
       if (userId) {
         try {
@@ -246,7 +249,7 @@ class SpeedTrackingServiceClass {
           const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
           const queue: PendingSessionRecord[] = raw ? JSON.parse(raw) : [];
           if (queue.length >= PENDING_QUEUE_SOFT_CAP) {
-            AppLogger.warn('[SpeedTrackingService] Pending session queue at capacity', { count: queue.length });
+            AppLogger.warn('[SpeedTrackingService] Pending session queue at capacity', { count: queue.length, payload_size: 0, ssi: 0 });
           }
           const record: PendingSessionRecord = { ...snapshot, calories, queued_at: new Date().toISOString() };
           queue.push(record);
@@ -255,6 +258,7 @@ class SpeedTrackingServiceClass {
         } catch (queueErr: unknown) {
           AppLogger.warn('[SpeedTrackingService] Failed to queue offline session after save exception', {
             error: queueErr instanceof Error ? queueErr.message : String(queueErr),
+            payload_size: 0, ssi: 0
           });
         }
       }
@@ -344,6 +348,7 @@ class SpeedTrackingServiceClass {
     } catch (e: unknown) {
       AppLogger.warn('[SpeedTrackingService] flushPendingSessionQueue error', {
         error: e instanceof Error ? e.message : String(e),
+        payload_size: 0, ssi: 0
       });
     } finally {
       this._isFlushingSessionQueue = false;
@@ -365,7 +370,7 @@ class SpeedTrackingServiceClass {
       calories:  calories,
       heartRate: heartRateBpm,
     }).catch((err: unknown) =>
-      AppLogger.warn('WATCH_BRIDGE', { event: 'metric_push_failed', error: (err instanceof Error ? err.message : String(err)) })
+      AppLogger.warn('WATCH_BRIDGE', { event: 'metric_push_failed', error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 })
     );
   }
 
@@ -422,6 +427,7 @@ class SpeedTrackingServiceClass {
     } catch (e: unknown) {
       AppLogger.warn('[SpeedTrackingService] fetchRecentSessions failed — falling back to offline queue', {
         error: e instanceof Error ? e.message : String(e),
+        payload_size: 0, ssi: 0
       });
       return userId ? this.getCachedRecentSessions(userId) : this._getOfflineFallbackSessions();
     }
@@ -461,6 +467,7 @@ class SpeedTrackingServiceClass {
     } catch (e: unknown) {
       AppLogger.warn('[SpeedTrackingService] _getOfflineFallbackSessions: failed to parse offline queue', {
         error: e instanceof Error ? e.message : String(e),
+        payload_size: 0, ssi: 0
       });
       return [];
     }
@@ -508,6 +515,7 @@ class SpeedTrackingServiceClass {
       } catch (e: unknown) {
         AppLogger.warn('[SpeedTrackingService] fetchLifetimeStats: user_profiles cache read failed', {
           error: e instanceof Error ? e.message : String(e),
+          payload_size: 0, ssi: 0
         });
       }
 
@@ -553,6 +561,7 @@ class SpeedTrackingServiceClass {
     } catch (e: unknown) {
       AppLogger.warn('[SpeedTrackingService] fetchLifetimeStats failed', {
         error: e instanceof Error ? e.message : String(e),
+        payload_size: 0, ssi: 0
       });
       const cached = userId ? await this.getCachedLifetimeStats(userId) : null;
       if (cached) return cached;
@@ -596,7 +605,7 @@ class SpeedTrackingServiceClass {
         }
       }
     } catch (e: unknown) {
-      AppLogger.warn('STATS_TELEMETRY', { event: 'lifetime_stats_update_failed', error: e instanceof Error ? e.message : String(e) });
+      AppLogger.warn('STATS_TELEMETRY', { event: 'lifetime_stats_update_failed', error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
   }
 }

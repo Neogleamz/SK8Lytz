@@ -190,7 +190,7 @@ export default function CameraTracker({
               }
             } catch (settingsErr: unknown) {
               const safeSettingsErr = settingsErr instanceof Error ? settingsErr : new Error(String(settingsErr));
-              AppLogger.error('Camera permission settings navigation failed', safeSettingsErr);
+              AppLogger.error('Camera permission settings navigation failed', safeSettingsErr, { payload_size: 0, ssi: 0 });
             }
           }}
         >

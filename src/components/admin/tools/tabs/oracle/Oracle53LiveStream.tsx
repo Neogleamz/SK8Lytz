@@ -37,7 +37,7 @@ export function Oracle53LiveStream({ hwPts, transmit }: Oracle53LiveStreamProps)
       try {
         transmit(ZenggeProtocol.streamPixelFrame(buildGradient()), `0x53 frame @ ${p53Fps}fps`, '0x53');
       } catch (e: unknown) {
-        AppLogger.error('[Oracle53LiveStream] 0x53 frame transmit error', e instanceof Error ? e : new Error(String(e)), { fps: p53Fps });
+        AppLogger.error('[Oracle53LiveStream] 0x53 frame transmit error', e instanceof Error ? e : new Error(String(e)), { fps: p53Fps, payload_size: 0, ssi: 0 });
       }
     }, ms);
     return () => clearInterval(id);
@@ -55,7 +55,7 @@ export function Oracle53LiveStream({ hwPts, transmit }: Oracle53LiveStreamProps)
         <Text style={{ color: txtMuted, fontSize: 10 }}>= {Math.round(1000 / Math.max(1, p53Fps))}ms/frame</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-        <TouchableOpacity onPress={() => { try { transmit(ZenggeProtocol.streamPixelFrame(Array.from({length:hwPts},(_,i)=>{const t=hwPts>1?i/(hwPts-1):0;return {r:Math.round(p53GradStart.r+(p53GradEnd.r-p53GradStart.r)*t),g:Math.round(p53GradStart.g+(p53GradEnd.g-p53GradStart.g)*t),b:Math.round(p53GradStart.b+(p53GradEnd.b-p53GradStart.b)*t)}})), '0x53 single frame', '0x53'); } catch (e: unknown) { AppLogger.error('[Oracle53LiveStream] 0x53 single frame error', e instanceof Error ? e : new Error(String(e)), {}); } }}
+        <TouchableOpacity onPress={() => { try { transmit(ZenggeProtocol.streamPixelFrame(Array.from({length:hwPts},(_,i)=>{const t=hwPts>1?i/(hwPts-1):0;return {r:Math.round(p53GradStart.r+(p53GradEnd.r-p53GradStart.r)*t),g:Math.round(p53GradStart.g+(p53GradEnd.g-p53GradStart.g)*t),b:Math.round(p53GradStart.b+(p53GradEnd.b-p53GradStart.b)*t)}})), '0x53 single frame', '0x53'); } catch (e: unknown) { AppLogger.error('[Oracle53LiveStream] 0x53 single frame error', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 }); } }}
           style={[S.txBtn, { flex: 1, backgroundColor: border, borderColor: '#00CC88' }]}>
           <Text style={{ color: '#00CC88', fontWeight: '900', fontSize: 11 }}>SINGLE FRAME</Text>
         </TouchableOpacity>

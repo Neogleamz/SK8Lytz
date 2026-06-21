@@ -62,7 +62,8 @@ const BLE_WRITE_THROTTLE_MS = 100;
                     .catch((err: unknown) => {
                         AppLogger.error('[PositionalGradientBuilder] BLE write failed', err instanceof Error ? err : new Error(String(err)), { 
                             payload_size: payload.length, 
-                            speed: mappedSpeed 
+                            speed: mappedSpeed,
+                            ssi: 0
                         });
                     });
              }

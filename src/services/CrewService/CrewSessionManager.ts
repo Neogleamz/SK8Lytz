@@ -78,12 +78,12 @@ export class CrewSessionManager {
         .eq('is_active', true);
 
       if (error) {
-        AppLogger.warn('[CrewService] cleanupLegacySessions failed', { error: error instanceof Error ? error.message : String(error)  });
+        AppLogger.warn('[CrewService] cleanupLegacySessions failed', { error: error instanceof Error ? error.message : String(error), payload_size: 0, ssi: 0 });
         AppLogger.log('CREW_ERROR', { action: 'cleanupLegacySessions', error: error instanceof Error ? error.message : String(error)  });
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] cleanupLegacySessions threw exception', { error: msg });
+      AppLogger.error('[CrewService] cleanupLegacySessions threw exception', { error: msg, payload_size: 0, ssi: 0 });
     }
   }
 
@@ -101,13 +101,13 @@ export class CrewSessionManager {
         .lt('expires_at', now);
 
       if (error) {
-        AppLogger.warn('[CrewService] cleanupExpiredSessions failed', { error: error instanceof Error ? error.message : String(error)  });
+        AppLogger.warn('[CrewService] cleanupExpiredSessions failed', { error: error instanceof Error ? error.message : String(error), payload_size: 0, ssi: 0 });
       } else {
         AppLogger.log('CREW_CLEANUP', { action: 'cleanupExpiredSessions', status: 'complete' });
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] cleanupExpiredSessions threw exception', { error: msg });
+      AppLogger.error('[CrewService] cleanupExpiredSessions threw exception', { error: msg, payload_size: 0, ssi: 0 });
     }
   }
 
@@ -226,7 +226,7 @@ export class CrewSessionManager {
       } as CrewSession));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] fetchActiveSessions failed', { error: msg });
+      AppLogger.error('[CrewService] fetchActiveSessions failed', { error: msg, payload_size: 0, ssi: 0 });
       return [];
     }
   }
@@ -270,7 +270,7 @@ export class CrewSessionManager {
         }) as CrewSession);
       }
     } catch (e: unknown) {
-      AppLogger.warn('[CrewService] public_sessions view failed, using fallback', { error: e instanceof Error ? e.message : String(e)  });
+      AppLogger.warn('[CrewService] public_sessions view failed, using fallback', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
 
     try {
@@ -295,7 +295,7 @@ export class CrewSessionManager {
       } as CrewSession));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] fetchPublicSessions fallback failed', { error: msg });
+      AppLogger.error('[CrewService] fetchPublicSessions fallback failed', { error: msg, payload_size: 0, ssi: 0 });
       return [];
     }
   }
@@ -328,7 +328,7 @@ export class CrewSessionManager {
         .select('id');
 
       if (fullError) {
-        AppLogger.warn('[CrewService] Full update failed, trying fallback', { error: fullError.message });
+        AppLogger.warn('[CrewService] Full update failed, trying fallback', { error: fullError.message, payload_size: 0, ssi: 0 });
         const { error: fallbackError, data: fallbackData } = await supabase
           .from('crew_sessions')
           .update({ is_active: false })
@@ -388,12 +388,12 @@ export class CrewSessionManager {
       try {
         await AsyncStorage.multiRemove([this.service.STORAGE_LAST_SESSION_ID, this.service.STORAGE_LAST_SESSION_EXP]);
       } catch (err: unknown) {
-        AppLogger.warn('[CrewService] Failed to multiRemove on endSession', { error: err instanceof Error ? err.message : String(err)  });
+        AppLogger.warn('[CrewService] Failed to multiRemove on endSession', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
       AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] endSession failed', { error: msg });
+      AppLogger.error('[CrewService] endSession failed', { error: msg, payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -427,7 +427,7 @@ export class CrewSessionManager {
       try {
         await AsyncStorage.multiRemove([this.service.STORAGE_LAST_SESSION_ID, this.service.STORAGE_LAST_SESSION_EXP]);
       } catch (err: unknown) {
-        AppLogger.warn('[CrewService] Failed to multiRemove on leaveSession', { error: err instanceof Error ? err.message : String(err)  });
+        AppLogger.warn('[CrewService] Failed to multiRemove on leaveSession', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
       this.service.currentSession = null;
       this.service.currentSessionId = null;
