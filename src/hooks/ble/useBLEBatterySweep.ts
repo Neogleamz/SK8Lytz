@@ -89,7 +89,7 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
       // isSweeperActiveRef.current is already true (set synchronously above)
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start', batteryTier: tier, batteryLevel: Math.round(level * 100) });
 
-      if (Platform.OS === 'android' && (Platform.Version as number) >= 31) {
+      if (Platform.OS === 'android' && typeof Platform.Version === 'number' && Platform.Version >= 31) {
         const now = Date.now();
         scanStartTimestampsRef.current = scanStartTimestampsRef.current.filter(ts => now - ts < BLE_TIMING.SCAN_BUDGET_WINDOW_MS);
         if (scanStartTimestampsRef.current.length >= SCAN_BUDGET_MAX) {

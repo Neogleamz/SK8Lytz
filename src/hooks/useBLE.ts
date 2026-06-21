@@ -248,7 +248,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       try {
         const cached = await AsyncStorage.getItem(CACHE_KEY);
         if (cached) {
-          blacklistedMacsRef.current = JSON.parse(cached);
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            blacklistedMacsRef.current = parsed.filter((m): m is string => typeof m === 'string');
+          }
         }
         } catch (e: unknown) {
       const _safeErr = e instanceof Error ? e : new Error(String(e));

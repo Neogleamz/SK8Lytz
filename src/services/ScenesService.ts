@@ -317,7 +317,7 @@ class ScenesServiceClass {
           id: scene.id,
           name: scene.name,
           // R-08: Fix double cast by serializing
-          nodes: JSON.parse(JSON.stringify(scene.steps)) as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          nodes: structuredClone(scene.steps) as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: 'SCENE',
           transition_type: 0,
           user_id: userId,

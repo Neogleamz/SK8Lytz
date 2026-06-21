@@ -18,6 +18,10 @@ type BleManagerPingLike = {
   ): { remove(): void };
 };
 
+function isBleManager(manager: unknown): manager is import('react-native-ble-plx').BleManager {
+  return typeof manager === 'object' && manager !== null && 'startDeviceScan' in manager && 'stopDeviceScan' in manager;
+}
+
 /**
  * executePingDevice — Wizard-exclusive atomic GATT session.
  * Connect → Blink → Probe EEPROM → Turn Off → Disconnect.
@@ -41,11 +45,14 @@ export async function executePingDevice(
   const turnOffAtEnd = options?.turnOffAtEnd ?? true;
 
   try {
+    if (!isBleManager(bleManager)) {
+      AppLogger.warn('[BLE pingDevice] Provided manager does not support full BleManager interface', { payload_size: 0, ssi: 0 });
+      return null;
+    }
+
     // ── BleSessionFactory: connect → discover → resolve (single source of truth) ──
-    // Cast justified: the caller always passes a real BleManager instance; BleManagerPingLike
-    // is a structural subset type we defined to avoid tight coupling at the type level.
     const { conn: _pingConn, adapter: pingAdapter } = await createGattSession(
-      bleManager as unknown as import('react-native-ble-plx').BleManager, mac, {
+      bleManager, mac, {
         timeout: 6000,
         retries: 2,
         context: 'pingDevice',

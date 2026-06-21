@@ -12,6 +12,14 @@ import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
  * Performs GATT teardown: cancels all device connections and removes
  * disconnect listener subscriptions. Returns to IDLE on success or error.
  */
+interface DestroyableClient {
+  destroyClient: () => void;
+}
+
+function isDestroyable(manager: unknown): manager is DestroyableClient {
+  return typeof manager === 'object' && manager !== null && 'destroyClient' in manager && typeof (manager as Record<string, unknown>).destroyClient === 'function';
+}
+
 const disconnectService = fromPromise<
   { success: boolean },
   {
@@ -24,8 +32,8 @@ const disconnectService = fromPromise<
   for (const device of connectedDevices) {
     try {
       await bleManager.cancelDeviceConnection(device.id);
-      if ('destroyClient' in bleManager && typeof bleManager.destroyClient === 'function') {
-        (bleManager as unknown as { destroyClient: () => void }).destroyClient();
+      if (isDestroyable(bleManager)) {
+        bleManager.destroyClient();
       }
     } catch (e: unknown) {
       AppLogger.warn('[disconnectService] cancelDeviceConnection failed', {

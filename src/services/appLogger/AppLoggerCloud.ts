@@ -51,13 +51,13 @@ export class AppLoggerCloud {
 
       // JSON round-trip produces a plain JSON-serializable object that satisfies the Supabase Json type.
       // This avoids `as unknown as Json` laundering — if any field is unserializable it becomes null.
-      const breadcrumbsJson = JSON.parse(JSON.stringify(FlightRecorder.getBreadcrumbs())) as import('../../types/supabase').Json;
-      const environmentStateJson = JSON.parse(JSON.stringify({
+      const breadcrumbsJson = structuredClone(FlightRecorder.getBreadcrumbs()) as import('../../types/supabase').Json;
+      const environmentStateJson = structuredClone({
         ...payload,
         host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown',
         session_id: sessionId,
         event_type: event
-      })) as import('../../types/supabase').Json;
+      }) as import('../../types/supabase').Json;
 
       supabase.from('crash_telemetry').insert({
       error_signature: safeErrorString.substring(0, 500),

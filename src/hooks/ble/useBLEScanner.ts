@@ -356,10 +356,10 @@ export function useBLEScanner({
 
       // Sandbox mock device discovery timer (not GATT write timing) — intentionally preserved per R-16
       setTimeout(() => {
-        const halozL = { id: 'VIRTUAL-HALOZ-L', name: 'SK8-HALOZ-L-DEV', rssi: -50, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
-        const halozR = { id: 'VIRTUAL-HALOZ-R', name: 'SK8-HALOZ-R-DEV', rssi: -52, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
-        const soulzL = { id: 'VIRTUAL-SOULZ-L', name: 'SK8-SOULZ-L-DEV', rssi: -55, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
-        const soulzR = { id: 'VIRTUAL-SOULZ-R', name: 'SK8-SOULZ-R-DEV', rssi: -57, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
+        const halozL = Object.assign(Object.create(null), { id: 'VIRTUAL-HALOZ-L', name: 'SK8-HALOZ-L-DEV', rssi: -50, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 }) as Device;
+        const halozR = Object.assign(Object.create(null), { id: 'VIRTUAL-HALOZ-R', name: 'SK8-HALOZ-R-DEV', rssi: -52, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 }) as Device;
+        const soulzL = Object.assign(Object.create(null), { id: 'VIRTUAL-SOULZ-L', name: 'SK8-SOULZ-L-DEV', rssi: -55, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 }) as Device;
+        const soulzR = Object.assign(Object.create(null), { id: 'VIRTUAL-SOULZ-R', name: 'SK8-SOULZ-R-DEV', rssi: -57, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 }) as Device;
 
         scanCallback(null, halozL);
         scanCallback(null, halozR);

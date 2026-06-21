@@ -124,7 +124,7 @@ class GradientsServiceClass {
           id: newPreset.id,
           name: newPreset.name,
           // R-08: Fix double cast by serializing
-          nodes: JSON.parse(JSON.stringify(newPreset.nodes)) as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          nodes: structuredClone(newPreset.nodes) as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: newPreset.fill_mode || 'GRADIENT',
           transition_type: newPreset.transition_type || 0x01,
           user_id: userId,
