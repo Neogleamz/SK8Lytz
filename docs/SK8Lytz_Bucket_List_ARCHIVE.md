@@ -3791,4 +3791,31 @@ pm run verify which includes QA tests.
     Rejected alternative: "Polling reconnect on foreground only — fails when user expects lights to just work"
   - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts) §BleManager init
   - **Details:** Creates NEW BackgroundBLEService.ts. Modifies useBLE.ts, useDashboardAutoConnect.ts, Info.plist, AndroidManifest.xml, app.json. REQUIRES dependency proposal for Android foreground service library. Prerequisite: ALL prior waves merged.
+
+
+- [x] **`sweep/error-unwrapping`**
+  - **Tags:** `[x]` `[QUAL]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 ROUTINE]` `[BATCH:sweep/deep-dive-w2]` `[WAVE:2]`
+  - **Goal:** Add e instanceof Error unwrapping to all catch blocks missing it.
+  - **Decision Log:** R-06 is #2 most-violated rule with ~28 MEDIUM findings. Zero architectural risk.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C05-error-unwrapping.md](./plans/PLAN-sweep-C05-error-unwrapping.md)
+  - **Source of Truth:** 📖 [ConnectService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts)
+  - **Details:** ~8 key files. Prerequisite: Wave 1 fully merged.
+
+
+- [x] **`sweep/telemetry-context`**
+  - **Tags:** `[x]` `[QUAL]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 ROUTINE]` `[BATCH:sweep/deep-dive-w3]` `[WAVE:3]`
+  - **Goal:** Add { payload_size, ssi } context to all AppLogger.error/warn calls missing it.
+  - **Decision Log:** R-04 is #3 most-violated rule. ~24 MEDIUM findings. Zero architectural risk.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C06-telemetry-context.md](./plans/PLAN-sweep-C06-telemetry-context.md)
+  - **Source of Truth:** 📖 [Oracle53LiveStream.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/oracle/Oracle53LiveStream.tsx)
+  - **Details:** ~7 key files. Prerequisite: Wave 2 fully merged.
+
+
+- [x] **`sweep/hardcoded-delays`**
+  - **Tags:** `[x]` `[BLE]` `[⚠️ M-RISK]` `[🍽️ Meal]` `[🎯 FOCUSED]` `[BATCH:sweep/deep-dive-w3]` `[WAVE:3]`
+  - **Goal:** Replace inline setTimeout/delay() calls with named constants.
+  - **Decision Log:** R-16 found 10 MEDIUM findings. Magic number delays in BLE pipeline.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C07-hardcoded-delays.md](./plans/PLAN-sweep-C07-hardcoded-delays.md)
+  - **Source of Truth:** 📖 [BleWriteDispatcher.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteDispatcher.ts)
+  - **Details:** 3 files. Prerequisite: Wave 2 fully merged.
 
