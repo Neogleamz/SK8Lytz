@@ -10,7 +10,9 @@
  * Auto-loaded: via moduleNameMapper in jest.config.js
  */
 
-import type { WatchSessionState, WatchCommand, WatchHealthUpdate } from '../../modules/sk8lytz-watch-bridge/src/index';
+type WatchSessionState = any;
+type WatchCommand = any;
+type WatchHealthUpdate = any;
 
 const mockSyncSessionState = jest.fn().mockResolvedValue(undefined);
 const mockSendMetricUpdate = jest.fn().mockResolvedValue(undefined);
