@@ -3818,4 +3818,49 @@ pm run verify which includes QA tests.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C07-hardcoded-delays.md](./plans/PLAN-sweep-C07-hardcoded-delays.md)
   - **Source of Truth:** 📖 [BleWriteDispatcher.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteDispatcher.ts)
   - **Details:** 3 files. Prerequisite: Wave 2 fully merged.
+
+
+- [x] **`sweep/dashboard-extraction`**
+  - **Tags:** `[✅ READY]` `[UI]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 COMPLEX]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Extract DashboardScreen.tsx (57.16KB) into sub-components below 30KB threshold.
+  - **Decision Log:** #1 hotspot file — 17 findings across 9 rules. Blocks 4 downstream clusters (C5, C8, C10, C15).
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C02-dashboard-extraction.md](./plans/PLAN-sweep-C02-dashboard-extraction.md)
+  - **Source of Truth:** 📖 [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx)
+  - **Details:** Extract to DashboardHeader, DashboardDeviceList, DashboardCrewHub, DashboardPowerControls. Fix R-23/26/25/27/24/18/17/14.
+
+
+- [x] **`sweep/protocol-monolith`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 COMPLEX]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Extract ZenggeProtocol.ts (54.55KB), SpatialEngine (59.28KB), effectProcessors.ts (35.02KB) below 30KB.
+  - **Decision Log:** 3 protocol files exceed S4 monolith threshold. R-21 split-brain between useControllerDispatch and useProtocolDispatch.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C03-protocol-monolith.md](./plans/PLAN-sweep-C03-protocol-monolith.md)
+  - **Source of Truth:** 📖 [ZenggeProtocol.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeProtocol.ts)
+  - **Details:** Extract to handler modules (static, dynamic, music, spatial). Fix split-brain.
+
+
+- [x] **`sweep/docked-controller`**
+  - **Tags:** `[✅ READY]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 COMPLEX]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Extract DockedController.tsx (57.09KB) into sub-components, reduce context depth.
+  - **Decision Log:** 12 findings. Consumes 4 React Contexts directly and hardcodes ZenggeProtocol bypassing adapter registry.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C04-docked-controller.md](./plans/PLAN-sweep-C04-docked-controller.md)
+  - **Source of Truth:** 📖 [DockedController.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/DockedController.tsx)
+  - **Details:** Extract panels (Color, Effect, Music, Header). Route through ControllerRegistry.
+
+
+- [x] **`sweep/split-brain`**
+  - **Tags:** `[✅ READY]` `[ARCH]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 COMPLEX]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Consolidate split-brain patterns in GroupRepository and useCrewSession.
+  - **Decision Log:** R-21 found 3 split-brain hazards. useDashboardGroups bypasses GroupRepository reads; useCrewSession duplicates SpeedTrackingService stat updates.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C14-split-brain.md](./plans/PLAN-sweep-C14-split-brain.md)
+  - **Source of Truth:** 📖 [GroupRepository.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/GroupRepository.ts)
+  - **Details:** 2 files. Consolidate read paths and remove duplicate stat updates.
+
+
+- [x] **`sweep/circular-deps`**
+  - **Tags:** `[✅ READY]` `[ARCH]` `[⚠️ M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Break import cycles in appLogger chain and CrewService internal modules.
+  - **Decision Log:** R-29 found 4 circular dependency cycles. appLogger→AppSettings→appLogger and 3 CrewService internal cycles.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C16-circular-deps.md](./plans/PLAN-sweep-C16-circular-deps.md)
+  - **Source of Truth:** 📖 [appLogger/index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/index.ts)
+  - **Details:** 6 files. Break cycles with lazy imports or interface extraction.
 
