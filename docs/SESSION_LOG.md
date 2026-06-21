@@ -4752,3 +4752,14 @@ TSC: ?  Jest: ?
 Files touched: src/components/admin/AdminToolsModal.tsx, src/components/VerticalPatternDrum.tsx
 TSC: ?  Jest: ?
 
+### [MERGE READY] sweep/accessibility-i18n — 5faefc31
+Files touched:
+- src/components/admin/AdminToolsModal.tsx
+- src/components/ConnectionStrengthBadge.tsx
+- src/components/CustomSlider.tsx
+- src/components/DeviceItem.tsx
+- src/components/NeonHueStrip.tsx
+- src/components/patterns/PatternCard.tsx
+- src/components/TacticalSlider.tsx
+- src/components/VerticalPatternDrum.tsx
+TSC: ?  Jest: ?
