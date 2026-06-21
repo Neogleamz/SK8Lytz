@@ -50,6 +50,8 @@ export const STORAGE_RECENT_SESSIONS_PREFIX = '@sk8lytz_recent_sessions_';
 export const STORAGE_LIFETIME_STATS_PREFIX = '@sk8lytz_lifetime_stats_';
 export const STORAGE_LEGACY_PROGRAMMER_PROFILES = 'ng_programmer_profiles';
 export const STORAGE_LEGACY_PRODUCT_CATALOG = 'ng_product_catalog';
+// R-24 FIX: crewHubCollapsed was hardcoded inline in DashboardCrewHub.tsx + DashboardScreen.tsx
+export const STORAGE_CREW_HUB_COLLAPSED = '@Sk8lytz_crewHubCollapsed';
 export const getHardwareConfigKey = (mac: string) => `@sk8_hw_${mac}`;
 
 

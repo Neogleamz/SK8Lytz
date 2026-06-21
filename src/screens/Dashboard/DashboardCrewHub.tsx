@@ -3,6 +3,7 @@ import { Linking } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from '../../services/appLogger';
+import { STORAGE_CREW_HUB_COLLAPSED } from '../../constants/storageKeys';
 import DashboardCrewPanel from '../../components/dashboard/DashboardCrewPanel';
 
 export function useDashboardCrewHub() {
@@ -11,15 +12,15 @@ export function useDashboardCrewHub() {
   const [initialDeepLinkCode, setInitialDeepLinkCode] = useState<string | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem('@Sk8lytz_crewHubCollapsed')
+    AsyncStorage.getItem(STORAGE_CREW_HUB_COLLAPSED)
       .then(res => { if (res !== null) setIsCrewHubCollapsed(res === 'true'); })
-      .catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_crewHubCollapsed', event: 'load_failed', error: String(e), payload_size: 0, ssi: 0 }));
+      .catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_CREW_HUB_COLLAPSED, event: 'load_failed', error: String(e), payload_size: 0, ssi: 0 }));
   }, []);
 
   const toggleCrewHubCollapse = useCallback(() => {
     setIsCrewHubCollapsed(prev => {
       const next = !prev;
-      AsyncStorage.setItem('@Sk8lytz_crewHubCollapsed', String(next)).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_crewHubCollapsed', event: 'save_failed', error: String(e), payload_size: 0, ssi: 0 }));
+      AsyncStorage.setItem(STORAGE_CREW_HUB_COLLAPSED, String(next)).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_CREW_HUB_COLLAPSED, event: 'save_failed', error: String(e), payload_size: 0, ssi: 0 }));
       return next;
     });
   }, []);

@@ -56,7 +56,10 @@ module.exports = {
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.health.WRITE_EXERCISE",
         "android.permission.health.WRITE_TOTAL_CALORIES_BURNED",
-        "android.permission.health.WRITE_DISTANCE"
+        "android.permission.health.WRITE_DISTANCE",
+        "android.permission.FOREGROUND_SERVICE_HEALTH",
+        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
       ],
       package: "com.neogleamz.sk8lytz",
       config: {
