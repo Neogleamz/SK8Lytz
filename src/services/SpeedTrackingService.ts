@@ -107,6 +107,8 @@ export function estimateCalories(avgSpeedMph: number, durationSec: number): numb
 class SpeedTrackingServiceClass {
   /** Re-entrancy guard — INSERT is non-idempotent, prevents double-row on slow networks. */
   private _isFlushingSessionQueue = false;
+  /** Guard against split-brain double counting during concurrent save & flush */
+  private _isUpdatingLifetimeStats = false;
   /** Timestamp of last watch metric push — used to throttle to max once/3s */
   private lastWatchSyncMs = 0;
   private readonly WATCH_SYNC_THROTTLE_MS = 3000;
@@ -585,6 +587,12 @@ class SpeedTrackingServiceClass {
   async updateLifetimeStats(userId: string, distanceMiles: number, peakSpeedMph: number): Promise<void> {
     if (!supabase || !userId) return;
     if (distanceMiles <= 0 && peakSpeedMph <= 0) return;
+    if (this._isUpdatingLifetimeStats) {
+      // simple backoff for concurrent flush + save race
+      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
+      return this.updateLifetimeStats(userId, distanceMiles, peakSpeedMph);
+    }
+    this._isUpdatingLifetimeStats = true;
     
     try {
       const { data: profile } = await supabase
@@ -606,6 +614,8 @@ class SpeedTrackingServiceClass {
       }
     } catch (e: unknown) {
       AppLogger.warn('STATS_TELEMETRY', { event: 'lifetime_stats_update_failed', error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+    } finally {
+      this._isUpdatingLifetimeStats = false;
     }
   }
 }

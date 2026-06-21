@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient';
 import { AppLogger } from '../appLogger';
 import { CrewSession, CrewMember } from './types';
 import type { Database } from '../../types/supabase';
+// @cycle-guard: import type only — DO NOT convert to runtime import
 import type { CrewService } from './CrewService';
 
 // ── Timing constants (R-16: no magic numbers) ─────────────────────────────
