@@ -212,6 +212,10 @@ export default function AdminToolsModal({
 
   const keyExtractor = useCallback((item: LogEntry, index: number) => item.t.toString() + index, []);
 
+  const listEmptyComponent = useMemo(() => (
+    <Text style={[styles.emptyText, { color: textMuted }]}>No events captured.</Text>
+  ), [textMuted]);
+
   const renderContent = () => {
     switch (tab) {
       case 'timeline':
@@ -224,7 +228,7 @@ export default function AdminToolsModal({
             maxToRenderPerBatch={10}
             windowSize={5}
             removeClippedSubviews={Platform.OS === 'android'}
-            ListEmptyComponent={<Text style={[styles.emptyText, { color: textMuted }]}>No events captured.</Text>}
+            ListEmptyComponent={listEmptyComponent}
           />
         );
       case 'stats':

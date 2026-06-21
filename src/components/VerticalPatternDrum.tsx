@@ -126,6 +126,10 @@ const VerticalPatternDrum = ({
     }
   }, [items, localVal, commitValue]);
 
+  const listHeaderFooterComponent = React.useMemo(() => (
+    <View style={{ height: padCount * ITEM_HEIGHT }} />
+  ), [padCount]);
+
   return (
     <View 
       style={[styles.containerWrap, { flex: 1 }]}
@@ -156,8 +160,8 @@ const VerticalPatternDrum = ({
                initialNumToRender={10}
                maxToRenderPerBatch={15}
                windowSize={5}
-               ListHeaderComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
-               ListFooterComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
+               ListHeaderComponent={listHeaderFooterComponent}
+               ListFooterComponent={listHeaderFooterComponent}
                getItemLayout={getDrumItemLayout}
                renderItem={renderItem}
              />
