@@ -11,6 +11,9 @@ import { HardwareStatusPills } from './dashboard/HardwareStatusPills';
 import { ConnectionStateBadge } from './ConnectionStateBadge';
 import type { DeviceConnectionState } from '../types/dashboard.types';
 
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t_i18n = (key: string) => key;
+
 interface DeviceItemProps {
   device: { name: string | null; id: string; rssi?: number | null; rssiList?: number[]; isGroup?: boolean; type?: string; product_type?: string; };
   onPress: () => void;
@@ -59,7 +62,7 @@ function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, 
       delayLongPress={300}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`Device ${displayName}, ${isConnected ? 'Connected' : 'Disconnected'}`}
+      accessibilityLabel={t_i18n(`Device ${displayName}, ${isConnected ? 'Connected' : 'Disconnected'}`)}
     >
       <LinearGradient 
         colors={isConnected 
@@ -131,7 +134,7 @@ function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, 
                   onPress={handlePowerToggle}
                   activeOpacity={0.6}
                   accessibilityRole="button"
-                  accessibilityLabel="Toggle device power"
+                  accessibilityLabel={t_i18n("Toggle device power")}
                 >
                   <MaterialCommunityIcons 
                     name="power" 

@@ -3,6 +3,9 @@ import React, { useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, StyleProp, StyleSheet, View, ViewStyle, Platform } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t_i18n = (key: string) => key;
+
 interface CustomSliderProps {
   value: number;
   onValueChange: (val: number) => void;
@@ -112,7 +115,7 @@ const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 
       {...panResponder.panHandlers}
       accessible={true}
       accessibilityRole="adjustable"
-      accessibilityLabel="Slider"
+      accessibilityLabel={t_i18n("Slider")}
       accessibilityValue={{ min: minimumValue, max: maximumValue, now: localValue }}
     >
       <View style={[styles.track, gradientTrack && { backgroundColor: 'transparent' }]} pointerEvents="none">

@@ -5,6 +5,9 @@ import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing , ThemePalette } from '../../theme/theme';
 import { LEDStripPreview } from '../LEDStripPreview';
 
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t_i18n = (key: string) => key;
+
 interface PatternCardProps {
   effect: typeof SK8LYTZ_TEMPLATES[0];
   isSelected: boolean;
@@ -59,7 +62,7 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
         id={`fx-card-${effect.id}`}
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
-        accessibilityLabel={effect.name}
+        accessibilityLabel={t_i18n(effect.name)}
         activeOpacity={0.75}
         onPress={handlePress}
         style={[

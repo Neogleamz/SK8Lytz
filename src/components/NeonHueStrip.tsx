@@ -3,6 +3,9 @@ import React, { useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, StyleProp, StyleSheet, View, ViewStyle, Platform } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t_i18n = (key: string) => key;
+
 interface WebStyle extends ViewStyle {
   touchAction?: string;
   userSelect?: string;
@@ -98,7 +101,7 @@ const NeonHueStrip = ({ value, onValueChange, onSlidingComplete, minimumValue = 
     <View 
       accessible={true}
       accessibilityRole="adjustable"
-      accessibilityLabel="Hue Selector"
+      accessibilityLabel={t_i18n("Hue Selector")}
       accessibilityValue={{ min: minimumValue, max: maximumValue, now: localValue }}
       style={[styles.container, style, Platform.select({ web: { touchAction: 'none', userSelect: 'none', cursor: 'pointer' }, default: {} }) as WebStyle]} 
       onLayout={(e: LayoutChangeEvent) => {

@@ -4,6 +4,9 @@ import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View, ViewStyle, Pla
 import { useTheme } from '../context/ThemeContext';
 import { Spacing } from '../theme/theme';
 
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t_i18n = (key: string) => key;
+
 interface TacticalSliderProps {
   value: number;
   onValueChange: (val: number) => void;
@@ -131,7 +134,7 @@ const TacticalSlider = ({
       }}
       accessible={true}
       accessibilityRole="adjustable"
-      accessibilityLabel={label || "Slider"}
+      accessibilityLabel={label ? t_i18n(label) : t_i18n("Slider")}
       accessibilityValue={{ min: minimumValue, max: maximumValue, now: localValue }}
       {...panResponder.panHandlers}
     >

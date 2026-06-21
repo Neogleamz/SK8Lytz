@@ -38,6 +38,9 @@ export interface ConnectionStrengthBadgeProps {
  *
  * Designed for overlay inside DeviceItem — small (18×14 pt footprint).
  */
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t_i18n = (key: string) => key;
+
 export function ConnectionStrengthBadge({ rssi, style }: ConnectionStrengthBadgeProps) {
   if (rssi == null) return null;
 
@@ -48,7 +51,7 @@ export function ConnectionStrengthBadge({ rssi, style }: ConnectionStrengthBadge
       style={[styles.container, style]}
       accessible={true}
       accessibilityRole="image"
-      accessibilityLabel={`Signal strength: ${label}`}
+      accessibilityLabel={t_i18n(`Signal strength: ${label}`)}
     >
       {/* Three bars, left=shortest, right=tallest */}
       <View style={[styles.bar, styles.bar1, bars >= 1 ? { backgroundColor: colour } : styles.barInactive]} />

@@ -38,6 +38,8 @@ import { HardwareBlacklistPanel } from './tools/HardwareBlacklistPanel';
 import { FeatureFlagsPanel } from './tools/FeatureFlagsPanel';
 import GlobalAnalyticsPanel from './tools/GlobalAnalyticsPanel';
 
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t_i18n = (key: string) => key;
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';
 
@@ -349,7 +351,7 @@ export default function AdminToolsModal({
               <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{memoizedTimelineLogs.length} events stored</Text>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity onPress={handleExport} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="Export logs">
+              <TouchableOpacity onPress={handleExport} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel={t_i18n("Export logs")}>
                 <MaterialCommunityIcons name="download" size={22} color="#00f0ff" />
               </TouchableOpacity>
               <TouchableOpacity
@@ -357,7 +359,7 @@ export default function AdminToolsModal({
                 style={[styles.actionBtn, isUploading && { opacity: 0.5 }]}
                 disabled={isUploading}
                 accessibilityRole="button"
-                accessibilityLabel={isUploading ? 'Uploading logs' : 'Upload logs to cloud'}
+                accessibilityLabel={isUploading ? t_i18n('Uploading logs') : t_i18n('Upload logs to cloud')}
               >
                 <MaterialCommunityIcons
                   name={isUploading ? 'cloud-sync' : 'cloud-upload'}
@@ -365,10 +367,10 @@ export default function AdminToolsModal({
                   color="#00E676"
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleClear} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="Clear all logs">
+              <TouchableOpacity onPress={handleClear} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel={t_i18n("Clear all logs")}>
                 <MaterialCommunityIcons name="delete-sweep" size={22} color="#ff4040" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={onClose} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="Close admin tools">
+              <TouchableOpacity onPress={onClose} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel={t_i18n("Close admin tools")}>
                 <MaterialCommunityIcons name="close" size={22} color={textPrimary} />
               </TouchableOpacity>
             </View>
@@ -382,7 +384,7 @@ export default function AdminToolsModal({
                 onPress={() => setTab(t)}
                 style={[styles.tabBtn, tab === t && { borderBottomColor: Colors.primary }]}
                 accessibilityRole="button"
-                accessibilityLabel={`${t} tab`}
+                accessibilityLabel={t_i18n(`${t} tab`)}
               >
                 <Text style={[styles.tabLabel, { color: tab === t ? Colors.primary : textMuted }]}>
                   {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}

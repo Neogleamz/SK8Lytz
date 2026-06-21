@@ -3,6 +3,9 @@ import { FlatList, NativeScrollEvent, NativeSyntheticEvent, StyleSheet, Text, To
 import { useTheme } from '../context/ThemeContext';
 import { Spacing , ThemePalette } from '../theme/theme';
 
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t_i18n = (key: string) => key;
+
 const ITEM_HEIGHT = 44;
 const COMMIT_DEBOUNCE_MS = 50;
 const getDrumItemLayout = (_data: unknown, index: number) => ({
@@ -128,8 +131,8 @@ const VerticalPatternDrum = ({
       style={[styles.containerWrap, { flex: 1 }]}
       accessible={true}
       accessibilityRole="adjustable"
-      accessibilityLabel={`Pattern drum. Currently selected pattern ${localVal}`}
-      accessibilityHint="Scroll up or down to change the pattern"
+      accessibilityLabel={t_i18n(`Pattern drum. Currently selected pattern ${localVal}`)}
+      accessibilityHint={t_i18n("Scroll up or down to change the pattern")}
     >
       <View style={styles.container} onLayout={(e) => setLayoutHeight(e.nativeEvent.layout.height)}>
         <View style={styles.drumMask}>
