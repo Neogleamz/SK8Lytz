@@ -4779,3 +4779,10 @@ TSC: ?  Jest: ?
 **Files touched:** docs/plans/PLAN-sweep-C17-boolean-fsm.md
 **TSC:** ?  **Jest:** ?
 
+
+### [MERGE READY] sweep-storage-key-registry - d57194805e6aa5796933fbf853ac286ee5da6590
+Files touched:
+- src/constants/storageKeys.ts
+- src/hooks/useProductCatalog.ts
+- src/components/admin/tools/Sk8LytzProgrammer.tsx
+TSC: ?  Jest: ?

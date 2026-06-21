@@ -82,22 +82,6 @@ at useBLESweeper.ts:145
 > **Worktree**: Individual per-cluster · **Type**: Parallel (4 clusters) · **Prerequisite**: Wave 2 fully merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — Wave 3 of deep-dive synthesis sweep
 
-- [ ] **`sweep/reentrancy-guards`**
-  - **Tags:** `[✅ READY]` `[UI]` `[⚠️ M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w3]` `[WAVE:3]`
-  - **Goal:** Add isProcessingRef.current guards to async UI handlers missing them.
-  - **Decision Log:** R-26 found 6 re-entrancy races. Double-tap on async handlers causes duplicate operations.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C09-reentrancy-guards.md](./plans/PLAN-sweep-C09-reentrancy-guards.md)
-  - **Source of Truth:** 📖 [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
-  - **Details:** 4 files. Prerequisite: Wave 2 fully merged.
-
-- [ ] **`sweep/boolean-fsm`**
-  - **Tags:** `[✅ READY]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 ROUTINE]` `[BATCH:sweep/deep-dive-w3]` `[WAVE:3]`
-  - **Goal:** Replace scattered boolean states with string union types or FSM patterns.
-  - **Decision Log:** R-18 found 6 boolean trap patterns. Impossible state combinations possible.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C17-boolean-fsm.md](./plans/PLAN-sweep-C17-boolean-fsm.md)
-  - **Source of Truth:** 📖 [AuthFormSignUp.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/auth/AuthFormSignUp.tsx)
-  - **Details:** 3 files. Prerequisite: Wave 2 fully merged.
-
 ---
 
 ### ⏳ [BATCH:sweep/deep-dive-w4] — `sweep/deep-dive-w4` — BLOCKED
