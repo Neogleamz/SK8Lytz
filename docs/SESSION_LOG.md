@@ -4775,3 +4775,7 @@ Files touched:
 - src/hooks/useAdminTelemetry.ts
 - src/components/admin/tools/AdminPicksScheduler.tsx
 TSC: ?  Jest: ?
+### [MERGE READY] sweep/boolean-fsm - e7780838
+**Files touched:** docs/plans/PLAN-sweep-C17-boolean-fsm.md
+**TSC:** ?  **Jest:** ?
+
