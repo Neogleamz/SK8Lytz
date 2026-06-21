@@ -18,7 +18,10 @@ import { ZenggeAdapter } from './ZenggeAdapter';
 let _appLogger: typeof import('../services/appLogger').AppLogger | typeof console | undefined;
 function getAppLogger() {
   if (!_appLogger) {
-    try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e: unknown) { _appLogger = console; /* intentional: AppLogger not ready yet */ }
+    try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e: unknown) {
+      const msg = _e instanceof Error ? _e.message : String(_e);
+      _appLogger = console; /* intentional: AppLogger not ready yet */
+    }
   }
   return _appLogger!;
 }

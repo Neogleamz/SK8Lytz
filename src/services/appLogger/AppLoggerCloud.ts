@@ -156,7 +156,8 @@ export class AppLoggerCloud {
     try {
       await supabase.storage.from('sk8lytz-logs').remove([`logs_${bleMac}.json`, `logs_${deviceId}.json`]);
     } catch(e: unknown) {
-      if (__DEV__) console.warn('Failed cloud wipe', e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      if (__DEV__) console.warn('Failed cloud wipe', msg);
     }
   }
 }

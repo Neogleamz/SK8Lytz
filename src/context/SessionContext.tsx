@@ -56,8 +56,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setAutoPauseEnabled(enabled !== 'false');
           setInitialDataLoaded(true);
         }
-      } catch (e) {
-        AppLogger.error('[SessionContext] Failed to load autoPause setting', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        AppLogger.error('[SessionContext] Failed to load autoPause setting', msg, { payload_size: 0, ssi: 0 });
         if (active) {
           setAutoPauseEnabled(false);
           setInitialDataLoaded(true);
@@ -280,14 +281,16 @@ function SessionMachineWrapper({
 
     let sub: { remove: () => void } | null = null;
     if (initialDataLoaded) {
-      recover().catch((e) =>
-        AppLogger.error('[SessionContext] recover() failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 })
-      );
+      recover().catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        AppLogger.error('[SessionContext] recover() failed', msg, { payload_size: 0, ssi: 0 });
+      });
       sub = AppState.addEventListener('change', (s) => {
         if (s === 'active') {
-          recover().catch((e) =>
-            AppLogger.error('[SessionContext] recover() AppState failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 })
-          );
+          recover().catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            AppLogger.error('[SessionContext] recover() AppState failed', msg, { payload_size: 0, ssi: 0 });
+          });
         }
       });
     }
@@ -371,18 +374,20 @@ function SessionMachineWrapper({
             .then(({ DeviceEventEmitter }) => {
               DeviceEventEmitter.emit('BACKGROUND_ACTION_TOGGLE_MUSIC');
             })
-            .catch((e) =>
-              AppLogger.error('[SessionContext] toggle-music dynamic import failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 })
-            );
+            .catch((e: unknown) => {
+              const msg = e instanceof Error ? e.message : String(e);
+              AppLogger.error('[SessionContext] toggle-music dynamic import failed', msg, { payload_size: 0, ssi: 0 });
+            });
         } else if (detail.pressAction?.id === 'fire-favorite') {
           AppLogger.log('APP_LOG', { event: 'fire_favorite_from_notification' });
           import('react-native')
             .then(({ DeviceEventEmitter }) => {
               DeviceEventEmitter.emit('BACKGROUND_ACTION_FIRE_FAVORITE');
             })
-            .catch((e) =>
-              AppLogger.error('[SessionContext] fire-favorite dynamic import failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 })
-            );
+            .catch((e: unknown) => {
+              const msg = e instanceof Error ? e.message : String(e);
+              AppLogger.error('[SessionContext] fire-favorite dynamic import failed', msg, { payload_size: 0, ssi: 0 });
+            });
         }
       }
     });

@@ -131,7 +131,8 @@ export const connectService = fromPromise<
        try {
          isMock = await AsyncStorage.getItem(STORAGE_DEMO_MODE).catch(() => 'false') || 'false';
        } catch (e: unknown) {
-         AppLogger.warn('Failed to read mock storage', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+         const msg = e instanceof Error ? e.message : String(e);
+         AppLogger.warn('Failed to read mock storage', { error: msg, payload_size: 0, ssi: 0 });
        }
     }
 
@@ -244,8 +245,9 @@ export const connectService = fromPromise<
               const backoffMs = BLE_TIMING.MTU_RETRY_SETTLE_MS * Math.pow(2, mtuAttempt - 1);
               await new Promise(res => setTimeout(res, jitteredDelay(backoffMs, 50)));
             } catch (mtuErr: unknown) {
+              const msg = mtuErr instanceof Error ? mtuErr.message : String(mtuErr);
               AppLogger.warn('[ConnectService] MTU negotiation attempt failed', {
-                error: mtuErr instanceof Error ? mtuErr.message : String(mtuErr),
+                error: msg,
                 deviceId: scrubPII(conn.id),
                 attempt: mtuAttempt,
                 payload_size: 0,
@@ -310,7 +312,8 @@ export const connectService = fromPromise<
             AppLogger.log('BLE_TIME_SYNC', { deviceId: scrubPII(conn.id), protocolId: scrubPII(adapter.protocolId), timestamp: Date.now() });
           }
         } catch (handshakeErr: unknown) {
-          AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: scrubPII(conn.id), payload_size: 0, ssi: 0 });
+          const msg = handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr);
+          AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: msg, deviceId: scrubPII(conn.id), payload_size: 0, ssi: 0 });
         }
 
         AppLogger.log('DEVICE_CONNECTED', { id: scrubPII(conn.id), name: scrubPII(conn.name ?? '') });

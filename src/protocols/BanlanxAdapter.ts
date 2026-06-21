@@ -95,7 +95,8 @@ export class BanlanxAdapter implements IControllerProtocol {
       } catch (e: unknown) {
         // Malformed base64 in manufacturer data — not unexpected during BLE scans
         if (typeof require !== 'undefined') {
-          try { require('../services/AppLogger').AppLogger.warn('BanlanxAdapter', 'matchesAdvertisement: malformed manufacturerData base64', { error: e instanceof Error ? e.message : String(e) }); } catch { /* logger not ready */ }
+          const msg = e instanceof Error ? e.message : String(e);
+          try { require('../services/AppLogger').AppLogger.warn('BanlanxAdapter', 'matchesAdvertisement: malformed manufacturerData base64', { error: msg }); } catch { /* logger not ready */ }
         }
       }
     }

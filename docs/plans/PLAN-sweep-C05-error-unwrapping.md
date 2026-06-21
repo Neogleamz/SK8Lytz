@@ -28,3 +28,6 @@ Add e instanceof Error unwrapping to all catch blocks missing it.
 
 ## Out of Scope
 - Test files, DashboardScreen.tsx (C2), DockedController.tsx (C4)
+
+// SKIPPED: src/services/ble/RSSIService.ts - Already uses const message = err instanceof Error
+// SKIPPED: src/services/CrewService/CrewSessionManager.ts - Already uses const msg = e instanceof Error

@@ -111,7 +111,8 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
             mtuMapRef.current.set(conn.id, 186);
           }
         } catch (e: unknown) {
-          AppLogger.warn('[RecoveryService] MTU negotiation failed', { deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+          const msg = e instanceof Error ? e.message : String(e);
+          AppLogger.warn('[RecoveryService] MTU negotiation failed', { deviceId: scrubPII(deviceId), error: msg, payload_size: 0, ssi: 0 });
         }
         if (signal.aborted || cancelled) break;
 
@@ -154,7 +155,10 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
             await conn.writeCharacteristicWithoutResponseForService(
               recoveryAdapter.serviceUUID, recoveryAdapter.writeCharacteristicUUID,
               Buffer.from(pingResult.packets[0]).toString('base64')
-            ).catch((e: unknown) => AppLogger.warn('[RecoveryService] Recovery ping failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
+            ).catch((e: unknown) => {
+              const msg = e instanceof Error ? e.message : String(e);
+              AppLogger.warn('[RecoveryService] Recovery ping failed', { error: msg, payload_size: 0, ssi: 0 });
+            });
             return true;
           });
         }
@@ -165,7 +169,8 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
         break; // Success! Exit while loop.
 
       } catch (e: unknown) {
-        AppLogger.warn(`[RecoveryService] Connection attempt failed for '${scrubPII(deviceId)}'`, { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+        const msg = e instanceof Error ? e.message : String(e);
+        AppLogger.warn(`[RecoveryService] Connection attempt failed for '${scrubPII(deviceId)}'`, { error: msg, payload_size: 0, ssi: 0 });
       }
     }
 
@@ -201,7 +206,10 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
             } else {
               mtuMapRef.current.set(conn.id, 186);
             }
-          } catch (e: unknown) { AppLogger.warn('[RecoveryService] Phase 3 MTU negotiation failed (non-fatal)', { deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }); }
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            AppLogger.warn('[RecoveryService] Phase 3 MTU negotiation failed (non-fatal)', { deviceId: scrubPII(deviceId), error: msg, payload_size: 0, ssi: 0 });
+          }
 
           if (disconnectListeners.current[conn.id]) {
             disconnectListeners.current[conn.id].remove();
@@ -236,7 +244,8 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
           AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId: scrubPII(deviceId), phase: 3 });
           break; // Success! Exit while loop.
         } catch (e: unknown) {
-          AppLogger.warn('[RecoveryService] Phase 3 reconnect failed', { deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+          const msg = e instanceof Error ? e.message : String(e);
+          AppLogger.warn('[RecoveryService] Phase 3 reconnect failed', { deviceId: scrubPII(deviceId), error: msg, payload_size: 0, ssi: 0 });
           break; // Give up
         }
       }

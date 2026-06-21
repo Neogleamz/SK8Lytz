@@ -27,7 +27,8 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const fresh = await AppSettingsService.fetchAllSettings();
       setSettings(fresh);
     } catch (error) {
-      AppLogger.warn('[AppConfigContext] fetchAllSettings failed', { error, payload_size: 0, ssi: 0 });
+      const msg = error instanceof Error ? error.message : String(error);
+      AppLogger.warn('[AppConfigContext] fetchAllSettings failed', { error: msg, payload_size: 0, ssi: 0 });
       setSettings({});
     }
   };
