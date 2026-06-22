@@ -250,5 +250,32 @@ We removed the redundant `enqueueWrite` calls from `useBLE.ts`. The `BleWriteDis
 - **Pro:** Eliminates the permanent priority queue deadlock that would lock the single-threaded dispatcher.
 - **Con:** Developers must trust `BleWriteDispatcher` for correct serialization and must not attempt to manually enqueue raw payload writes at the hook level.
 
+---
 
-<!-- Synced against recent SESSION_LOG DECISION entries: 2026-06-19 -->
+## ADR-015: SpatialEngine Monolith Extraction (Pattern Engine Modularization)
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+The lighting pattern generation logic had accreted into a single 61KB `SpatialEngine.ts` monolith holding 61+ effect-builder functions, shared math, coordinate-system logic, and type definitions all in one file. This violated the 30KB monolith threshold (HARD STOP S4), created a collision zone where unrelated effects risked corruption on every edit, and introduced a circular dependency between `PatternEngine` and `SpatialEngine`.
+
+### The Decision
+We extracted the monolith into five focused modules under `src/protocols/shared/` and `src/protocols/spatial/`:
+- `shared/engineTypes.ts` — RGB, PatternId, ColorMode, SK8LytzTemplate, PatternOptions (canonical type home).
+- `shared/spatialMath.ts` — dim, lerpRGB, hueToRGB, blendRGB, hsvToRgb.
+- `shared/coordinateSystem.ts` — LED strip/segment coordinate logic.
+- `shared/engineUtils.ts` — hexToRgb, clamp, smoothStep, mapRange.
+- `spatial/effectProcessors.ts` — all 61+ effect builder functions.
+`SpatialEngine.ts` was rewritten as a thin orchestrator (61KB → 28KB) that imports from the new modules; `PatternEngine`, `VisualizerEngine`, and `SymphonyEngine` now import shared types from `shared/engineTypes` rather than from each other. The `PatternEngine ↔ SpatialEngine` cycle was broken and AST-confirmed as a DAG.
+
+### The Trade-off (What Stakeholders Must Know)
+- **Pro:** No more monolith collision zone; the circular dependency is gone; each effect family can be edited in isolation. BLE payload output is byte-for-byte identical — zero behavioral change, pure structural refactor.
+- **Con:** More files to navigate, and contributors must know which shared module owns a given helper before adding new effects.
+
+*Evidence: SESSION_LOG `[MERGE] 2026-06-18 refactor/spatial-pattern-engines → master @ 178c0b5f`. Byte invariant verified; AST confirmed DAG.*
+
+---
+
+<!-- Synced against recent SESSION_LOG DECISION entries: 2026-06-19; major [MERGE] architectural shifts through 2026-06-18 (SpatialEngine extraction → ADR-015) -->
+<!-- Cartographer satellite sync: 2026-06-22 (deepdive-docs Phase 5) -->

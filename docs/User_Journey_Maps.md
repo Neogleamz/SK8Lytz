@@ -88,4 +88,4 @@ journey
 - **Heart Rate Priority Fallback:** If the watch is disconnected, the phone falls back to querying Apple Health/Health Connect (15s poll) rather than real-time watch stream (5s push).
 
 
-<!-- Last Validated against Master Cartography Rebuild: 2026-06-19 -->
+<!-- Last Validated against Master Cartography Rebuild: 2026-06-22 (verified: 3 journeys current; broadcastScene no-op routed to triage, not a flow change) -->

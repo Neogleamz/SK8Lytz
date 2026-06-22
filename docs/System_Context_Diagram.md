@@ -29,6 +29,10 @@ C4Context
     System_Ext(supabase, "Supabase (Cloud)", "Handles user authentication, database storage for crews/spots, and telemetry/crash logging.")
     System_Ext(expo_eas, "Expo EAS", "Provides Over-The-Air (OTA) updates and handles push notifications.")
 
+    %% External Systems (Platform Services)
+    System_Ext(health, "Health Platform (Apple HealthKit / Android Health Connect)", "Provides heart rate, steps, and workout/exercise read-write for session telemetry.")
+    System_Ext(maps, "Map Provider (react-native-maps)", "Renders skate spots and route maps; supplies map tiles and clustering.")
+
     %% Relationships
     Rel(skater, sk8lytz_app, "Customizes lights, tracks speed, views spots using")
     Rel(crew_leader, sk8lytz_app, "Creates crews, broadcasts 'Hive Mind' patterns using")
@@ -40,6 +44,8 @@ C4Context
     Rel(sk8lytz_app, phone_os, "Requests Bluetooth access, reads GPS data from", "Native OS APIs")
     Rel(sk8lytz_app, supabase, "Syncs profiles, crews, and telemetry to", "HTTPS / WebSocket")
     Rel(sk8lytz_app, expo_eas, "Receives OTA updates and Push Notifications from", "HTTPS")
+    Rel(sk8lytz_app, health, "Reads heart rate/steps, writes workouts to", "HealthKit / Health Connect APIs")
+    Rel(sk8lytz_app, maps, "Renders skate spots & routes using", "Map SDK")
 ```
 
 ## How to Read This Diagram
@@ -51,4 +57,4 @@ C4Context
    - If the **Mobile OS** revokes Bluetooth permissions: The app is completely paralyzed.
    - If the **BLE Skate** hardware is out of range: The app queues the command and waits for the hardware to return (Auto-Recovery).
 
-<!-- Last Validated against Master Cartography Rebuild: 2026-06-19 -->
+<!-- Last Validated against Master Cartography Rebuild: 2026-06-22 (added Health Platform + Map Provider external systems per DEPENDENCY_AUDIT C4 impact) -->
