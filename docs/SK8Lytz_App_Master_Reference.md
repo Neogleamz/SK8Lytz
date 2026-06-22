@@ -6339,7 +6339,8 @@ Outdated documentation items found in `SK8Lytz_App_Master_Reference.md` matching
 ---
 
 
-## Section 13: Historical Archive (The Graveyard)
+### Curated Archive Entries (Hand-Maintained)
+<!-- NOTE: consolidated under the single Section 13 above (was a duplicate top-level "Section 13" header — deepdive-docs 2026-06-22) -->
 
 
 

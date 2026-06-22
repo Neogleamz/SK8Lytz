@@ -30,6 +30,19 @@
   - **Details:** Found crash telemetry with ID err_091a in file `src/hooks/ble/useBLEAutoRecovery.ts`. Trace: at useBLE.ts:321
 at useBLESweeper.ts:145
 
+- [ ] **`fix/crew-broadcast-scene-noop`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[Snack]` `[🧠 FOCUSED]`
+  - **Goal:** Crew leader scene broadcasts are silently dropped. `broadcastScene()` is a dead no-op stub, yet it is the live path for full-state crew sync.
+  - **Decision Log:** Found by /deepdive-docs GROUP_SYNC cartographer (2026-06-22). A prior refactor ("the plan removed broadcastScene") deleted the implementation but left two callers wired to it.
+  - **Source of Truth:** `src/services/CrewService/CrewRealtime.ts:104-108` (no-op stub with TODO) · caller `src/hooks/useDashboardController.tsx:203` → `crewService.broadcastScene(scene, userId)` · chain: `useCrewLeaderBroadcast.ts:18` `onCrewSceneChange(captureEntireState())`. Working parallel path: `CrewRealtime.broadcastPayload(payload: number[])` L84 (members read `crewPayload.payload` byte array at L57-59).
+  - **Architectural decision required (Morgan):** Either (A) convert the `captureEntireState()` snapshot → byte array inside `broadcastScene` then delegate to `broadcastPayload`, OR (B) delete the redundant `onCrewSceneChange`/`broadcastScene` path entirely if `onPatternChanged`→`broadcastPayload` is the canonical broadcast. Pick the canonical path BEFORE coding.
+
+- [ ] **`spike/watch-bridge-clean-install`**
+  - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[BUILD]` `[M-RISK]` `[Snack]` `[🧠 FOCUSED]`
+  - **Goal:** Determine whether the `"sk8lytz-watch-bridge": "file:modules/sk8lytz-watch-bridge"` dependency breaks `npm install` on a clean checkout, given the target dir is empty and gitignored.
+  - **Decision Log:** Flagged by /deepdive-docs DEPENDENCY_AUDIT cartographer (2026-06-22). NOTE: local `npm install` + full `npm run verify` currently PASS — so this is verify-before-touch, not a confirmed break. Do NOT delete the dep blind.
+  - **Source of Truth:** `package.json` deps `sk8lytz-watch-bridge` · `.gitignore:167` `modules/sk8lytz-watch-bridge/` (whole module gitignored) · dir empty on this checkout. Spike: confirm if a config plugin (`./plugins/withWearOsModule`, `@bacons/apple-targets`) generates it at prebuild, or if it must be committed/scaffolded for CI.
+
 ---
 
 ### 🔥 ON DECK
