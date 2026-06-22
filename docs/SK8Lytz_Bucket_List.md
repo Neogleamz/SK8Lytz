@@ -30,13 +30,6 @@
   - **Details:** Found crash telemetry with ID err_091a in file `src/hooks/ble/useBLEAutoRecovery.ts`. Trace: at useBLE.ts:321
 at useBLESweeper.ts:145
 
-- [ ] **`fix/crew-broadcast-scene-noop`**
-  - **Tags:** `[📝 NEEDS PLAN]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[Snack]` `[🧠 FOCUSED]`
-  - **Goal:** Crew leader scene broadcasts are silently dropped. `broadcastScene()` is a dead no-op stub, yet it is the live path for full-state crew sync.
-  - **Decision Log:** Found by /deepdive-docs GROUP_SYNC cartographer (2026-06-22). A prior refactor ("the plan removed broadcastScene") deleted the implementation but left two callers wired to it.
-  - **Source of Truth:** `src/services/CrewService/CrewRealtime.ts:104-108` (no-op stub with TODO) · caller `src/hooks/useDashboardController.tsx:203` → `crewService.broadcastScene(scene, userId)` · chain: `useCrewLeaderBroadcast.ts:18` `onCrewSceneChange(captureEntireState())`. Working parallel path: `CrewRealtime.broadcastPayload(payload: number[])` L84 (members read `crewPayload.payload` byte array at L57-59).
-  - **Architectural decision required (Morgan):** Either (A) convert the `captureEntireState()` snapshot → byte array inside `broadcastScene` then delegate to `broadcastPayload`, OR (B) delete the redundant `onCrewSceneChange`/`broadcastScene` path entirely if `onPatternChanged`→`broadcastPayload` is the canonical broadcast. Pick the canonical path BEFORE coding.
-
 - [ ] **`spike/watch-bridge-clean-install`**
   - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[BUILD]` `[M-RISK]` `[Snack]` `[🧠 FOCUSED]`
   - **Goal:** Determine whether the `"sk8lytz-watch-bridge": "file:modules/sk8lytz-watch-bridge"` dependency breaks `npm install` on a clean checkout, given the target dir is empty and gitignored.
@@ -46,6 +39,43 @@ at useBLESweeper.ts:145
 ---
 
 ### 🔥 ON DECK
+
+### 🚀 Epic: Crew Hub End-to-End Repair — `[BATCH:crew-e2e]`
+
+> **Source Analysis**: 🕵️ Reyes E2E audit — 📊 [crew-subsystem-e2e-audit.md](./analysis/crew-subsystem-e2e-audit.md) + [crew-broadcast-scene-redundancy.md](./analysis/crew-broadcast-scene-redundancy.md). Crew feature ~50% functional; light-sync, membership presence, and scheduled-crew activation all broken.
+> **Decision Log:** User directive 2026-06-22 — crew must work end-to-end; scheduled crews = server-side activation; plan all three together before building.
+
+#### Batch Strategy Table (AST-Verified — `node tools/ast-parser.js --collision-matrix artifacts/crew_epic_clusters.json`)
+
+| Wave | Task | Parallel-Safe? | Prerequisite | Collision basis |
+|------|------|---------------|-------------|-----------------|
+| **1** | `fix/crew-broadcast-scene` | Solo | None | shares `CrewService.ts`, `DashboardScreen.tsx` |
+| **2** | `fix/crew-membership-presence` | Solo | Wave 1 merged | shares `CrewService.ts`, `CrewSessionManager.ts` |
+| **3** | `feat/crew-scheduled-server-side` | Solo | Wave 2 merged + SPIKE cleared | shares `CrewSessionManager.ts`, `DashboardScreen.tsx` |
+
+> ⚠️ AST tool output: `total_collisions: 3`, `total_waves: 3` — all three pairwise-collide on shared files; **zero parallelism**, strictly sequential per VS-001.
+
+- [ ] **`fix/crew-broadcast-scene`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:crew-e2e]` `[WAVE:1]`
+  - **Plan:** 📎 [PLAN-fix-crew-broadcast-scene.md](./plans/PLAN-fix-crew-broadcast-scene.md)
+  - **Goal:** Repair leader→member light sync end-to-end. Delete the dead `broadcastScene`/`onCrewSceneChange` path; expose+wire `broadcastPayload` as the leader broadcast; fix the member receiver to route the `number[]` payload via a new `applyCrewPayload` handle into `writeToDevice` (not `applyCloudScene`).
+  - **Decision Log:** Reyes VERIFIED (HIGH) — broadcastScene is a no-op AND broadcastPayload had zero callers AND member receiver type-mismatched. User chose Scope A (full repair). See docs/analysis/crew-broadcast-scene-redundancy.md.
+  - **Source of Truth:** PLAN-fix-crew-broadcast-scene.md §Files to Create/Modify (7 files: CrewRealtime.ts, CrewService.ts, types.ts, useCrewLeaderBroadcast.ts [delete], DockedController.tsx, useDashboardController.tsx, DashboardScreen.tsx).
+
+- [ ] **`fix/crew-membership-presence`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DATA]` `[M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:crew-e2e]` `[WAVE:2]`
+  - **Plan:** 📎 [PLAN-fix-crew-membership-presence.md](./plans/PLAN-fix-crew-membership-presence.md)
+  - **Goal:** Leader sees members live + every member renders with real name/avatar. Emit the missing `member_update` broadcast on join/leave; wire the two `() => {}` leader callbacks to refresh member UI; rewrite the `CrewMemberDashboard` query off the non-existent `role` column + `user_profiles` implicit join (use existing `crew_members.display_name` + derived role + explicit avatar query). NO migration needed.
+  - **Decision Log:** Reyes VERIFIED — 3 sub-bugs (no member_update sender, no-op callbacks, schema-mismatch query). Quinn recommends query-rewrite over migration (session table `crew_members` correctly has no role column; persistent `crew_memberships` is a different table). See docs/analysis/crew-subsystem-e2e-audit.md Flow 4.
+  - **Source of Truth:** PLAN-fix-crew-membership-presence.md §Files to Create/Modify (6 files: CrewSessionManager.ts, CrewService.ts, useCrewSession.ts, DashboardCrewPanel.tsx, useDashboardCrew.ts, CrewMemberDashboard.tsx).
+
+- [ ] **`feat/crew-scheduled-server-side`**
+  - **Tags:** `[✅ READY]` `[🕵️ SPIKE]` `[CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:crew-e2e]` `[WAVE:3]`
+  - **Plan:** 📎 [PLAN-feat-crew-scheduled-server-side.md](./plans/PLAN-feat-crew-scheduled-server-side.md)
+  - **⛔ BLOCKED (Rule 5 — Unverified Task Spike Gate):** Run the SPIKE before execution — confirm (1) `pg_cron`+`pg_net` available on the Supabase project, (2) `CRON_SECRET` + service-role env in the edge runtime, (3) `crew_sessions.is_active` insert default. If pg_cron is unavailable the activation mechanism must be redesigned.
+  - **Goal:** Server-side scheduled-crew activation: a `pg_cron` job (1-min cadence) → new edge function `activate-scheduled-crews` that flips due `status='scheduled'` sessions to active (service-role, idempotent) and sends Expo push to members; client join error-path + 15-min reminder + notification deep-link.
+  - **Decision Log:** User chose server-side activation 2026-06-22. Reyes found scheduling entirely cosmetic (no activation; members can't join scheduled rows). Quinn chose pg_cron+pg_net→edge function (reuses proven push-batch code; cron can't reuse the JWT-gated notify-crew-session fn). See docs/analysis/crew-subsystem-e2e-audit.md Flow 2.
+  - **Source of Truth:** PLAN-feat-crew-scheduled-server-side.md §Files to Create/Modify (2 NEW: activate-scheduled-crews/index.ts, 20260622000000_activate_scheduled_crews_cron.sql; + CrewSessionManager.ts, CrewScheduleScreen.tsx, useDashboardProfile.ts, DashboardScreen.tsx).
 
 ### 🧹 Epic: Deep-Dive QA Synthesis Sweep
 

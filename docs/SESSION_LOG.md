@@ -1,4 +1,21 @@
-### [EVENT] 2026-06-19T08:26Z — GOAL COMPLETE: BLE Connection Excellence
+### [ARTIFACT] 2026-06-22T â€” Crew Subsystem E2E Audit
+
+**Analyst:** Reyes  
+**Artifact:** `docs/analysis/crew-subsystem-e2e-audit.md`  
+**Scope:** 7 end-to-end flows (create, schedule, join, membership/presence, session restore, end/leave, heartbeat)  
+**Verdict summary:** 2 flows working, 3 broken, 2 suspect. Largest broken cluster: light-sync (already planned in PLAN-fix-crew-broadcast-scene.md) + schedule notifications are a confirmed no-op stub + member_update has no sender anywhere in the source tree (leader member list never updates reactively). DB schema drift: `crew_members.role` column absent from `supabase.ts` but queried by `CrewMemberDashboard.tsx:202`. `user_profiles` join in `CrewMemberDashboard.tsx:202-208` has no FK declared in supabase.ts â€” join silently returns null on all member display names.  
+**Don't re-derive:** Schedule activation has zero backing mechanism â€” `CrewScheduleScreen.tsx:57-59` explicitly comments "Optional notifications logic can be added later". No cron, no push notification, no auto-status-flip from 'scheduled'â†’'active' exists in source. The `scheduled_at` column is persisted but cosmetic only.
+
+### [DECISION] 2026-06-22T â€” Crew Broadcast Option B: Delete broadcastScene dead path (VERIFIED safe, but incomplete alone)
+
+**Finding:** `broadcastScene` (`CrewRealtime.ts:106-108`) is a confirmed no-op stub. Deleting the entire `onCrewSceneChange`/`useCrewLeaderBroadcast`/`broadcastScene` path (Option B) loses zero functionality â€” nothing was ever transmitted through this path.
+**Don't re-derive:** `broadcastPayload` (`CrewRealtime.ts:84`) has NO caller anywhere in the source tree. It is NOT exposed as a public delegation on `CrewService`. The Master Reference diagram showing `DC->>CS: broadcastPayload` (L1717) is aspirational, not current reality. Crew sync is completely broken in both directions.
+**Additional finding:** Member receiver (`subscribeAsMember` L57-59) calls `onSceneOrPayload(crewPayload.payload)` with a `number[]`, but all callsites pass this to `applyCloudScene` which expects a `CloudScenePayload` object â€” a second independent silent failure.
+**Fix scope (all 3 steps required for crew sync to work):** (1) DELETE Option B surface per artifact checklist, (2) WIRE `broadcastPayload` as public on CrewService + call from DockedController.writeToDevice, (3) FIX member receiver to call `writeToDevice(payload)` not `applyCloudScene(payload)`.
+**Artifact:** `docs/analysis/crew-broadcast-scene-redundancy.md`
+**Task:** `fix/crew-broadcast-scene-noop` in Bucket List (TRIAGE QUEUE) â€” status NEEDS PLAN, needs scope expanded to cover all 3 fix steps.
+
+### [EVENT] 2026-06-19T08:26Z â€” GOAL COMPLETE: BLE Connection Excellence
 **Epic:** Industry Parity & Background Connection Hardening
 **Total tasks:** 8 (across 4 waves)
 **Total waves:** 4
@@ -8,7 +25,7 @@
 - Wave 3 @ df85b52d: Passive autoconnect (fire-and-forget), Smart group health UI (degraded mode)
 - Wave 4 @ d06447d7: Background reconnect (iOS state restoration + Android foreground service)
 - **Result:** Complete parity with industry leaders (Govee/Hue/LIFX). 100% offline-first reliability.
-### [MERGE] 2026-06-19T08:26Z — feat-ble-excellence-w4 ? master
+### [MERGE] 2026-06-19T08:26Z ï¿½ feat-ble-excellence-w4 ? master
 **What merged:** Implemented background BLE reconnect (Wave 4 - Gap 1). App now maintains connection when backgrounded via Android foreground service (react-native-background-actions) and iOS state restoration.
 **Verify result:** TSC ?, Jest ?, tests updated, Gatekeeper passed.
 **Files touched:** BackgroundBLEService.ts, useBLE.ts, useDashboardAutoConnect.ts, package.json
@@ -16,15 +33,15 @@
 **What:** Background reconnect and keepalive (Wave 4)
 **Files touched:** src/services/ble/BackgroundBLEService.ts, src/hooks/useBLE.ts, src/hooks/useDashboardAutoConnect.ts, docs/plans/PLAN-feat-ble-background-reconnect.md, package.json, package-lock.json
 **Verify result:** TSC ?, Jest ?, All gates green
-### [MERGE] 2026-06-19T08:16Z — feat-ble-excellence-w3 ? master
+### [MERGE] 2026-06-19T08:16Z ï¿½ feat-ble-excellence-w3 ? master
 **What merged:** Implemented passive autoConnect for known devices and smart group health UI (degraded mode 1/2 skates connected).
 **Verify result:** TSC ?, Jest ?, tests updated, Gatekeeper passed.
 **Files touched:** MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardScreen.tsx, BleMachine.ts, BleMachine.types.ts, ConnectService.ts, ConnectService.test.ts, dashboard.types.ts
-### [MERGE READY] 2026-06-19T08:13Z — feat-ble-excellence-w3 — acedfb18
+### [MERGE READY] 2026-06-19T08:13Z ï¿½ feat-ble-excellence-w3 ï¿½ acedfb18
 **What:** Implemented passive autoConnect for known devices and smart group health UI (degraded mode 1/2 skates connected).
 **Files touched:** MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardScreen.tsx, BleMachine.ts, BleMachine.types.ts, ConnectService.ts, ConnectService.test.ts, dashboard.types.ts
 **Verify result:** TSC ?, Jest ?, tests updated for options change.
-### [ARTIFACT] 2026-06-19T07:10Z — BLE Connection Excellence Intake (8 tasks, 4 waves)
+### [ARTIFACT] 2026-06-19T07:10Z ï¿½ BLE Connection Excellence Intake (8 tasks, 4 waves)
 **What:** Industry gap analysis comparing SK8Lytz BLE connection architecture against Govee/Hue/LIFX/Nordic gold standards. Identified 10 gaps, user selected 8 for intake.
 **Artifact:** [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md)
 **Plans created (8):**
@@ -35,20 +52,20 @@
 **Key decisions:**
 - Wave assignment verified by AST collision analysis (ConnectService.ts is the collision nexus)
 - Gap 3 scoped down: RSSI meters already exist on device + group cards. Task is state badges only.
-- Gap 1 (background reconnect) placed as Wave 4 — depends on all prior infrastructure
+- Gap 1 (background reconnect) placed as Wave 4 ï¿½ depends on all prior infrastructure
 - Gap 5 (bonding) and Gap 8 (metrics) excluded by user
 
-### [MERGE READY] 2026-06-19T06:38Z — fix/autoconnect-dashboard-stale — 5ea98248
-**What fixed (Wave 2 — H6+M1+L3+L4):**
-- H6: Cloud sync MAC case mismatch — `cloudMacSet.add(d.device_mac || d.id)` now `.toUpperCase()` to match BLE `Device.id` convention
+### [MERGE READY] 2026-06-19T06:38Z ï¿½ fix/autoconnect-dashboard-stale ï¿½ 5ea98248
+**What fixed (Wave 2 ï¿½ H6+M1+L3+L4):**
+- H6: Cloud sync MAC case mismatch ï¿½ `cloudMacSet.add(d.device_mac || d.id)` now `.toUpperCase()` to match BLE `Device.id` convention
 - H6 cont: Merge loop `id` normalized via `const normalizedId = id.toUpperCase()` before `currentSet.has/add`
-- M1: `allDevicesRef` in DashboardScreen never synced after init — added `useEffect` to keep ref current
-- L3: Ref mutation after cloud sync doesn't trigger React re-render — added burst scan to force observer re-fire
-- L4: `renderItem` used `item.id` (Supabase composite key) for `deviceConfigs` lookup — changed to `mac` (uppercase MAC)
+- M1: `allDevicesRef` in DashboardScreen never synced after init ï¿½ added `useEffect` to keep ref current
+- L3: Ref mutation after cloud sync doesn't trigger React re-render ï¿½ added burst scan to force observer re-fire
+- L4: `renderItem` used `item.id` (Supabase composite key) for `deviceConfigs` lookup ï¿½ changed to `mac` (uppercase MAC)
 **Verify result:** TSC ? Jest ? Blast Radius ? Type Safety ? BLE Guards ? Organic Disconnect ? Browser Console ? Workflow Refs ? (8/8 gates green)
 **Files touched:** src/hooks/useDashboardAutoConnect.ts, src/screens/DashboardScreen.tsx
 
-### [EVENT] 2026-06-19T06:40Z — GOAL COMPLETE: Connection Pipeline Fix
+### [EVENT] 2026-06-19T06:40Z ï¿½ GOAL COMPLETE: Connection Pipeline Fix
 **Batch:** fix/ble-connection-pipeline + fix/autoconnect-dashboard-stale
 **Total tasks:** 3 (2 Wave 1 + 1 Wave 2)
 **Total waves:** 2
@@ -57,8 +74,8 @@
 - Wave 2 @ 8af1ad8f: Cloud MAC normalization + stale ref + deviceConfigs key (H6, M1, L3, L4)
 - 7 HIGH severity bugs eliminated, 9 MEDIUM fixed, 4 LOW fixed
 
-### [MERGE] 2026-06-19T06:40Z — fix/autoconnect-dashboard-stale ? master @ 8af1ad8f
-**What merged (Wave 2 — 1 plan, 2 commits):**
+### [MERGE] 2026-06-19T06:40Z ï¿½ fix/autoconnect-dashboard-stale ? master @ 8af1ad8f
+**What merged (Wave 2 ï¿½ 1 plan, 2 commits):**
 - useDashboardAutoConnect: cloud sync MAC normalized to .toUpperCase() (H6)
 - useDashboardAutoConnect: burst scan after cloud ref mutation for observer wake (L3)
 - DashboardScreen: allDevicesRef synced via useEffect (M1)
@@ -66,8 +83,8 @@
 **Verify result:** TSC ? Jest ? All 8 gates green
 **Files touched:** useDashboardAutoConnect.ts, DashboardScreen.tsx
 
-### [MERGE] 2026-06-19T06:34Z — fix/ble-connection-pipeline ? master @ b5338db6
-**What merged (Wave 1 unified — 2 plans, 5 commits):**
+### [MERGE] 2026-06-19T06:34Z ï¿½ fix/ble-connection-pipeline ? master @ b5338db6
+**What merged (Wave 1 unified ï¿½ 2 plans, 5 commits):**
 - BleMachine: added disconnectService invoked actor + 10s DISCONNECTING timeout (H1/M3)
 - BleMachine: HEARTBEAT_FAIL in RECOVERING appends to ghostedDeviceIds (H4)
 - BleMachine: CONNECT_REQUEST in CONNECTING cancels+restarts with new targets (H5)
@@ -77,7 +94,7 @@
 - BleMachine.types: targetMacs required, removed dead CONNECT_SUCCESS/CONNECT_FAIL (M8/L7)
 - ConnectService: notification subscription stored in notificationListeners for cleanup (H2)
 - ConnectService: MTU catch block now logs AppLogger.warn (M7)
-- ConnectService: Android 12+ connectedDevices race — retry loop (M5)
+- ConnectService: Android 12+ connectedDevices race ï¿½ retry loop (M5)
 - RecoveryService: while-loop guard uses PHASE_1+PHASE_2 total budget (H7)
 - RecoveryService: getSweepedDevice wired from BleMachine via context (H3)
 - RecoveryService: hasExceededMaxRecovery off-by-one fix (> ? >=)
@@ -93,9 +110,9 @@
 - [PLAN-fix-autoconnect-dashboard-stale.md] - Cloud MAC case + stale allDevicesRef + renderItem key (H6+M1+L3+L4)
 - 3 tasks added to ON DECK under 2 batch groups (Wave 1 unified, Wave 2 solo)
 
-### [MERGE] 2026-06-19T05:42Z — fix/group-connect-stale-devices ? master @ 98cfd8ea
+### [MERGE] 2026-06-19T05:42Z ï¿½ fix/group-connect-stale-devices ? master @ 98cfd8ea
 **What merged:**
-- Scanner: split `seenMacsRef` gate — telemetry/interrogation remain one-shot, but Device objects now re-stage on every scan callback to keep `allDevices` fresh
+- Scanner: split `seenMacsRef` gate ï¿½ telemetry/interrogation remain one-shot, but Device objects now re-stage on every scan callback to keep `allDevices` fresh
 - Scanner: `flushStagedDevices` upserts Device handles (replaces stale objects) instead of skipping duplicates
 - AutoConnect: `buildOfflineGroupMap` normalizes `device_mac` to `.toUpperCase()` to match BLE `Device.id` convention
 - Wizard: replaced slug-based `group_ids` (`fleetName.toLowerCase().replace(...)`) with canonical `group-${Date.now()}` format matching `GroupRepository`
@@ -128,129 +145,129 @@
 - BYTE INVARIANT: All BLE payload values byte-for-byte identical. Zero logic changes.
 **Verify result:** TSC ? Jest ? BLE Guards ? Type Safety ? AST ?
 **Files touched:** SpatialEngine.ts, PatternEngine.ts, VisualizerEngine.ts, SymphonyEngine.ts, shared/engineTypes.ts, shared/spatialMath.ts, shared/coordinateSystem.ts, shared/engineUtils.ts, spatial/effectProcessors.ts
-### [MERGE READY] 2026-06-18T13:24Z — fix/scanner-ble-hooks — d8850721
+### [MERGE READY] 2026-06-18T13:24Z ï¿½ fix/scanner-ble-hooks ï¿½ d8850721
 **Files touched:**
-- `src/hooks/ble/useBLEScanner.ts` — R-07 L38: empty `catch {}` ? `AppLogger.error('[useBLEScanner] Failed to parse manufacturerData base64 in determineFactoryName', ...)`; R-07 L84: empty `catch {}` ? `AppLogger.error('[useBLEScanner] Failed to parse cached RSSI threshold from AsyncStorage JSON', ...)`; R-16: all timeouts already used BLE_TIMING.* — no raw literals found (SKIPPED); R-22 invariant verified intact and not modified (startSweeper() called unconditionally at L372–376 when registeredMacs.length === 0)
-- `src/hooks/useBLE.ts` — R-08 L144: `useRef<any>` ? `useRef<((event: EventFrom<typeof bleMachine>) => void) | null>` (MIGRATION-SHIM resolved); added `EventFrom` to xstate imports
-- `src/hooks/useOptimisticBLE.ts` — R-16 L111: raw `300` ? `BLE_TIMING.OPTIMISTIC_CONFIRM_RESET_MS`; R-16 L135: raw `1000` ? `BLE_TIMING.OPTIMISTIC_RECONCILE_RESET_MS`; R-07 L138-142: silent `catch` ? `AppLogger.error('[OptimisticBLE] Unexpected write error', ...)`; R-16 L86: SKIPPED (debounceMs is caller-provided parameter, not raw BLE timing literal)
-- `src/hooks/useDeviceStateLedger.ts` — R-16 L150: inline `LEDGER_WRITE_DEBOUNCE_MS = 500` removed, replaced with `BLE_TIMING.LEDGER_WRITE_DEBOUNCE_MS`
-- `src/constants/bleTimingConstants.ts` — Added `OPTIMISTIC_CONFIRM_RESET_MS: 300`, `OPTIMISTIC_RECONCILE_RESET_MS: 1000`, `LEDGER_WRITE_DEBOUNCE_MS: 500` with JSDoc
-- `src/hooks/ble/useBLEBatterySweep.ts` — SKIPPED: all R-16 timeouts at L53,58,105,159 already use BLE_TIMING.* constants
+- `src/hooks/ble/useBLEScanner.ts` ï¿½ R-07 L38: empty `catch {}` ? `AppLogger.error('[useBLEScanner] Failed to parse manufacturerData base64 in determineFactoryName', ...)`; R-07 L84: empty `catch {}` ? `AppLogger.error('[useBLEScanner] Failed to parse cached RSSI threshold from AsyncStorage JSON', ...)`; R-16: all timeouts already used BLE_TIMING.* ï¿½ no raw literals found (SKIPPED); R-22 invariant verified intact and not modified (startSweeper() called unconditionally at L372ï¿½376 when registeredMacs.length === 0)
+- `src/hooks/useBLE.ts` ï¿½ R-08 L144: `useRef<any>` ? `useRef<((event: EventFrom<typeof bleMachine>) => void) | null>` (MIGRATION-SHIM resolved); added `EventFrom` to xstate imports
+- `src/hooks/useOptimisticBLE.ts` ï¿½ R-16 L111: raw `300` ? `BLE_TIMING.OPTIMISTIC_CONFIRM_RESET_MS`; R-16 L135: raw `1000` ? `BLE_TIMING.OPTIMISTIC_RECONCILE_RESET_MS`; R-07 L138-142: silent `catch` ? `AppLogger.error('[OptimisticBLE] Unexpected write error', ...)`; R-16 L86: SKIPPED (debounceMs is caller-provided parameter, not raw BLE timing literal)
+- `src/hooks/useDeviceStateLedger.ts` ï¿½ R-16 L150: inline `LEDGER_WRITE_DEBOUNCE_MS = 500` removed, replaced with `BLE_TIMING.LEDGER_WRITE_DEBOUNCE_MS`
+- `src/constants/bleTimingConstants.ts` ï¿½ Added `OPTIMISTIC_CONFIRM_RESET_MS: 300`, `OPTIMISTIC_RECONCILE_RESET_MS: 1000`, `LEDGER_WRITE_DEBOUNCE_MS: 500` with JSDoc
+- `src/hooks/ble/useBLEBatterySweep.ts` ï¿½ SKIPPED: all R-16 timeouts at L53,58,105,159 already use BLE_TIMING.* constants
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  Disconnect Wiring: ?  Workflow Refs: ?  (8/8 gates green)
 
-### [MERGE] 2026-06-18T13:26Z — fix/memory-leak-sweep ? master @ 85291fb7
+### [MERGE] 2026-06-18T13:26Z ï¿½ fix/memory-leak-sweep ? master @ 85291fb7
 **Files touched:**
-- `src/components/AccountModal.tsx` — R-22: added useEffect cleanup return
-- `src/components/CommunityModal.tsx` — R-22: 4 insertions, cleanup guards
-- `src/components/MarqueeText.tsx` — R-22: cleanup return added
-- `src/components/ProductVisualizer.tsx` — R-22: cleanup return added
-- `src/components/SessionSummaryModal.tsx` — R-20: Platform.select + R-12 stale closure fix
-- `src/components/patterns/PatternCard.tsx` — R-22: cleanup return added
-- `src/hooks/useAppMicrophone.ts` — R-22: cleanup + stale closure guard
+- `src/components/AccountModal.tsx` ï¿½ R-22: added useEffect cleanup return
+- `src/components/CommunityModal.tsx` ï¿½ R-22: 4 insertions, cleanup guards
+- `src/components/MarqueeText.tsx` ï¿½ R-22: cleanup return added
+- `src/components/ProductVisualizer.tsx` ï¿½ R-22: cleanup return added
+- `src/components/SessionSummaryModal.tsx` ï¿½ R-20: Platform.select + R-12 stale closure fix
+- `src/components/patterns/PatternCard.tsx` ï¿½ R-22: cleanup return added
+- `src/hooks/useAppMicrophone.ts` ï¿½ R-22: cleanup + stale closure guard
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
 
-### [MERGE] 2026-06-18T13:26Z — fix/scanner-ble-hooks ? master @ ec50a5f3
+### [MERGE] 2026-06-18T13:26Z ï¿½ fix/scanner-ble-hooks ? master @ ec50a5f3
 **Files touched:**
-- `src/hooks/ble/useBLEScanner.ts` — R-07: 2 empty catch blocks ? AppLogger.error
-- `src/hooks/useBLE.ts` — R-08: `useRef<any>` ? `useRef<EventFrom>` typed
-- `src/hooks/useOptimisticBLE.ts` — R-16: raw 300/1000ms ? BLE_TIMING constants; R-07: silent catch ? AppLogger.error
-- `src/hooks/useDeviceStateLedger.ts` — R-16: inline 500ms ? BLE_TIMING.LEDGER_WRITE_DEBOUNCE_MS
-- `src/constants/bleTimingConstants.ts` — added OPTIMISTIC_CONFIRM_RESET_MS, OPTIMISTIC_RECONCILE_RESET_MS, LEDGER_WRITE_DEBOUNCE_MS
-- `docs/plans/PLAN-fix-scanner-ble-hooks.md` — SKIPPED annotations per plan completeness gate
+- `src/hooks/ble/useBLEScanner.ts` ï¿½ R-07: 2 empty catch blocks ? AppLogger.error
+- `src/hooks/useBLE.ts` ï¿½ R-08: `useRef<any>` ? `useRef<EventFrom>` typed
+- `src/hooks/useOptimisticBLE.ts` ï¿½ R-16: raw 300/1000ms ? BLE_TIMING constants; R-07: silent catch ? AppLogger.error
+- `src/hooks/useDeviceStateLedger.ts` ï¿½ R-16: inline 500ms ? BLE_TIMING.LEDGER_WRITE_DEBOUNCE_MS
+- `src/constants/bleTimingConstants.ts` ï¿½ added OPTIMISTIC_CONFIRM_RESET_MS, OPTIMISTIC_RECONCILE_RESET_MS, LEDGER_WRITE_DEBOUNCE_MS
+- `docs/plans/PLAN-fix-scanner-ble-hooks.md` ï¿½ SKIPPED annotations per plan completeness gate
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
 
-### [MERGE] 2026-06-18T13:23Z — fix/crew-services-hardening ? master @ 5201c152
+### [MERGE] 2026-06-18T13:23Z ï¿½ fix/crew-services-hardening ? master @ 5201c152
 **Files touched:**
-- `src/services/CrewService/CrewRealtime.ts` — R-07: empty `catch { // ignore }` in `startHeartbeat` ? `AppLogger.warn`; R-16: extracted `BROADCAST_DEBOUNCE_MS`, `HEARTBEAT_INTERVAL_MS`, `PERSIST_PAYLOAD_DELAY_MS` constants; R-04: corrected logger prefix from `[CrewService]` ? `[CrewRealtime]`
-- `src/services/CrewService/CrewSessionManager.ts` — R-04: added `payload_size: 0, ssi: 0` to 4 `AppLogger.error` calls (`createSession`, `joinSession`, `joinSessionById`, `leaveSession`); R-16: extracted `CHANNEL_TEARDOWN_DELAY_MS = 600` constant
-- `src/services/CrewProfileService.ts` — R-16: extracted `SESSION_BROADCAST_TEARDOWN_MS = 500` constant for deferred `removeChannel` in `deleteCrew`
-- `src/hooks/useCrewSession.ts` — R-11: silent `catch (e) { return false; }` in `handleHandoffLeadership` now emits `AppLogger.warn`; R-05: `executeEndSession` converted to Optimistic UI (navigate away immediately, fire `endSession` in background); Boy Scout: fixed double-nested `instanceof` ternary bug on L86
-- `src/hooks/useCrewLeaderBroadcast.ts` — R-16: extracted `LEADER_BROADCAST_DEBOUNCE_MS = 200` constant
-- `src/components/CrewMemberDashboard.tsx` — R-05: offline-first `AsyncStorage` cache for member list (read cache first ? display immediately ? fetch fresh ? persist); R-16: extracted `MEMBER_POLL_INTERVAL_MS = 30_000` constant
-- `src/hooks/useCrewHub.ts` — SKIPPED: already well-hardened; all `.catch()` blocks present, GPS_TIMEOUT_MS already named constant
-- `src/hooks/useCrewManage.ts` — SKIPPED: already well-hardened; SEARCH_DEBOUNCE_MS already named, all errors logged
+- `src/services/CrewService/CrewRealtime.ts` ï¿½ R-07: empty `catch { // ignore }` in `startHeartbeat` ? `AppLogger.warn`; R-16: extracted `BROADCAST_DEBOUNCE_MS`, `HEARTBEAT_INTERVAL_MS`, `PERSIST_PAYLOAD_DELAY_MS` constants; R-04: corrected logger prefix from `[CrewService]` ? `[CrewRealtime]`
+- `src/services/CrewService/CrewSessionManager.ts` ï¿½ R-04: added `payload_size: 0, ssi: 0` to 4 `AppLogger.error` calls (`createSession`, `joinSession`, `joinSessionById`, `leaveSession`); R-16: extracted `CHANNEL_TEARDOWN_DELAY_MS = 600` constant
+- `src/services/CrewProfileService.ts` ï¿½ R-16: extracted `SESSION_BROADCAST_TEARDOWN_MS = 500` constant for deferred `removeChannel` in `deleteCrew`
+- `src/hooks/useCrewSession.ts` ï¿½ R-11: silent `catch (e) { return false; }` in `handleHandoffLeadership` now emits `AppLogger.warn`; R-05: `executeEndSession` converted to Optimistic UI (navigate away immediately, fire `endSession` in background); Boy Scout: fixed double-nested `instanceof` ternary bug on L86
+- `src/hooks/useCrewLeaderBroadcast.ts` ï¿½ R-16: extracted `LEADER_BROADCAST_DEBOUNCE_MS = 200` constant
+- `src/components/CrewMemberDashboard.tsx` ï¿½ R-05: offline-first `AsyncStorage` cache for member list (read cache first ? display immediately ? fetch fresh ? persist); R-16: extracted `MEMBER_POLL_INTERVAL_MS = 30_000` constant
+- `src/hooks/useCrewHub.ts` ï¿½ SKIPPED: already well-hardened; all `.catch()` blocks present, GPS_TIMEOUT_MS already named constant
+- `src/hooks/useCrewManage.ts` ï¿½ SKIPPED: already well-hardened; SEARCH_DEBOUNCE_MS already named, all errors logged
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
 **Commits:** a7462bac (hardening sweep) | 977c1956 (optimistic UI)
 
-### [MERGE READY] 2026-06-18T13:20Z — fix/ui-misc-safety — 8aaa2f84
+### [MERGE READY] 2026-06-18T13:20Z ï¿½ fix/ui-misc-safety ï¿½ 8aaa2f84
 **Files touched:**
-- `src/components/admin/tools/tabs/oracle/Oracle53LiveStream.tsx` — R-02: import AppLogger; wrap setInterval transmit and single-frame transmit in try-catch with AppLogger.error
-- `src/hooks/dev/useWebDemoConsoleBridge.ts` — R-08: `any[]` ? `unknown[]` on sendMessage args parameter
-- `src/components/DeviceSettingsModal.tsx` — R-16: `PROBE_TIMEOUT_MS = 5000` constant; raw `5000` in setTimeout replaced
-- `src/components/LocationPicker.tsx` — R-16: `SEARCH_DEBOUNCE_MS = 400` constant; raw `400` in setTimeout replaced
-- `src/components/VerticalPatternDrum.tsx` — R-16: `COMMIT_DEBOUNCE_MS = 50` constant; raw `50` in setTimeout replaced
-- `src/components/admin/tools/tabs/DiagnosticLabOracleTab.tsx` — R-16: `MAGNITUDE_STREAM_INTERVAL_MS = 100` constant; raw `100` in setInterval replaced
-- `src/components/PositionalGradientBuilder.tsx` — SKIPPED: already has `BLE_WRITE_THROTTLE_MS` constant + `.catch()` in place
-- `src/hooks/cloud/useOfflineSyncWorker.ts` — SKIPPED: already has `SYNC_INTERVAL_MS` constant in place
-- `docs/plans/PLAN-fix-ui-misc-safety.md` — SKIPPED annotations added per Kanban Constitution Rule 9
+- `src/components/admin/tools/tabs/oracle/Oracle53LiveStream.tsx` ï¿½ R-02: import AppLogger; wrap setInterval transmit and single-frame transmit in try-catch with AppLogger.error
+- `src/hooks/dev/useWebDemoConsoleBridge.ts` ï¿½ R-08: `any[]` ? `unknown[]` on sendMessage args parameter
+- `src/components/DeviceSettingsModal.tsx` ï¿½ R-16: `PROBE_TIMEOUT_MS = 5000` constant; raw `5000` in setTimeout replaced
+- `src/components/LocationPicker.tsx` ï¿½ R-16: `SEARCH_DEBOUNCE_MS = 400` constant; raw `400` in setTimeout replaced
+- `src/components/VerticalPatternDrum.tsx` ï¿½ R-16: `COMMIT_DEBOUNCE_MS = 50` constant; raw `50` in setTimeout replaced
+- `src/components/admin/tools/tabs/DiagnosticLabOracleTab.tsx` ï¿½ R-16: `MAGNITUDE_STREAM_INTERVAL_MS = 100` constant; raw `100` in setInterval replaced
+- `src/components/PositionalGradientBuilder.tsx` ï¿½ SKIPPED: already has `BLE_WRITE_THROTTLE_MS` constant + `.catch()` in place
+- `src/hooks/cloud/useOfflineSyncWorker.ts` ï¿½ SKIPPED: already has `SYNC_INTERVAL_MS` constant in place
+- `docs/plans/PLAN-fix-ui-misc-safety.md` ï¿½ SKIPPED annotations added per Kanban Constitution Rule 9
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
 
-### [MERGE] 2026-06-18T13:11Z — fix/test-suite-type-safety ? master @ 95eaac5c
+### [MERGE] 2026-06-18T13:11Z ï¿½ fix/test-suite-type-safety ? master @ 95eaac5c
 **What merged:** Purged all `as any` casts from 22+ test files. Created `src/__tests__/test-env.d.ts` with typed global augmentations. Fixed `useControllerDispatch.test.ts` to include typed `useRef`/`useCallback` mocks (forward-ported from fix/docked-controller-safety). Resolved rebase conflict via cherry-pick + manual resolution.
 **Verify result:** TSC ? Jest ? Guards ?
 **Files touched:**
 **Files touched:**
-- `src/__tests__/test-env.d.ts` (NEW) — global augmentation types: `GlobalWithDev`, `MutablePlatform`, `CallbackServiceActor`, `PromiseServiceActor`
-- `jest.config.js` — added `test-env.d.ts` to `testPathIgnorePatterns` (prevents "must contain at least one test" error)
-- `src/services/ble/__tests__/HeartbeatService.test.ts` — `AnyActorSystem` ? `ActorSystem<any>` (xstate export fix)
-- `src/services/ble/__tests__/RecoveryService.test.ts` — same xstate `ActorSystem` fix
-- `src/services/ble/__tests__/InterrogatorService.test.ts` — narrow `CharacteristicValue` structural interface replaces wide `as any` Characteristic cast
-- `src/services/ble/__tests__/BleMachine.test.ts` — `mockBleManager as unknown as BleManager`; `createActor` options typed via `Parameters<typeof createActor<...>>[1]` cast
-- `src/services/ble/__tests__/ConnectService.test.ts` — `capturedCallback!(err, null)` (non-null assert + 2nd arg)
-- `src/services/session/__tests__/AutoPauseService.test.ts` — relative `test-env` import fix; `cleanup?.()` optional invocation
-- `src/services/session/__tests__/SessionBridge.test.ts` — relative `test-env` import fix
-- `src/services/session/__tests__/SessionCommitService.test.ts` — relative `test-env` import fix; `cleanup?.()` optional invocation
-- `src/services/session/__tests__/SessionMachine.test.ts` — relative `test-env` import fix
-- `src/services/__tests__/AppLogger.test.ts` — relative `test-env` import fix
-- `src/hooks/__tests__/useDeviceStateLedger.test.ts` — `DevicePatternState` mock shape fixed; `ModeType` value corrected to valid union member
-- (all other 8 test files) — `as any` ? strict typed casts throughout
+- `src/__tests__/test-env.d.ts` (NEW) ï¿½ global augmentation types: `GlobalWithDev`, `MutablePlatform`, `CallbackServiceActor`, `PromiseServiceActor`
+- `jest.config.js` ï¿½ added `test-env.d.ts` to `testPathIgnorePatterns` (prevents "must contain at least one test" error)
+- `src/services/ble/__tests__/HeartbeatService.test.ts` ï¿½ `AnyActorSystem` ? `ActorSystem<any>` (xstate export fix)
+- `src/services/ble/__tests__/RecoveryService.test.ts` ï¿½ same xstate `ActorSystem` fix
+- `src/services/ble/__tests__/InterrogatorService.test.ts` ï¿½ narrow `CharacteristicValue` structural interface replaces wide `as any` Characteristic cast
+- `src/services/ble/__tests__/BleMachine.test.ts` ï¿½ `mockBleManager as unknown as BleManager`; `createActor` options typed via `Parameters<typeof createActor<...>>[1]` cast
+- `src/services/ble/__tests__/ConnectService.test.ts` ï¿½ `capturedCallback!(err, null)` (non-null assert + 2nd arg)
+- `src/services/session/__tests__/AutoPauseService.test.ts` ï¿½ relative `test-env` import fix; `cleanup?.()` optional invocation
+- `src/services/session/__tests__/SessionBridge.test.ts` ï¿½ relative `test-env` import fix
+- `src/services/session/__tests__/SessionCommitService.test.ts` ï¿½ relative `test-env` import fix; `cleanup?.()` optional invocation
+- `src/services/session/__tests__/SessionMachine.test.ts` ï¿½ relative `test-env` import fix
+- `src/services/__tests__/AppLogger.test.ts` ï¿½ relative `test-env` import fix
+- `src/hooks/__tests__/useDeviceStateLedger.test.ts` ï¿½ `DevicePatternState` mock shape fixed; `ModeType` value corrected to valid union member
+- (all other 8 test files) ï¿½ `as any` ? strict typed casts throughout
 TSC: ?  Jest: ? (234 passed, 32 suites)  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
 **Key patterns resolved:**
-- `AnyActorSystem` is not exported from `xstate` main — use `ActorSystem<any>` instead
-- XState `cleanup()` return is `void | (() => void)` — use `cleanup?.()` not `cleanup()`
-- `createActor` with machine requiring `input` needs `{ input: ... }` in options — cast via `unknown` to avoid TS2345
+- `AnyActorSystem` is not exported from `xstate` main ï¿½ use `ActorSystem<any>` instead
+- XState `cleanup()` return is `void | (() => void)` ï¿½ use `cleanup?.()` not `cleanup()`
+- `createActor` with machine requiring `input` needs `{ input: ... }` in options ï¿½ cast via `unknown` to avoid TS2345
 - Relative paths to `test-env.d.ts` differ per depth: `../../__tests__/test-env` from `services/ble/__tests__/`, `../../../__tests__/test-env` from `services/session/__tests__/`
 
-### [MERGE] 2026-06-18T12:55Z — fix/docked-controller-safety ? master @ 85ca319e
+### [MERGE] 2026-06-18T12:55Z ï¿½ fix/docked-controller-safety ? master @ 85ca319e
 **What merged:**
-- `src/components/DockedController.tsx` — R-16: replaced hardcoded `50ms` delay with `BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS` import; added `BLE_TIMING` import
-- `src/hooks/useControllerDispatch.ts` — R-26: added `isMusicBusyRef` and `isPatternBusyRef` re-entrancy guards (useRef + try/finally) to `applyFixedPattern` and `handleMusicChange`; added `useRef` to React imports
-- `src/hooks/__tests__/useControllerDispatch.test.ts` — Boy Scout: added `useRef` to React mock (plain-function test context requires mocked dispatcher)
-- `src/components/FixedPatternPreviewRow.tsx` — Phase 1 extraction (new file)
-- `src/components/DockedController.styles.ts` — Phase 1 extraction (new file)
-- `src/hooks/useLoadFavorite.ts` — Phase 1 extraction + type fix for `setBuilderFillMode` literal union
+- `src/components/DockedController.tsx` ï¿½ R-16: replaced hardcoded `50ms` delay with `BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS` import; added `BLE_TIMING` import
+- `src/hooks/useControllerDispatch.ts` ï¿½ R-26: added `isMusicBusyRef` and `isPatternBusyRef` re-entrancy guards (useRef + try/finally) to `applyFixedPattern` and `handleMusicChange`; added `useRef` to React imports
+- `src/hooks/__tests__/useControllerDispatch.test.ts` ï¿½ Boy Scout: added `useRef` to React mock (plain-function test context requires mocked dispatcher)
+- `src/components/FixedPatternPreviewRow.tsx` ï¿½ Phase 1 extraction (new file)
+- `src/components/DockedController.styles.ts` ï¿½ Phase 1 extraction (new file)
+- `src/hooks/useLoadFavorite.ts` ï¿½ Phase 1 extraction + type fix for `setBuilderFillMode` literal union
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
-**Blast Radius bypass reason:** `useControllerDispatch.ts` blast-radius scan flagged `useDockedControllerState.ts` as a dependent — confirmed false positive via grep: zero imports of `useControllerDispatch` in that file. Function signatures unchanged; guards are internal-only.
+**Blast Radius bypass reason:** `useControllerDispatch.ts` blast-radius scan flagged `useDockedControllerState.ts` as a dependent ï¿½ confirmed false positive via grep: zero imports of `useControllerDispatch` in that file. Function signatures unchanged; guards are internal-only.
 **Phase 1 commit:** 75558f8a | **Phase 2 commit:** 97906de1 | **Rebased merge:** 85ca319e
 
-### [MERGE READY] 2026-06-18T12:40Z — fix/onboarding-safety — 5dda15e7
+### [MERGE READY] 2026-06-18T12:40Z ï¿½ fix/onboarding-safety ï¿½ 5dda15e7
 **Files touched:**
-- `src/screens/AuthScreen.tsx` — R-07: `} catch {}` ? `AppLogger.error('[AuthScreen]', ...)` ; R-20: `Platform.OS === 'ios' ? 'padding' : undefined` ? `Platform.select({ ios: 'padding', android: undefined, default: undefined })`
-- `src/screens/Onboarding/HardwareSetupWizardScreen.tsx` — R-16: `2000` ? `KEEP_ALIVE_POLL_MS` module constant; R-20×2: `Platform.OS === 'ios'` ternary ? `Platform.select()` in KeyboardAvoidingView behavior and footer paddingBottom style
+- `src/screens/AuthScreen.tsx` ï¿½ R-07: `} catch {}` ? `AppLogger.error('[AuthScreen]', ...)` ; R-20: `Platform.OS === 'ios' ? 'padding' : undefined` ? `Platform.select({ ios: 'padding', android: undefined, default: undefined })`
+- `src/screens/Onboarding/HardwareSetupWizardScreen.tsx` ï¿½ R-16: `2000` ? `KEEP_ALIVE_POLL_MS` module constant; R-20ï¿½2: `Platform.OS === 'ios'` ternary ? `Platform.select()` in KeyboardAvoidingView behavior and footer paddingBottom style
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
 **What was fixed:**
-- R-07 (AuthScreen L71): Empty `catch {}` now emits `AppLogger.error('[AuthScreen]', ...)` — JSON parse errors in stored credentials are no longer silently swallowed.
-- R-16 (HardwareSetupWizardScreen L163): `setTimeout(..., 2000)` extracted to `KEEP_ALIVE_POLL_MS = 2000` module constant — delay is now self-documenting and easily configurable.
-- R-20 (AuthScreen L98): `Platform.OS === 'ios' ? 'padding' : undefined` ? `Platform.select({ ios: 'padding', android: undefined, default: undefined })` — explicit web/other platform handling.
+- R-07 (AuthScreen L71): Empty `catch {}` now emits `AppLogger.error('[AuthScreen]', ...)` ï¿½ JSON parse errors in stored credentials are no longer silently swallowed.
+- R-16 (HardwareSetupWizardScreen L163): `setTimeout(..., 2000)` extracted to `KEEP_ALIVE_POLL_MS = 2000` module constant ï¿½ delay is now self-documenting and easily configurable.
+- R-20 (AuthScreen L98): `Platform.OS === 'ios' ? 'padding' : undefined` ? `Platform.select({ ios: 'padding', android: undefined, default: undefined })` ï¿½ explicit web/other platform handling.
 - R-20 (HardwareSetupWizardScreen L563): Same KAV behavior fix as AuthScreen.
 - R-20 (HardwareSetupWizardScreen L778): `Platform.OS === 'ios' ? 0 : 12` ? `Platform.select({ ios: 0, android: 12, default: 12 })` in `footer` stylesheet.
 
-### [MERGE READY] 2026-06-18T12:39Z — fix/crew-ui-types — 4ec11d82
+### [MERGE READY] 2026-06-18T12:39Z ï¿½ fix/crew-ui-types ï¿½ 4ec11d82
 **Files touched:**
-- `src/components/crew/CrewCard.tsx` — `styles:any`?`ReturnType<typeof createStyles>`, `Colors:any`?`ThemePalette`, `setStep:any`?`CrewModalStep` union, `profileService:any`?`typeof profileService`, `setCardMembers Record<string,any[]>`?`Record<string,CrewMemberFull[]>`
-- `src/components/crew/CrewLandingMap.web.tsx` — `[key:string]:any` index sig ? `Record<string,unknown>`
-- `src/components/crew/CrewScheduleScreen.tsx` — 2× `_evt:any` ? `DateTimePickerEvent` (imported from @react-native-community/datetimepicker)
-- `src/components/crew/MapFiltersTray.tsx` — `opt:any`?`typeof FILTER_OPTS[number]` (hoisted to module scope), `Colors:any`?`ThemePalette`
+- `src/components/crew/CrewCard.tsx` ï¿½ `styles:any`?`ReturnType<typeof createStyles>`, `Colors:any`?`ThemePalette`, `setStep:any`?`CrewModalStep` union, `profileService:any`?`typeof profileService`, `setCardMembers Record<string,any[]>`?`Record<string,CrewMemberFull[]>`
+- `src/components/crew/CrewLandingMap.web.tsx` ï¿½ `[key:string]:any` index sig ? `Record<string,unknown>`
+- `src/components/crew/CrewScheduleScreen.tsx` ï¿½ 2ï¿½ `_evt:any` ? `DateTimePickerEvent` (imported from @react-native-community/datetimepicker)
+- `src/components/crew/MapFiltersTray.tsx` ï¿½ `opt:any`?`typeof FILTER_OPTS[number]` (hoisted to module scope), `Colors:any`?`ThemePalette`
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
-**Root cause note:** `typeof FILTER_OPTS[number]` requires `FILTER_OPTS` at module scope — it was originally inside the function body making it invisible to the module-level `FilterPill` type definition. Hoisted to module scope; zero behavior change (pure data constant, no closure dependencies).
+**Root cause note:** `typeof FILTER_OPTS[number]` requires `FILTER_OPTS` at module scope ï¿½ it was originally inside the function body making it invisible to the module-level `FilterPill` type definition. Hoisted to module scope; zero behavior change (pure data constant, no closure dependencies).
 
-### [MERGE READY] 2026-06-18T12:36Z — fix/session-context-safety — 18b575b9
+### [MERGE READY] 2026-06-18T12:36Z ï¿½ fix/session-context-safety ï¿½ 18b575b9
 **Files touched:**
-- `src/context/SessionContext.tsx` — R-26 isRecoveringRef re-entrancy guard, R-11 floating import .catch(), R-06 AppLogger on autoPause catch, R-08 SessionPhase import replaces inline `as` cast, R-16 UI_TICK_MS named constant
-- `src/hooks/useTelemetryLedger.ts` — R-11 AppLogger on parse error (L117) and fatal storage error (L144)
+- `src/context/SessionContext.tsx` ï¿½ R-26 isRecoveringRef re-entrancy guard, R-11 floating import .catch(), R-06 AppLogger on autoPause catch, R-08 SessionPhase import replaces inline `as` cast, R-16 UI_TICK_MS named constant
+- `src/hooks/useTelemetryLedger.ts` ï¿½ R-11 AppLogger on parse error (L117) and fatal storage error (L144)
 TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
 **What was fixed:**
-- R-26: `isRecoveringRef = useRef(false)` guard wraps the entire `recover()` body in `try/finally` — prevents concurrent calls from initial load + AppState 'active' firing simultaneously
+- R-26: `isRecoveringRef = useRef(false)` guard wraps the entire `recover()` body in `try/finally` ï¿½ prevents concurrent calls from initial load + AppState 'active' firing simultaneously
 - R-11: Both `import('react-native').then(...)` floating promises now chain `.catch(e => AppLogger.error(...))`
 - R-11: `recover()` calls now `.catch(e => AppLogger.error(...))` instead of fire-and-forget
 - R-06: Empty `catch (e)` at autoPause load (L58) now logs before falling back
@@ -258,11 +275,11 @@ TSC: ?  Jest: ?  Browser: ?  Type Safety: ?  BLE Guards: ?  (8/8 gates green)
 - R-16: `1000` interval literal ? `UI_TICK_MS = 1_000` module-level constant
 - R-11 (useTelemetryLedger): Two empty catch blocks now emit `AppLogger.error` with structured messages
 
-### [MERGE] 2026-06-18T12:30Z — fix/dashboard-screen-safety ? master @ 830ef034
+### [MERGE] 2026-06-18T12:30Z ï¿½ fix/dashboard-screen-safety ? master @ 830ef034
 **Files touched:**
-- `src/screens/DashboardScreen.tsx` — R-08/R-17/R-20/R-25 type safety, event listener leak fix, BackHandler guard, Platform.select
-- `src/hooks/useDashboardAutoConnect.ts` — R-16 extracted magic numbers to module constants
-- `docs/plans/PLAN-fix-dashboard-screen-safety.md` — SKIPPED annotations added for deferred items
+- `src/screens/DashboardScreen.tsx` ï¿½ R-08/R-17/R-20/R-25 type safety, event listener leak fix, BackHandler guard, Platform.select
+- `src/hooks/useDashboardAutoConnect.ts` ï¿½ R-16 extracted magic numbers to module constants
+- `docs/plans/PLAN-fix-dashboard-screen-safety.md` ï¿½ SKIPPED annotations added for deferred items
 TSC: ?  Jest: ?  Gates: all green (8/8 checks)
 **What was fixed:**
 - R-08: `ledgerState?: any` ? `ledgerState?: DevicePatternState` in MemoizedDeviceItemProps; `DevicePatternState` imported from `dashboard.types`
@@ -274,7 +291,7 @@ TSC: ?  Jest: ?  Gates: all green (8/8 checks)
 - R-28 FlatList keyExtractor/getItemLayout: deferred pending extraction of MemoizedDeviceItem to own file
 - R-27 context consumer depth: blocked by S4 (requires structural extraction)
 
-### [MERGE] 2026-06-18T12:28Z — fix/camera-visualizer-safety ? master @ 73e369fa
+### [MERGE] 2026-06-18T12:28Z ï¿½ fix/camera-visualizer-safety ? master @ 73e369fa
 **What merged:**
 - CameraTracker.tsx: Added `{ payload_size: 0, ssi: 0 }` context to 3 `AppLogger.error` calls (R-04)
 - CameraTracker.tsx: Wrapped `onPress` handler in try/catch with `Platform.OS` guard before `Linking.openSettings()` (R-11, R-25); added `Platform` import
@@ -284,9 +301,9 @@ TSC: ?  Jest: ?  Gates: all green (8/8 checks)
 **Files touched:** src/components/CameraTracker.tsx, src/components/visualizer/VisualizerHooks.ts, src/components/admin/tools/tabs/DiagnosticLabBuilderTab.tsx, docs/plans/PLAN-fix-camera-visualizer-safety.md
 **SKIPPED (documented in plan):**
 - CustomEffectVisualizer.tsx deletion: props incompatible with LEDStripPreview (different rendering contracts)
-- VisualizerUnit.tsx R-08 L115 cast: requires modifying ProductVisualizer.tsx (Wave 4 — Out of Scope)
+- VisualizerUnit.tsx R-08 L115 cast: requires modifying ProductVisualizer.tsx (Wave 4 ï¿½ Out of Scope)
 
-### [MERGE READY] 2026-06-18T12:20Z — fix/ble-services-hardening — 653854f2
+### [MERGE READY] 2026-06-18T12:20Z ï¿½ fix/ble-services-hardening ï¿½ 653854f2
 **Files touched:** src/services/ble/RecoveryService.ts, src/services/ble/RSSIService.ts, src/constants/bleTimingConstants.ts
 TSC: ?  Jest: ?  Gates: all green (8/8 checks)
 **What was fixed:**
@@ -294,7 +311,7 @@ TSC: ?  Jest: ?  Gates: all green (8/8 checks)
 - bleTimingConstants.ts: added `RSSI_POLL_INTERVAL_MS: 30_000` to BLE_TIMING registry
 - RSSIService.ts: replaced hardcoded `RSSI_POLL_INTERVAL_MS = 30_000` literal with `BLE_TIMING.RSSI_POLL_INTERVAL_MS` import
 
-### [MERGE READY] 2026-06-18T12:18Z — fix/notifications-routing-safety — b72b8a97
+### [MERGE READY] 2026-06-18T12:18Z ï¿½ fix/notifications-routing-safety ï¿½ b72b8a97
 **Files touched:** src/services/NotificationService.ts, src/services/LocationService.ts, src/providers/BluetoothGuard.tsx, App.tsx
 TSC: ?  Jest: ?  Gates: all green (8/8 checks)
 **What was fixed:**
@@ -338,13 +355,13 @@ TSC: pass  Jest: pass  Gates: all green
 - BleWriteDispatcher already migrated to named constants ? excluded from timer audit
 - DisplayDevice extends Device chosen over adapter functions for type hierarchy fix
 **Don't re-derive:** Wave assignments are based on file collision analysis. Clusters 1+3 are parallel-safe because they touch different aspects of useControllerDispatch (Promise.all vs protocol mapping).
-### [ARTIFACT] 2026-06-16T23:34:00Z — Plan: feat/watch-bidirectional-bridge
+### [ARTIFACT] 2026-06-16T23:34:00Z ï¿½ Plan: feat/watch-bidirectional-bridge
 **Type:** Implementation Plan
 **File:** `docs/plans/PLAN-feat-watch-bidirectional-bridge.md`
 **Source:** Intake workflow based on user request.
 **Details:** Defines the architecture for transforming the one-way watch bridge into a fully bidirectional phone-as-gateway orchestrator.
 
-### [ARTIFACT] 2026-06-16T23:26:00Z — KB Capture: watch-ble-bridge
+### [ARTIFACT] 2026-06-16T23:26:00Z ï¿½ KB Capture: watch-ble-bridge
 **Type:** Knowledge Base Capture
 **File:** `tools/knowledge-base/patterns/watch-ble-bridge.md`
 **Source:** Web Research (Expo / Industry Patterns)
@@ -352,7 +369,7 @@ TSC: pass  Jest: pass  Gates: all green
 **Feeds Into:** `tools/SK8Lytz_App_Master_Reference.md`
 **Re-Validate By:** 2026-09-14
 
-### [ARTIFACT] 2026-06-16T23:25:00Z — Smartwatch Integration Analysis
+### [ARTIFACT] 2026-06-16T23:25:00Z ï¿½ Smartwatch Integration Analysis
 | Artifact | Path | Description |
 |---|---|---|
 | Watch App Analysis | [watch_app_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/c32537a3-610e-4934-884a-37f7878eec17/watch_app_analysis.md) | Comprehensive architectural analysis of Direct BLE vs Companion App models, industry benchmarks, and Expo/React Native integration strategy for watchOS and Wear OS. |
@@ -3820,7 +3837,7 @@ Active Sprint is now empty.
  * * F i l e s   t o u c h e d : * *   s r c / c o m p o n e n t s / c r e w / C r e w C a r d . t s x ,   s r c / c o m p o n e n t s / c r e w / C r e w L a n d i n g S c r e e n . t s x ,   s r c / c o m p o n e n t s / c r e w / C r e w D e t a i l S c r e e n . t s x ,   s r c / c o m p o n e n t s / c r e w / C r e w M a n a g e S c r e e n . t s x ,   s r c / c o m p o n e n t s / c r e w / C r e w C o n t r o l l e r S c r e e n . t s x ,   s r c / c o m p o n e n t s / c r e w / C r e w D e t a i l S t a t s . t s x ,   s r c / c o m p o n e n t s / c r e w / C r e w D e t a i l E d i t F o r m . t s x ,   s r c / c o m p o n e n t s / c r e w / C r e w L a n d i n g M a p . t s x ,   s r c / c o m p o n e n t s / c r e w / C r e w J o i n S c r e e n . t s x 
  
  
-### [MERGE READY] sweep-components-patterns — db61bfd3
+### [MERGE READY] sweep-components-patterns ï¿½ db61bfd3
 Files touched:
 - src/components/patterns/GradientLibraryTab.tsx
 - src/components/patterns/PatternPickerTab.tsx
@@ -3839,7 +3856,7 @@ Files touched: src/components/DeviceItem.tsx
 TSC: ?  Jest: ?
 
 
-### [MERGE READY] sweep-hooks-useCrewProximityRadar.ts — 6c08d78ce212b87201712f8c3e2941a60f9d2ec5
+### [MERGE READY] sweep-hooks-useCrewProximityRadar.ts ï¿½ 6c08d78ce212b87201712f8c3e2941a60f9d2ec5
 Files touched: src/hooks/useCrewProximityRadar.ts, docs/plans/PLAN-sweep-hooks-useCrewProximityRadar.ts.md
 TSC: ?  Jest: ?
 ### [MERGE READY] sweep-components-DockedController.tsx - c38628370cdca79a7de5cf319275584ed862558c
@@ -3874,7 +3891,7 @@ TSC: ?  Jest: ?
 Files touched: src/components/LocationPicker.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep-components-VisualizerUnit.tsx — a354ec9f
+### [MERGE READY] sweep-components-VisualizerUnit.tsx ï¿½ a354ec9f
 Files touched: src/components/VisualizerUnit.tsx, src/components/visualizer/VisualizerHooks.ts
 TSC: ?  Jest: ?
 
@@ -3890,7 +3907,7 @@ TSC: ?  Jest: ?
 Files touched: src/hooks/useCrewSession.ts
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep-hooks-useProductManager.ts — 4e0662d4
+### [MERGE READY] sweep-hooks-useProductManager.ts ï¿½ 4e0662d4
 Files touched: src/hooks/useProductManager.ts
 TSC: ?  Jest: ?
 
@@ -3979,12 +3996,12 @@ Files touched:
 TSC: ?  Jest: ?
 
 
-### [MERGE] 2026-06-14T17:22 — Wave 1 Sweeps ? master
+### [MERGE] 2026-06-14T17:22 ï¿½ Wave 1 Sweeps ? master
 **What merged:** 7 worktrees from the AST-verified Wave 1 batch.
 **Verify result:** TSC ?, Jest ?, gates ?, cryptographic attestations verified.
 **Files touched:** Extensively across the UI and BLE hooks domains.
 
-### [MERGE] 2026-06-14T17:33 — sweep-src-components-DockedController.tsx ? master
+### [MERGE] 2026-06-14T17:33 ï¿½ sweep-src-components-DockedController.tsx ? master
 **What merged:** Extracted useDockedPermissions and useCrewLeaderBroadcast, unified Context usage, fixed PII logging, added try/catch, fixed returning types.
 **Verify result:** TSC ?, Jest ?, gates ?, cryptographic attestations verified.
 **Files touched:** DockedController.tsx, CommunityModal.tsx, useDockedPermissions.ts, useCrewLeaderBroadcast.ts, ScenesService.ts
@@ -4045,20 +4062,20 @@ TSC: ?  Jest: ?
 Files touched: src/components/permissions/GranularPermissionsList.tsx
 TSC: ?  Jest: ?
 
-### [MERGE] 2026-06-14T18:17 — Wave 3 Batched Fixes
+### [MERGE] 2026-06-14T18:17 ï¿½ Wave 3 Batched Fixes
 **What merged:**
 - sweep-src-components-GlobalErrorBoundary.tsx ? master @ 2f89923f
 - sweep-src-components-permissions ? master @ cbf8342b
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/GlobalErrorBoundary.tsx, src/components/permissions/GranularPermissionsList.tsx
 
-### [MERGE READY] sweep-src-context — aa7f7471
+### [MERGE READY] sweep-src-context ï¿½ aa7f7471
 Files touched:
 - src/context/AuthContext.tsx
 - docs/plans/PLAN-sweep-src-context.md
 TSC: ?  Jest: ?
 
-### [MERGE] 2026-06-14T13:32 — sweep-src-components-crew ? master @ e943efab
+### [MERGE] 2026-06-14T13:32 ï¿½ sweep-src-components-crew ? master @ e943efab
 **What merged:** Sweeping refactor of the Crew Domain components. Extracted SessionMarker and FilterPill to prevent re-renders. Addressed accessibility and removed PII.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/crew/CrewCard.tsx, CrewLandingScreen.tsx, CrewDetailScreen.tsx, MapFiltersTray.tsx, CrewLandingMap.tsx, CrewCreateScreen.tsx, etc.
@@ -4067,12 +4084,12 @@ Files touched:
 - src/components/PositionalGradientBuilder.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep-src-components-ProductVisualizer.tsx — 89cf09bf
+### [MERGE READY] sweep-src-components-ProductVisualizer.tsx ï¿½ 89cf09bf
 Files touched:
 - src/components/ProductVisualizer.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep-src-components-ProductVisualizer.tsx — 89cf09bf
+### [MERGE READY] sweep-src-components-ProductVisualizer.tsx ï¿½ 89cf09bf
 Files touched:
 - src/components/ProductVisualizer.tsx
 TSC: ?  Jest: ?
@@ -4111,14 +4128,14 @@ TSC: ?  Jest: ?
 >>>>>>> b981d161 (chore(log): update SESSION_LOG.md)
 
 
-### [MERGE] 2026-06-14T19:00 — Wave 5 Batched Fixes
+### [MERGE] 2026-06-14T19:00 ï¿½ Wave 5 Batched Fixes
 **What merged:**
 - sweep-src-services ? master @ 2647c760
 - sweep-src-components-CustomSlider.tsx ? master @ 0f881896
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/services/* (31 files), src/components/CustomSlider.tsx
 
-### [ARTIFACT] 2026-06-14T22:30:02 — AST-Verified Extraction Plans
+### [ARTIFACT] 2026-06-14T22:30:02 ï¿½ AST-Verified Extraction Plans
 **Plans Generated:** PLAN-extract-and-sweep-AppLogger.ts.md, PLAN-extract-and-sweep-DeviceRepository.ts.md, PLAN-extract-and-sweep-CrewService.ts.md
 **Decision:** Based on AST collision analysis, these three monoliths were separated into Wave 6 (Foundation: AppLogger) and Wave 7 (Dependents: DeviceRepository, CrewService) to prevent import reference merge conflicts.
 **Link:** [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/3d2a7d84-27f3-4652-93e1-22a80e55076e/implementation_plan.md)
@@ -4132,7 +4149,7 @@ Files touched:
 TSC: ?  Jest: ?
 
 
-### [MERGE READY] sweep-src-hooks — 3cc9eecb0e7a8e44af4f69680b38fd78a72a289d
+### [MERGE READY] sweep-src-hooks ï¿½ 3cc9eecb0e7a8e44af4f69680b38fd78a72a289d
 **Files touched:**
 - docs/SESSION_LOG.md
 - docs/SK8Lytz_Bucket_List.md
@@ -4171,7 +4188,7 @@ TSC: ?  Jest: ?
 - src/hooks/useTelemetryLedger.ts
 **TSC:** ?  **Jest:** ?
 
-### [MERGE READY] sweep-remediation-wave1to6 — c86733b6
+### [MERGE READY] sweep-remediation-wave1to6 ï¿½ c86733b6
 **Files touched:**
 - src/components/permissions/GranularPermissionsList.tsx
 - src/services/LocationService.ts
@@ -4184,7 +4201,7 @@ TSC: ?  Jest: ?
 **TSC:** ?  **Jest:** ?
 
 
-### [MERGE] 2026-06-15T12:55 — sweep-remediation-wave1to6 -> master @ 5210326c
+### [MERGE] 2026-06-15T12:55 ï¿½ sweep-remediation-wave1to6 -> master @ 5210326c
 **What merged:**
 - XState RESTORING delay transition in BleMachine
 - Created FavoritesService layer
@@ -4206,7 +4223,7 @@ TSC: ?  Jest: ?
 - src/services/ble/BleMachine.ts
 - src/hooks/useBLE.ts
 
-### [MERGE] 2026-06-15T18:31 — extract-and-sweep-DeviceRepository.ts ? master @ 69eac04f81e35463900eb66ff69c338388fd16a5
+### [MERGE] 2026-06-15T18:31 ï¿½ extract-and-sweep-DeviceRepository.ts ? master @ 69eac04f81e35463900eb66ff69c338388fd16a5
 **What merged:** 
 - Extracted monolithic DeviceRepository.ts into a modular deviceRepository directory
 - Separated local storage, state management, and cloud sync into dedicated classes
@@ -4293,7 +4310,7 @@ Files touched: AccountModal.tsx, AccountModalSkeleton.tsx, AccountModalStyles.ts
 Verify result: TSC ?, Jest ?, gates ?
 
 
-### [ARTIFACT] 2026-06-15T19:22:00 — KB Capture: mobile-perf-visualization
+### [ARTIFACT] 2026-06-15T19:22:00 ï¿½ KB Capture: mobile-perf-visualization
 **Type:** Knowledge Base Capture
 **File:** \	ools/knowledge-base/patterns/mobile-perf-visualization.md\ 
 **Source:** Web Research (Sentry RUM, Datadog RUM, Firebase Performance Documentation)
@@ -4302,7 +4319,7 @@ Verify result: TSC ?, Jest ?, gates ?
 **Re-Validate By:** 2026-12-12
 
 
-### [ARTIFACT] 2026-06-15T19:24:00 — PLAN: PLAN-feat-command-center-perf-charts.md
+### [ARTIFACT] 2026-06-15T19:24:00 ï¿½ PLAN: PLAN-feat-command-center-perf-charts.md
 **Type:** Implementation Plan
 **File:** \docs/plans/PLAN-feat-command-center-perf-charts.md\ 
 **Key Finding:** Visualizes TTID and TTFD load times per-screen in a grid of area charts in the Command Center web dashboard.
@@ -4311,22 +4328,22 @@ Verify result: TSC ?, Jest ?, gates ?
 
 
 
-### [MERGE READY] feat/command-center-perf-charts — 06348bc3
+### [MERGE READY] feat/command-center-perf-charts ï¿½ 06348bc3
 Files touched:
 - tools/command-center/src/components/widgets/AppPerformanceWidget.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] fix-command-center-ref-crash — ab7f4852
+### [MERGE READY] fix-command-center-ref-crash ï¿½ ab7f4852
 Files touched:
 - tools/command-center/src/components/widgets/AppPerformanceWidget.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] fix-camera-mode-docked — 2c811720
+### [MERGE READY] fix-camera-mode-docked ï¿½ 2c811720
 Files touched:
 - src/hooks/useDockedPermissions.ts
 TSC: ?  Jest: ?
 
-### [DECISION] 2026-06-15T22:53 — Web Demo SafeArea Crash
+### [DECISION] 2026-06-15T22:53 ï¿½ Web Demo SafeArea Crash
 **Decision:** Added web-only zero-fallback initialMetrics to SafeAreaProvider in App.tsx.
 **Rejected:** Allowing default measurement (crashes web demo on first paint).
 **Don't re-derive:** react-native-safe-area-context measures DOM asynchronously. Calling useSafeAreaInsets synchronously on first render throws if no fallback is provided.
@@ -4337,7 +4354,7 @@ Files touched:
 - App.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] bug-fix-batch — c5e89db0aa2651511a3914e636ed2fc145383acb
+### [MERGE READY] bug-fix-batch ï¿½ c5e89db0aa2651511a3914e636ed2fc145383acb
 **Files touched:**
 - src/hooks/useDashboardController.tsx
 - src/hooks/useDashboardGroups.ts
@@ -4345,7 +4362,7 @@ TSC: ?  Jest: ?
 - src/services/BleWriteDispatcher.ts
 **TSC:** ?  **Jest:** ?
 
-### [MERGE] 2026-06-15T23:41 — bug-fix-batch ? master @ 4145ea63
+### [MERGE] 2026-06-15T23:41 ï¿½ bug-fix-batch ? master @ 4145ea63
 **What merged:**
 - Swapped order of object spread in useDashboardController to prioritize device settings from local DB (EEPROM cached config).
 - Synced product_type from Supabase to local DB to ensure type consistency across dashboard groups.
@@ -4361,7 +4378,7 @@ Files touched:
 TSC: ?  Jest: ?
 
 
-### [MERGE] 2026-06-15T23:54 — feat-command-center-perf-charts ? master @ e109135e
+### [MERGE] 2026-06-15T23:54 ï¿½ feat-command-center-perf-charts ? master @ e109135e
 **What merged:**
 - Implemented screen-level TTID/TTFD latency charts in AppPerformanceWidget.tsx.
 **Verify result:** TSC ?, Jest ?, gates ?
@@ -4382,7 +4399,7 @@ TSC: ?  Jest: ?
 **Verify result:** Anonymous dumps now bypass auth blocks and land in telemetry_snapshots.
 **Files touched:** supabase/migrations/20260616053000_restore_anonymous_telemetry.sql
 
-### [MERGE READY] fix/ble-group-sync-debounce — 7fda0552
+### [MERGE READY] fix/ble-group-sync-debounce ï¿½ 7fda0552
 **Files touched:**
 - src/services/BleWriteDispatcher.ts
 - src/hooks/useBLE.ts
@@ -4393,7 +4410,7 @@ TSC: ?  Jest: ?
 - index.ts
 **Verify result:** TSC ?, Jest ?
 
-### [MERGE READY] feat/deep-dive-fixes-wave1 — fd106363
+### [MERGE READY] feat/deep-dive-fixes-wave1 ï¿½ fd106363
 Files touched:
 - src/services/BleWriteDispatcher.ts
 - src/services/ble/InterrogatorService.ts
@@ -4406,32 +4423,32 @@ Files touched:
 TSC: ?  Jest: ?
 
 
-### [MERGE] 2026-06-16T22:48 — feat/deep-dive-fixes-wave1 -> master @ 17902bb2
+### [MERGE] 2026-06-16T22:48 ï¿½ feat/deep-dive-fixes-wave1 -> master @ 17902bb2
 **What merged:** Unified fixes for BLE Protocol Corruption, Memory Leaks, and Unhandled Async Rejections.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** BleWriteDispatcher.ts, InterrogatorService.ts, useControllerDispatch.ts, useBLE.ts, ConnectService.ts, RecoveryService.ts, RSSIService.ts, CameraTracker.tsx
 
-### [MERGE] 2026-06-16T23:10 — feat/deep-dive-fixes-wave1 -> master
+### [MERGE] 2026-06-16T23:10 ï¿½ feat/deep-dive-fixes-wave1 -> master
 **What merged:** Fixed critical BLE issue where groups only fired to single skate by changing global writeGeneration tracking to per-device (debounceKey) tracking in BleWriteDispatcher and BleWriteQueue. Parallelized Promise.all loops in useControllerDispatch. Added border and flexWrap to UniversalColorGrid to make black/white dots visible.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** BleWriteDispatcher.ts, BleWriteQueue.ts, useBLE.ts, useControllerDispatch.ts, UniversalColorGrid.tsx
 
-### [DECISION] 2026-06-16T23:08 — Halt Release & Upgrade Expo 56
+### [DECISION] 2026-06-16T23:08 ï¿½ Halt Release & Upgrade Expo 56
 **Decision:** Paused the `/ship-it` release pipeline to perform a major dependency upgrade to Expo SDK 56.
 **Rejected:** Proceeding with the release despite 20 moderate `js-yaml` vulnerabilities.
 **Don't re-derive:** The user explicitly commanded overriding the release freeze to wipe out all outstanding NPM tech debt. This is a massive architectural shift (React Native 0.85) executed as an emergency mid-release injection.
 **Source:** User prompt
 
-### [ARTIFACT] 2026-06-16T23:09 — Expo 56 Upgrade Plan
+### [ARTIFACT] 2026-06-16T23:09 ï¿½ Expo 56 Upgrade Plan
 Plan drafted: `docs/plans/PLAN-refactor-upgrade-expo-56.md`
 
-### [DECISION] 2026-06-16T23:38 — Rich OS Notifications Architecture
+### [DECISION] 2026-06-16T23:38 ï¿½ Rich OS Notifications Architecture
 **Decision:** Upgrade standard text notifications to use iOS Live Activities (ActivityKit) and Android Custom RemoteViews with 3 interactive buttons (End Session, Music Mode, Favorite).
-**Rejected:** Bypassing `BleWriteDispatcher` for quick-favorite BLE writes — rejected because it violates the global write synchronization lock and leads to GATT 133 errors. We will use headless UI dispatches instead.
+**Rejected:** Bypassing `BleWriteDispatcher` for quick-favorite BLE writes ï¿½ rejected because it violates the global write synchronization lock and leads to GATT 133 errors. We will use headless UI dispatches instead.
 **Don't re-derive:** Notifee supports basic headless actions, but iOS requires dropping down to native SwiftUI via an Expo plugin/module to achieve the Dynamic Island/Lock Screen widget.
 **Source:** User approval and benchmarking of Spotify/Strava/Uber standards.
 
-### [ARTIFACT] 2026-06-16T23:38 — PLAN-feat-rich-os-notifications Created
+### [ARTIFACT] 2026-06-16T23:38 ï¿½ PLAN-feat-rich-os-notifications Created
 | Artifact | Path | Description |
 |---|---|---|
 | Rich Notifications Plan | [PLAN-feat-rich-os-notifications.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-feat-rich-os-notifications.md) | Architectural plan for implementing Android Custom RemoteViews and iOS Live Activities. |
@@ -4471,17 +4488,17 @@ TSC: ?  Jest: ?
 **Plan Link**: docs/plans/PLAN-fix-hal-parity.md
 **Context**: Created plan to refactor UI components to use useProtocolDispatch to solve mixed-protocol parity splits.
 
-### [MERGE READY] fix/pii-scrubber — c3c8deb4
+### [MERGE READY] fix/pii-scrubber ï¿½ c3c8deb4
 Files touched:
 - src/components/admin/tools/Sk8LytzProgrammer.tsx (FIXED: unit: id ? unit: scrubPII(id) at L222)
 - docs/plans/PLAN-fix-pii-scrubber.md (SKIPPED annotations for 3 already-compliant files)
 TSC: ?  Jest: ?  BLE Guards: ?  Type Safety: ?  Browser QG: ?
 
 **Audit findings:**
-- Sk8LytzProgrammer.tsx: FIXED — `unit: id` was leaking raw MAC. `deviceId` was already scrubbed but `unit` was not. Patched to `unit: scrubPII(id)`.
-- CrewDetailScreen.tsx: SKIPPED — L122 already uses `crewName: scrubPII(editCrewName.trim())`.
-- CrewLandingScreen.tsx: SKIPPED — L124, L145 already use `crewName: scrubPII(crew.name)`.
-- CrewManageScreen.tsx: SKIPPED — L67 already uses `crewName: scrubPII(crew.name)`. City is location data, not PII.
+- Sk8LytzProgrammer.tsx: FIXED ï¿½ `unit: id` was leaking raw MAC. `deviceId` was already scrubbed but `unit` was not. Patched to `unit: scrubPII(id)`.
+- CrewDetailScreen.tsx: SKIPPED ï¿½ L122 already uses `crewName: scrubPII(editCrewName.trim())`.
+- CrewLandingScreen.tsx: SKIPPED ï¿½ L124, L145 already use `crewName: scrubPII(crew.name)`.
+- CrewManageScreen.tsx: SKIPPED ï¿½ L67 already uses `crewName: scrubPII(crew.name)`. City is location data, not PII.
 
 ### [MERGE] 2026-06-17T00:10  feat/rich-os-notifications -> master @ 1ac8e688
 **What merged:** Android Custom RemoteViews with 3 interactive buttons (End, Music, Favorite). Implemented headless background dispatch wired directly to BleWriteQueue.
@@ -4494,7 +4511,7 @@ TSC: ?  Jest: ?  BLE Guards: ?  Type Safety: ?  Browser QG: ?
 **Files touched:** UniversalTacticalSliders.tsx, BuilderPanel.tsx, UniversalSlidersFooter.tsx, DockedController.tsx
 
 
-### [ARTIFACT] 2026-06-17T05:35:00Z — Crewz Domain Audit Report
+### [ARTIFACT] 2026-06-17T05:35:00Z ï¿½ Crewz Domain Audit Report
 **Artifact:** crewz_audit_report.md
 **Key Finding:** Crewz group sessions are 100% reliant on Supabase Realtime pub/sub, violating the Offline-First Mandate. Latency risks are high, and there is no automated host migration if a leader crashes.
 **Status:** Analysis complete, Roadmap generated.
@@ -4601,7 +4618,7 @@ TSC: ?  Jest: ?
 
 
 
-### [MERGE] 2026-06-17T16:43:25.172Z — fix/fsm-state-matrix -> master @ c437e5c2
+### [MERGE] 2026-06-17T16:43:25.172Z ï¿½ fix/fsm-state-matrix -> master @ c437e5c2
 **What merged:** Normalized remaining Tier 2 & Tier 3 error variables to FSM state matrix (ViewState).
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/crew/CrewJoinScreen.tsx, src/components/crew/CrewLandingScreen.tsx, src/hooks/useAccountOverview.ts, src/providers/ComplianceGate.tsx, etc.
@@ -4630,18 +4647,18 @@ TSC: PASS  Jest: PASS
 - Auth verification + membership check now use callerClient (anon+JWT, RLS-enforced)
 - Added PushTokenRow, ExpoMessage interfaces; typed fetchPromises, batch, all catch blocks as unknown
 - Documented PostgREST !inner join relationship in comments
-### [MERGE READY] 2026-06-18T12:05Z — fix/data-layer-types @ 12351d01
+### [MERGE READY] 2026-06-18T12:05Z ï¿½ fix/data-layer-types @ 12351d01
 **Files touched:** src/services/SkateSpotsService.ts (R-07 empty catch fixed), docs/plans/PLAN-fix-data-layer-types.md (SKIPPED annotations)
 **TSC:** ?  **Jest:** ?  **BLE Guards:** ?  **Type Safety:** ?
 
 **Audit findings:**
-- ScenesService.ts: SKIPPED — no violations (already clean)
-- GradientsService.ts: SKIPPED — no violations (already clean)
-- SkateSpotsService.ts: FIXED R-07 — empty catch at L39 now logs via AppLogger.error with instanceof Error unwrapping
-- DeviceRepositoryService.ts: SKIPPED — no violations (already uses const msg = e instanceof Error pattern)
-- SpeedTrackingService.ts: SKIPPED — no violations (offline-first already implemented, storage key constants in place)
-- HealthSyncService.ts: SKIPPED — no violations (R-08 fix already present with comment)
-- GlobalForegroundService.ts: SKIPPED — no violations (clean catch blocks)
+- ScenesService.ts: SKIPPED ï¿½ no violations (already clean)
+- GradientsService.ts: SKIPPED ï¿½ no violations (already clean)
+- SkateSpotsService.ts: FIXED R-07 ï¿½ empty catch at L39 now logs via AppLogger.error with instanceof Error unwrapping
+- DeviceRepositoryService.ts: SKIPPED ï¿½ no violations (already uses const msg = e instanceof Error pattern)
+- SpeedTrackingService.ts: SKIPPED ï¿½ no violations (offline-first already implemented, storage key constants in place)
+- HealthSyncService.ts: SKIPPED ï¿½ no violations (R-08 fix already present with comment)
+- GlobalForegroundService.ts: SKIPPED ï¿½ no violations (clean catch blocks)
 
 **Note:** 6 of 7 files were already clean from prior fixes (deepdive-hunt team's work). Only one live violation found and fixed.
 
@@ -4667,7 +4684,7 @@ Files touched: docs/plans/PLAN-fix-data-layer-types.md
 TSC: ?  Jest: ?
 
 
-### [MERGE READY] fix/manifest-permissions — f21e00c8
+### [MERGE READY] fix/manifest-permissions ï¿½ f21e00c8
 **Files touched:** app.config.js
 **TSC:** ?  **Jest:** ?
 
@@ -4748,11 +4765,11 @@ TSC: ?  Jest: ?
 ### [EVENT] 2026-06-21T05:19Z - Goal Complete: BATCH:sweep/deep-dive
 **Summary:** Successfully executed and merged all sub-tasks in Wave 1 and Wave 2 (including C04, C05, C06, C07). Master branch is green and all worktrees have been safely torn down.
 
-### [MERGE READY] sweep/flatlist-perf — ff3503b5
+### [MERGE READY] sweep/flatlist-perf ï¿½ ff3503b5
 Files touched: src/components/admin/AdminToolsModal.tsx, src/components/VerticalPatternDrum.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep/accessibility-i18n — 5faefc31
+### [MERGE READY] sweep/accessibility-i18n ï¿½ 5faefc31
 Files touched:
 - src/components/admin/AdminToolsModal.tsx
 - src/components/ConnectionStrengthBadge.tsx
@@ -4768,7 +4785,7 @@ TSC: ?  Jest: ?
  F i l e s   t o u c h e d :   d o c s / p l a n s / P L A N - s w e e p - C 0 8 - m e m o r y - l e a k s . m d  
  T S C :   '    J e s t :   ' 
  
-### [MERGE READY] sweep-reentrancy-guards — f7416f828e7e6cfe237abe281b9db0cd88f81e6f
+### [MERGE READY] sweep-reentrancy-guards ï¿½ f7416f828e7e6cfe237abe281b9db0cd88f81e6f
 Files touched:
 - src/screens/Onboarding/HardwareSetupWizardScreen.tsx
 - src/hooks/useDashboardGroups.ts
@@ -4801,7 +4818,7 @@ Files touched:
 - src/services/SpeedTrackingService.ts
 TSC: ?  Jest: ?
 
-### [MERGE] 2026-06-21T13:10 — fix-audit-gaps -> master @ 20db04130526c4027447a2950180d3ead6ab07d7
+### [MERGE] 2026-06-21T13:10 ï¿½ fix-audit-gaps -> master @ 20db04130526c4027447a2950180d3ead6ab07d7
 **What merged:** Fixes for R-24, R-20, R-29 (CrewSessionManager cycle), R-21 (SpeedTrackingService mutex).
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/constants/storageKeys.ts, src/screens/DashboardScreen.tsx, src/screens/Dashboard/DashboardCrewHub.tsx, app.config.js, src/services/CrewService/CrewSessionManager.ts, src/services/SpeedTrackingService.ts
