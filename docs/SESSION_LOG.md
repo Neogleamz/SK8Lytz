@@ -1,3 +1,28 @@
+### [MERGE READY] feat/crew-scheduled-server-side — 3623b9c5
+
+**Batch:** [BATCH:crew-e2e] Wave 3 of 3
+**Files touched:**
+
+- `supabase/functions/activate-scheduled-crews/index.ts` (CREATE)
+- `supabase/migrations/20260622000000_activate_scheduled_crews_cron.sql` (CREATE)
+- `src/services/CrewService/CrewSessionManager.ts` (MODIFY — is_active insert + scheduled join error)
+- `src/components/crew/CrewScheduleScreen.tsx` (MODIFY — 15-min local reminder wired)
+- `src/hooks/useDashboardProfile.ts` (MODIFY — sessionId type + passthrough)
+- `src/screens/DashboardScreen.tsx` (MODIFY — onCrewJoinNotification signature)
+- `docs/SK8Lytz_App_Master_Reference.md` (MODIFY — VS-003 docs gate)
+
+**TSC:** ✅  **Jest:** ✅  **All 8 verify gates:** ✅
+
+**DEFERRED MANUAL DEPLOY STEPS (cannot be verified in this environment):**
+
+1. Replace `<PROJECT_REF>` and `<CRON_SECRET>` in `supabase/migrations/20260622000000_activate_scheduled_crews_cron.sql` before deploying
+2. `supabase functions deploy activate-scheduled-crews`
+3. `supabase db push` (applies the cron migration)
+4. Verify in Supabase SQL editor: `select jobname, schedule, active from cron.job where jobname='activate-scheduled-crews-every-min';` — expect 1 row, active=true
+5. After ~2 min: check `cron.job_run_details` for `status='succeeded'` rows
+
+**Note:** `deno check` skipped — deno CLI not available in this environment. Edge function type-correctness verified by manual review against plan Step 1 source.
+
 ### [MERGE] fix/crew-membership-presence → master @ 37223566
 
 **Batch:** [BATCH:crew-e2e] Wave 2 of 3
