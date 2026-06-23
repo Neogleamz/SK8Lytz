@@ -33,7 +33,7 @@
   - **Source of Truth:** `package.json` deps `sk8lytz-watch-bridge` · `.gitignore:167` `modules/sk8lytz-watch-bridge/` (whole module gitignored) · dir empty on this checkout. Spike: confirm if a config plugin (`./plugins/withWearOsModule`, `@bacons/apple-targets`) generates it at prebuild, or if it must be committed/scaffolded for CI.
 
 - [ ] **`fix/ble-disconnect-service`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:branch-salvage]` `[WAVE:2]` `[⛔ BLOCKED BY: refactor/burn-down-audit-failures]`
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:branch-salvage]` `[WAVE:2]`
   - **Goal:** Port DisconnectService GATT teardown actor + FEF3 UUID scan detection from salvaged backup branch — fixes orphaned GATT zombie connections (VS-005) and silent device drops on fresh install.
   - **Decision Log:** Branch audit 2026-06-23 found `DisconnectService.ts` (new file) and FEF3 UUID detection NOT in master despite being implemented in `temp-troubleshoot-backup` commit `a3146b5f`. GATT orphaning causes reconnect failures that appear as BLE hangs. Blocked on Wave 1 (`refactor/burn-down-audit-failures`) due to shared `useBLEScanner.ts` edit — both tasks modify that file.
   - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-fix-ble-disconnect-service.md](./plans/PLAN-fix-ble-disconnect-service.md)
@@ -207,18 +207,12 @@
 
 | Wave | Task | Parallel-Safe? | Prerequisite | Collision Basis |
 |------|------|---------------|-------------|-----------------|
-| **1** | `refactor/burn-down-audit-failures` | Solo | None | `AuthContext.tsx`, `useBLEScanner.ts`, 28 other files |
-| **2** | `fix/ble-disconnect-service` | Solo | Wave 1 merged | shared `useBLEScanner.ts` |
+| **1** | ~~`refactor/burn-down-audit-failures`~~ | — | — | SUPERSEDED — master already clean |
+| **2** | `fix/ble-disconnect-service` | Solo | None (Wave 1 superseded) | standalone — no collision |
 
-- [ ] **`refactor/burn-down-audit-failures`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[AUTH]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:branch-salvage]` `[WAVE:1]`
-  - **Goal:** Verify and merge the completed auth-context dependency injection refactor — eliminates all rogue `supabase.auth.getUser()` calls from services/hooks, centralises auth through `AuthContext`.
-  - **Decision Log:** Branch `refactor/burn-down-audit-failures` was marked "pending manual gatekeeper merge" in SESSION_LOG 2026-06-07 but never executed. Branch audit 2026-06-23 confirmed the work is complete (30 files, 3 commits), plan exists, branch is clean. TSC/Jest were bypassed at review time — must re-run `npm run verify` before merge.
-  - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-refactor-burn-down-audit-failures.md](./plans/PLAN-refactor-burn-down-audit-failures.md)
-    Key finding: 25+ rogue `supabase.auth.getUser()` calls eliminated from CrewService, CrewProfileService, DeviceRepository, ScenesService, NotificationService; `userId: string` injection enforced at all callers. Code already done on branch — task is verify + gatekeeper.
-    Rejected alternative: Cherry-pick individual commits — unnecessary; branch is clean and complete as a unit.
-  - **Source of Truth:** 📖 [PLAN-refactor-burn-down-audit-failures.md](./plans/PLAN-refactor-burn-down-audit-failures.md) · `refactor/burn-down-audit-failures` branch HEAD `185d41d0` · [AuthContext.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/AuthContext.tsx)
-  - **Details:** Branch exists. Work is done. Task = run `npm run verify`, fix any TSC regressions (master has moved since June 7), then gatekeeper merge and delete branch.
+- [x] **`refactor/burn-down-audit-failures`** — SUPERSEDED ✅ work already in master via subsequent development
+  - **Tags:** `[x]` `[AUTH]` `[✅ L-RISK]` `[🍱 Meal]` `[BATCH:branch-salvage]` `[WAVE:1]`
+  - **Decision Log (2026-06-23 — CLOSED):** Attempted gatekeeper merge. Rebase revealed `CrewService.ts` was deleted in master (extracted to modular `src/services/CrewService/` directory). Grep confirmed ALL goals already achieved: zero rogue `supabase.auth.getUser()` in services/hooks, `bleGateRef` gone, `AuthContext` has all 5 auth methods with proper Supabase types (better than branch's `unknown` types). Merging would be a regression. Branch `185d41d0` deleted. Wave 2 unblocked — no `useBLEScanner.ts` collision concern remains.
 
 - [ ] **`feat/applogger-mmkv-storage`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[PERF]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]`
