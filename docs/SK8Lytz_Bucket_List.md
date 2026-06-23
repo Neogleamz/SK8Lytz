@@ -11,9 +11,10 @@
 
 ## 🚧 ACTIVE SPRINT
 
-- [/] **`fix/crew-broadcast-scene`** — `[BATCH:crew-e2e]` `[WAVE:1]`
-  - **Worktree:** `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\fix\crew-broadcast-scene`
-  - **Plan:** 📎 [PLAN-fix-crew-broadcast-scene.md](./plans/PLAN-fix-crew-broadcast-scene.md)
+- [x] **`fix/crew-broadcast-scene`** — merged `2964d5a4` ✅
+- [/] **`fix/crew-membership-presence`** — `[BATCH:crew-e2e]` `[WAVE:2]`
+  - **Worktree:** `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\fix\crew-membership-presence`
+  - **Plan:** 📎 [PLAN-fix-crew-membership-presence.md](./plans/PLAN-fix-crew-membership-presence.md)
 
 ---
 
@@ -59,14 +60,14 @@ at useBLESweeper.ts:145
 
 > ⚠️ AST tool output: `total_collisions: 3`, `total_waves: 3` — all three pairwise-collide on shared files; **zero parallelism**, strictly sequential per VS-001.
 
-- [/] **`fix/crew-broadcast-scene`**
+- [x] **`fix/crew-broadcast-scene`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:crew-e2e]` `[WAVE:1]`
   - **Plan:** 📎 [PLAN-fix-crew-broadcast-scene.md](./plans/PLAN-fix-crew-broadcast-scene.md)
   - **Goal:** Repair leader→member light sync end-to-end. Delete the dead `broadcastScene`/`onCrewSceneChange` path; expose+wire `broadcastPayload` as the leader broadcast; fix the member receiver to route the `number[]` payload via a new `applyCrewPayload` handle into `writeToDevice` (not `applyCloudScene`).
   - **Decision Log:** Reyes VERIFIED (HIGH) — broadcastScene is a no-op AND broadcastPayload had zero callers AND member receiver type-mismatched. User chose Scope A (full repair). See docs/analysis/crew-broadcast-scene-redundancy.md.
   - **Source of Truth:** PLAN-fix-crew-broadcast-scene.md §Files to Create/Modify (7 files: CrewRealtime.ts, CrewService.ts, types.ts, useCrewLeaderBroadcast.ts [delete], DockedController.tsx, useDashboardController.tsx, DashboardScreen.tsx).
 
-- [ ] **`fix/crew-membership-presence`**
+- [/] **`fix/crew-membership-presence`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DATA]` `[M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:crew-e2e]` `[WAVE:2]`
   - **Plan:** 📎 [PLAN-fix-crew-membership-presence.md](./plans/PLAN-fix-crew-membership-presence.md)
   - **Goal:** Leader sees members live + every member renders with real name/avatar. Emit the missing `member_update` broadcast on join/leave; wire the two `() => {}` leader callbacks to refresh member UI; rewrite the `CrewMemberDashboard` query off the non-existent `role` column + `user_profiles` implicit join (use existing `crew_members.display_name` + derived role + explicit avatar query). NO migration needed.
