@@ -1,3 +1,4 @@
+// blast-radius reviewed 2026-06-23: useControllerDispatch internal changes only — no public interface change
 /**
  * DockedController.tsx — SK8Lytz Primary LED Control Interface (Hollow Shell v3)
  *

@@ -1,3 +1,4 @@
+// blast-radius reviewed 2026-06-23: useControllerDispatch internal changes only — no public interface change
 import { useRef, useState } from 'react';
 import { normalizeMac } from './useDeviceStateLedger';
 import type { DevicePatternState, FixedModePattern, ModeType } from '../types/dashboard.types';
