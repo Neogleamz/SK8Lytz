@@ -353,7 +353,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     pendingJoinCrewId: _pendingJoinCrewId,
     setPendingJoinCrewId,
   } = useDashboardCrew({
-    onApplyScene: (scene) => dockedControllerRef.current?.applyCloudScene(scene),
+    onApplyScene: (payload) => dockedControllerRef.current?.applyCrewPayload(payload as number[]),
   });
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
 
@@ -598,8 +598,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     disconnectFromDevice();
   }, [disconnectFromDevice, endSession]);
 
-  const handleCrewHubApplyCloudScene = useCallback((scene: Record<string, unknown>) => {
-    dockedControllerRef.current?.applyCloudScene(scene);
+  const handleCrewHubApplyCloudScene = useCallback((payload: number[]) => {
+    dockedControllerRef.current?.applyCrewPayload(payload);
   }, []);
 
   const handleDeviceReconnect = useCallback((mac: string) => {

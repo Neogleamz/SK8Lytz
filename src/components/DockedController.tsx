@@ -71,7 +71,6 @@ import { useScreenPerformance } from '../hooks/useScreenPerformance';
 import { enqueueDelay } from '../services/BleWriteQueue';
 import { BLE_TIMING } from '../constants/bleTimingConstants';
 import { useDockedPermissions } from '../hooks/useDockedPermissions';
-import { useCrewLeaderBroadcast } from '../hooks/useCrewLeaderBroadcast';
 
 
 
@@ -105,8 +104,8 @@ interface Sk8lytzControllerProps {
   onDisconnect?: () => void;
   /** 'leader' = broadcast changes, 'member' = receive changes, null = solo */
   crewRole?: 'leader' | 'member' | null;
-  /** Called with full scene snapshot whenever any mode/color changes (leader only) */
-  onCrewSceneChange?: (scene: Record<string, unknown>) => void;
+  /** Routes the compiled BLE byte payload to the crew broadcast service (leader only). */
+  onCrewBroadcast?: (payload: number[]) => void;
   /** Triggered to persist the active pattern name + color snapshot to dashboard group persistent storage */
   appSettings?: Record<string, string | boolean>;
   // ── Telemetry props (BUG-01 fix) ──────────────────────────────────────────
@@ -135,6 +134,7 @@ interface Sk8lytzControllerProps {
 // Acknowledged Rule S4: Monolithic file edit for hooks-core sweep plan
 export type DockedControllerHandle = {
   applyCloudScene: (scenePayload: Record<string, unknown>) => void;
+  applyCrewPayload: (payload: number[]) => void;
   loadFavorite: (fav: IFavoriteState) => void;
   setActiveMode: (mode: ModeType) => void;
   setBrightness: (val: number) => void;
@@ -148,7 +148,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionPeakSpeed = 0, sessionPhase = 'IDLE', sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
+  function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewBroadcast, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionPeakSpeed = 0, sessionPhase = 'IDLE', sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
     const { markFullyDrawn } = useScreenPerformance('DockedController');
     useEffect(() => { markFullyDrawn(); }, [markFullyDrawn]);
 
@@ -255,8 +255,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       setLastSentPayload([...payload]);
       lastSentPayloadRef.current = [...payload]; // sync update — ref is always current for replayStateToDevice
       await optimisticWrite(payload, undefined, targetDeviceId);
+      // Crew leader: mirror the compiled byte payload to crew members.
+      // Service layer is leader-gated + debounced (CrewRealtime.ts:85,88).
+      if (crewRole === 'leader') onCrewBroadcast?.(payload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [parentWriteToDevice, optimisticWrite]);
+    }, [parentWriteToDevice, optimisticWrite, crewRole, onCrewBroadcast]);
 
     // ── Global Telemetry Engine ─────────────────────────────────────────────
     // REMOVED: useGlobalTelemetry(true) — values now received as props from DashboardScreen
@@ -443,6 +446,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // Expose control methods to parent via ref for Voice and Crew coordination
     React.useImperativeHandle(ref, () => ({
       applyCloudScene,
+      applyCrewPayload: (payload: number[]) => {
+        if (!payload || payload.length === 0) return;
+        // Member receive: write the leader's compiled byte payload straight to BLE.
+        // Wire format is a raw number[] (CrewRealtime.ts:59) — NOT a CloudScenePayload.
+        void writeToDevice(payload);
+      },
       loadFavorite,
       setActiveMode,
       setBrightness,
@@ -461,14 +470,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     // (useStreetMode and useSessionTracking placed higher up context)
     // sessionActive prop is injected from DashboardScreen
-
-
-    // ── Crew Leader Broadcast ────────────────────────────────────────────────
-    useCrewLeaderBroadcast(crewRole, onCrewSceneChange, captureEntireState, [
-      activeMode, fixedSubMode, selectedColor, selectedPatternId,
-      brightness, speed, multiColors,
-      streetSensitivity, streetCruiseColor, streetBrakeColor,
-    ]);
 
 
     const [isDiyBuilderExpanded, setIsDiyBuilderExpanded] = useState(false);

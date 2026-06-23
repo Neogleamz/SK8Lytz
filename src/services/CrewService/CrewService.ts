@@ -58,7 +58,7 @@ export class CrewService {
   // Delegated Methods (Realtime)
   public subscribeAsLeader: CrewRealtime['subscribeAsLeader'];
   public subscribeAsMember: CrewRealtime['subscribeAsMember'];
-  public broadcastScene: CrewRealtime['broadcastScene'];
+  public broadcastPayload: CrewRealtime['broadcastPayload'];
 
   // Delegated Methods (Auto-Rejoin)
   public tryAutoRejoin: CrewAutoRejoin['tryAutoRejoin'];
@@ -84,7 +84,7 @@ export class CrewService {
 
     this.subscribeAsLeader = this.realtime.subscribeAsLeader.bind(this.realtime);
     this.subscribeAsMember = this.realtime.subscribeAsMember.bind(this.realtime);
-    this.broadcastScene = this.realtime.broadcastScene.bind(this.realtime);
+    this.broadcastPayload = this.realtime.broadcastPayload.bind(this.realtime);
 
     this.tryAutoRejoin = this.autoRejoin.tryAutoRejoin.bind(this.autoRejoin);
   }

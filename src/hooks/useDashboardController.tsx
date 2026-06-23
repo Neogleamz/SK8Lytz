@@ -200,7 +200,7 @@ export function useDashboardController({
             onDisconnect={handleDisconnect}
             crewRole={crewRole}
             appSettings={appSettings}
-            onCrewSceneChange={(scene: Record<string, unknown>) => crewService.broadcastScene(scene, userId)}
+            onCrewBroadcast={(payload: number[]) => crewService.broadcastPayload(payload, userId)}
             bleState={bleState as BleConnectionState}
             gpsSpeed={gpsSpeed}
             peakGForce={peakGForce}

@@ -53,8 +53,7 @@ export class CrewRealtime {
 
     this.service.channel = supabase
       .channel(`crew:${sessionId}`, { config: { broadcast: { self: false } } })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .on('broadcast', { event: 'scene_update' }, (payload: { payload: CrewScenePayload & { payload?: any } }) => {
+      .on('broadcast', { event: 'scene_update' }, (payload: { payload: CrewScenePayload }) => {
         const crewPayload = payload.payload;
         if (crewPayload?.payload) onSceneOrPayload(crewPayload.payload);
       })
@@ -91,20 +90,13 @@ export class CrewRealtime {
         type: 'broadcast',
         event: 'scene_update',
         payload: {
-          scene: {}, // dummy to satisfy strict type
-          payload,   // runtime byte array
+          payload,            // runtime byte array
           leader_id: leaderId,
           ts: Date.now(),
-        } as unknown as CrewScenePayload, // override to inject new field
+        } satisfies CrewScenePayload,
       });
       this._persistLastPayload(payload);
     }, BROADCAST_DEBOUNCE_MS);
-  }
-
-  // TODO: The plan removed broadcastScene, but unlisted caller CrewService & useDashboardController still require it.
-  // Leaving this stub to prevent compiler failure (S4 rule enforcement).
-  broadcastScene(_scene: Record<string, unknown>, _userId?: string): void {
-    // Cannot compile to byte array here without unlisted refactors. Dummy op.
   }
 
   private _heartbeatTimer: ReturnType<typeof setInterval> | null = null;

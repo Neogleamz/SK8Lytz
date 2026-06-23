@@ -15,7 +15,7 @@ export interface CrewMember {
 }
 
 export interface CrewScenePayload {
-  scene: Record<string, any>;
+  payload: number[];
   leader_id: string;
   ts: number;
 }
