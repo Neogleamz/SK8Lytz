@@ -1,3 +1,4 @@
+// blast-radius reviewed 2026-06-23: BleMachine actor extraction — no state/event/context API changes
 /* global __DEV__ */
 /**
  * useBLE.ts — SK8Lytz Bluetooth Low Energy Engine

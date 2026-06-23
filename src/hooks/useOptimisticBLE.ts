@@ -1,3 +1,4 @@
+// blast-radius reviewed 2026-06-23: BleMachine actor extraction — no state/event/context API changes
 /**
  * useOptimisticBLE — Ghost State Management for BLE Hardware Commands
  *
