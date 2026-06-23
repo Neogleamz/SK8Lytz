@@ -112,7 +112,9 @@ export default React.memo(function DashboardCrewPanel({
               crewUnsubRef.current = null;
             }
             if (role === 'leader') {
-              crewUnsubRef.current = crewService.subscribeAsLeader(session.id, () => {});
+              crewUnsubRef.current = crewService.subscribeAsLeader(session.id, (members) => {
+                crewService.emitMembers(members);
+              });
             } else {
               crewUnsubRef.current = crewService.subscribeAsMember(session.id, (scene) => {
                 onApplyCloudScene(scene);

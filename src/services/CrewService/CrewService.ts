@@ -37,6 +37,10 @@ export class CrewService {
 
   private listeners = new Set<Listener>();
 
+  /** Latest known member list, published by leader realtime subscriptions. */
+  public latestMembers: CrewMember[] = [];
+  private memberListeners = new Set<(members: CrewMember[]) => void>();
+
   private manager: ICrewSessionManager;
   private realtime: CrewRealtime;
   private autoRejoin: CrewAutoRejoin;
@@ -98,9 +102,20 @@ export class CrewService {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
-  
+
   public emit() {
     this.listeners.forEach(l => l());
+  }
+
+  // --- Member-list Listener Logic (leader presence) ---
+  subscribeMembers(listener: (members: CrewMember[]) => void): () => void {
+    this.memberListeners.add(listener);
+    return () => this.memberListeners.delete(listener);
+  }
+
+  public emitMembers(members: CrewMember[]) {
+    this.latestMembers = members;
+    this.memberListeners.forEach(l => l(members));
   }
 
   public _ensureUnsubscribed() {

@@ -77,7 +77,9 @@ export function useDashboardCrew({
         const { session, role } = result;
 
         if (role === 'leader') {
-          const u = await crewService.subscribeAsLeader(session.id, () => {});
+          const u = await crewService.subscribeAsLeader(session.id, (members) => {
+            crewService.emitMembers(members);
+          });
           if (!isMounted) {
             u();
           } else {

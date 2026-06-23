@@ -146,6 +146,8 @@ export class CrewSessionManager {
 
       if (memberErr) throw memberErr;
 
+      this._broadcastMemberUpdate();
+
       await this.service._persistSession(session);
       this.service.currentSession = session as CrewSession;
       this.service.currentSessionId = session.id;
@@ -186,6 +188,8 @@ export class CrewSessionManager {
         user_id: userId,
         display_name: displayName,
       }, { onConflict: 'session_id,user_id' });
+
+      this._broadcastMemberUpdate();
 
       await this.service._persistSession(session);
       this.service.currentSession = session as CrewSession;
@@ -424,6 +428,8 @@ export class CrewSessionManager {
         .eq('session_id', this.service.currentSessionId)
         .eq('user_id', userId);
 
+      this._broadcastMemberUpdate();
+
       this.service.unsubscribe();
       try {
         await AsyncStorage.multiRemove([this.service.STORAGE_LAST_SESSION_ID, this.service.STORAGE_LAST_SESSION_EXP]);
@@ -476,6 +482,25 @@ export class CrewSessionManager {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('[CrewService] fetchMembers failed', { error: msg , payload_size: 0, ssi: 0 });
       return [];
+    }
+  }
+
+  /**
+   * Notify the crew channel that the membership set changed (join / leave).
+   * The leader's `subscribeAsLeader` listens for `member_update` and refreshes
+   * its member list. Fire-and-forget; mirrors the `session_ended` send pattern
+   * used by endSession (CrewSessionManager.ts) and `scene_update` (CrewRealtime.ts).
+   * Safe no-op when no channel is subscribed.
+   */
+  private _broadcastMemberUpdate(): void {
+    try {
+      this.service.channel?.send({
+        type: 'broadcast',
+        event: 'member_update',
+        payload: {},
+      });
+    } catch (err: unknown) {
+      AppLogger.warn('[CrewService] _broadcastMemberUpdate failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
     }
   }
 }

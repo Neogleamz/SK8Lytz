@@ -145,15 +145,13 @@ const viStyles = StyleSheet.create({
 
 interface CrewMemberRow {
   user_id: string;
-  role: 'leader' | 'member' | null;
+  display_name: string | null;
   joined_at: string;
-  user_profiles: {
-    display_name: string | null;
-    avatar_color: string | null;
-  } | {
-    display_name: string | null;
-    avatar_color: string | null;
-  }[] | null;
+}
+
+interface UserProfileAvatarRow {
+  user_id: string;
+  avatar_color: string | null;
 }
 
 import { useScreenPerformance } from '../hooks/useScreenPerformance';
@@ -198,13 +196,13 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           // Cache miss — proceed to network fetch
         }
 
+        // 1) Membership rows — crew_members already stores display_name at join.
+        //    Role is NOT a column; it is derived from session.leader_user_id.
         const { data, error: supaError } = await supabase
         .from('crew_members')
-        .select(`
-          user_id, role, joined_at,
-          user_profiles ( display_name, avatar_color )
-        `)
+        .select('user_id, display_name, joined_at')
         .eq('session_id', session.id)
+        .order('joined_at', { ascending: true })
         .returns<CrewMemberRow[]>();
 
         if (!mounted) return;
@@ -214,14 +212,35 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         }
 
         if (data) {
+          // 2) Avatar colors — separate explicit query (no FK/implicit join needed).
+          const userIds = data
+            .map((r) => r.user_id)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+          const avatarByUserId: Record<string, string | null> = {};
+          if (userIds.length > 0) {
+            const { data: profiles, error: profErr } = await supabase
+              .from('user_profiles')
+              .select('user_id, avatar_color')
+              .in('user_id', userIds)
+              .returns<UserProfileAvatarRow[]>();
+            if (!profErr && profiles) {
+              profiles.forEach((p) => { avatarByUserId[p.user_id] = p.avatar_color ?? null; });
+            }
+          }
+
+          if (!mounted) return;
+
+          const leaderId = session.leader_user_id ?? null;
+
           const freshMembers = data.map((r) => {
-            const profile = Array.isArray(r.user_profiles) ? r.user_profiles[0] : r.user_profiles;
+            const memberRole: 'leader' | 'member' = r.user_id === leaderId ? 'leader' : 'member';
             return {
               user_id: r.user_id,
-              role: r.role ?? 'member',
+              role: memberRole,
               joined_at: r.joined_at,
-              display_name: profile?.display_name ?? null,
-              avatar_color: profile?.avatar_color ?? null,
+              display_name: r.display_name ?? null,
+              avatar_color: avatarByUserId[r.user_id] ?? null,
             };
           });
           setMembers(freshMembers);

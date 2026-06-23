@@ -34,6 +34,14 @@ export function useCrewSession(
     });
   }, []);
 
+  // Live presence: leader realtime subscriptions publish refreshed member lists
+  // here whenever a `member_update` broadcast is received (join/leave).
+  useEffect(() => {
+    return crewService.subscribeMembers((m: CrewMember[]) => {
+      setMembers(m);
+    });
+  }, []);
+
   const loadMembers = useCallback(async () => {
     if (!currentSession) return;
     const m = await crewService.fetchMembers(currentSession.id).catch(() => []);
