@@ -598,8 +598,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     disconnectFromDevice();
   }, [disconnectFromDevice, endSession]);
 
-  const handleCrewHubApplyCloudScene = useCallback((payload: number[]) => {
-    dockedControllerRef.current?.applyCrewPayload(payload);
+  const handleCrewHubApplyCloudScene = useCallback((payload: Record<string, unknown>) => {
+    dockedControllerRef.current?.applyCrewPayload(payload as unknown as number[]);
   }, []);
 
   const handleDeviceReconnect = useCallback((mac: string) => {
