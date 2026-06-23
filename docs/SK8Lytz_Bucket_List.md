@@ -11,6 +11,10 @@
 
 ## 🚧 ACTIVE SPRINT
 
+- [/] **`fix/crew-broadcast-scene`** — `[BATCH:crew-e2e]` `[WAVE:1]`
+  - **Worktree:** `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\fix\crew-broadcast-scene`
+  - **Plan:** 📎 [PLAN-fix-crew-broadcast-scene.md](./plans/PLAN-fix-crew-broadcast-scene.md)
+
 ---
 
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
@@ -55,7 +59,7 @@ at useBLESweeper.ts:145
 
 > ⚠️ AST tool output: `total_collisions: 3`, `total_waves: 3` — all three pairwise-collide on shared files; **zero parallelism**, strictly sequential per VS-001.
 
-- [ ] **`fix/crew-broadcast-scene`**
+- [/] **`fix/crew-broadcast-scene`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:crew-e2e]` `[WAVE:1]`
   - **Plan:** 📎 [PLAN-fix-crew-broadcast-scene.md](./plans/PLAN-fix-crew-broadcast-scene.md)
   - **Goal:** Repair leader→member light sync end-to-end. Delete the dead `broadcastScene`/`onCrewSceneChange` path; expose+wire `broadcastPayload` as the leader broadcast; fix the member receiver to route the `number[]` payload via a new `applyCrewPayload` handle into `writeToDevice` (not `applyCloudScene`).

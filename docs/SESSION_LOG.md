@@ -1,3 +1,8 @@
+### [MERGE READY] fix/crew-broadcast-scene — 09400982
+
+Files touched: src/services/CrewService/CrewRealtime.ts, src/services/CrewService/CrewService.ts, src/services/CrewService/types.ts, src/hooks/useDashboardController.tsx, src/components/DockedController.tsx, src/screens/DashboardScreen.tsx, src/hooks/useCrewLeaderBroadcast.ts (DELETED)
+TSC: ✅  Jest: ✅  All 8 verify gates: ✅
+
 ### [ARTIFACT] 2026-06-22T — Crew Subsystem E2E Audit
 
 **Analyst:** Reyes  
