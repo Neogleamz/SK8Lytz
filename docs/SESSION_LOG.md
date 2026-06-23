@@ -1,3 +1,22 @@
+### [DECISION] 2026-06-23T — Phase 0 Knowledge State: fix/ble-disconnect-service
+
+**Analyst:** Reyes
+**Task:** fix/ble-disconnect-service
+**Finding:** The prior `fix/ble-connection-pipeline` Wave 1 merge (`b5338db6`) added a `disconnectService` actor INLINE inside `BleMachine.ts` (lines 10-53). This is NOT a standalone `DisconnectService.ts` file. The current plan (`PLAN-fix-ble-disconnect-service.md`) correctly identifies this — it calls for CREATING `src/services/ble/DisconnectService.ts` (extract the inline actor to its own file) and then MODIFYING BleMachine.ts to import it instead of defining it inline.
+
+**Live code state (VERIFIED):**
+
+- `DisconnectService.ts`: MISSING — file does not exist in `src/services/ble/`
+- `BleMachine.ts` disconnectService actor: EXISTS but INLINE (lines 10-53 of BleMachine.ts) — not yet extracted to its own file
+- `useBLEScanner.ts` FEF3_UUID: MISSING — confirmed absent. Current UUID constants: `ZENGGE_SERVICE_UUID` (FFFF), `FFD5_UUID`, `FCF1_UUID`. FEF3 not present.
+- `ZENGGE_SERVICE_UUID` is `0000ffff-0000-1000-8000-00805f9b34fb` (in `ZenggeProtocol.ts:24`)
+
+**Protocol Bible §3 FEF3 finding:** Protocol Bible §3 does NOT explicitly document FEF3 as a service UUID. It confirms the write characteristic FF01 and service FFFF. FEF3 origin is the `temp-troubleshoot-backup` branch per the plan SoT. This is a gap — the plan SoT references the backup branch, not the Protocol Bible. Sage must verify FEF3 against the Protocol Bible or the backup branch before wiring it.
+
+**Master Reference §3/§4:** BleMachine.ts entry (line 1254) explicitly states "Defines `disconnectService` inline actor" — confirming the inline placement. No `DisconnectService.ts` standalone file is registered anywhere in §3 or §4.
+
+**Don't re-derive:** No double-implementation risk exists. The plan is correct: extract inline actor → standalone file → import it. The FEF3 UUID needs Protocol Bible verification before it ships — flag for Sage.
+
 ### [EVENT] 2026-06-22 — 🏆 GOAL COMPLETE: [BATCH:crew-e2e] Crew Hub End-to-End Repair
 
 **Orchestration:** /goal autonomous Wave orchestrator (Jordan) — 3 strictly-sequential waves (AST: 3 pairwise collisions, 0 parallelism).
