@@ -1,3 +1,20 @@
+### [DECISION] 2026-06-23T — Phase 0 Audit: fix/controller-dispatch-safety
+
+**Analyst:** Reyes
+**Task:** fix/controller-dispatch-safety
+**Finding:** Pre-gatekeeper blast-radius audit. Branch has 1 commit ahead of master. useControllerDispatch.ts was modified (PII scrub + enqueueDelay); useDockedControllerState.ts is IDENTICAL to master (the `as ModeType` fix was pre-shipped on master). useControllerAnalytics.ts is IDENTICAL to master (the setTimeout fix was pre-shipped on master). DockedController.tsx was NOT touched (per plan Out of Scope).
+
+**Gap confirmed:** The gatekeeper blast-radius violation was a FALSE ALARM. No new exports, no renamed signatures, no removed functions in useControllerDispatch.ts. Return shape is identical. The two dependents (useDockedControllerState.ts and DockedController.tsx) do NOT need updates — they consume useControllerDispatch via the same destructured return object that is unchanged.
+
+**Plan file:** EXISTS at `docs/plans/PLAN-fix-controller-dispatch-safety.md`
+**Prior SESSION_LOG entries:** None for this task (cold investigation).
+
+**Don't re-derive:**
+- The `as ModeType` fix (R-08/useDockedControllerState.ts L61) is ALREADY on master — isModeType() type guard is live at line 6-8 of master's file.
+- The `useControllerAnalytics.ts` setTimeout replacements are ALREADY on master — the worktree copy is byte-for-byte identical to master.
+- The only real diff in the worktree is useControllerDispatch.ts: two new imports (scrubPII, enqueueDelay) + all AppLogger.error device.id calls replaced with scrubPII(device.id) + one `new Promise(r => setTimeout(...))` replaced with `await enqueueDelay(...)`.
+- Return shape of useControllerDispatch is unchanged: {sendColor, applyFixedPattern, applyStaticModePattern, applyEmergencyPattern, handleMusicChange, clampSpeed, setPower, setMultiColor} — DockedController.tsx L542-552 destructuring needs NO update.
+
 ### [MERGE] feat/applogger-mmkv-storage → master @ 72e25ec7 — 2026-06-23
 
 - **Files touched:** `src/services/appLogger/AppLoggerStorage.ts` (MODIFY — MMKV JSI backend replacing AsyncStorage), `src/constants/storageKeys.ts` (MODIFY — TELEMETRY_MMKV_ID key added), `app.config.js` (MODIFY — ProGuard rules for MMKV), `docs/SK8Lytz_App_Master_Reference.md` (MODIFY §2 storage key registry / §4 hook & service registry), `docs/KNOWN_ISSUES.md` (MODIFY — VS-010/VS-011/VS-012 resolved), `docs/SESSION_LOG.md` (MODIFY)
