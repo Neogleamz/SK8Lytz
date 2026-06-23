@@ -1,3 +1,15 @@
+### [MERGE READY] fix/crew-membership-presence — 95a55823
+
+Files touched: src/services/CrewService/CrewSessionManager.ts, src/services/CrewService/CrewService.ts, src/hooks/useCrewSession.ts, src/components/dashboard/DashboardCrewPanel.tsx, src/hooks/useDashboardCrew.ts, src/components/CrewMemberDashboard.tsx, docs/SK8Lytz_App_Master_Reference.md
+TSC: ✅  Jest: ✅  All 8 verify gates: ✅
+
+### [MERGE] fix/crew-broadcast-scene → master @ 2964d5a4
+
+**Batch:** [BATCH:crew-e2e] Wave 1 of 3
+**Files touched:** CrewRealtime.ts, CrewService.ts, types.ts, DockedController.tsx, useDashboardController.tsx, DashboardScreen.tsx, useCrewLeaderBroadcast.ts (DELETED)
+**Result:** Dead broadcastScene path eliminated; broadcastPayload wired leader→member; applyCrewPayload imperative handle added; both DashboardScreen member sinks corrected. Leader→member light sync is now functional end-to-end.
+**TSC:** ✅ **Jest:** ✅ **All 8 gates:** ✅
+
 ### [MERGE READY] fix/crew-broadcast-scene — 09400982
 
 Files touched: src/services/CrewService/CrewRealtime.ts, src/services/CrewService/CrewService.ts, src/services/CrewService/types.ts, src/hooks/useDashboardController.tsx, src/components/DockedController.tsx, src/screens/DashboardScreen.tsx, src/hooks/useCrewLeaderBroadcast.ts (DELETED)
