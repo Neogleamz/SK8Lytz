@@ -14,6 +14,7 @@
 > 🏆 **[BATCH:crew-e2e] GOAL COMPLETE** — all 3 waves merged 2026-06-22. Crew Hub functional end-to-end.
 > ✅ Wave 3 Supabase deploy COMPLETE 2026-06-23 — edge function ACTIVE, pg_cron job firing every minute.
 > ✅ **`fix/ble-disconnect-service` MERGED 2026-06-23** — `b3bd6abc`. DisconnectService extracted, VS-009 destroyClient-in-loop fixed, FEF3 pre-GATT filter + Tile guard (VS-006/VS-008) live. Master is green.
+> ✅ **`feat/applogger-mmkv-storage` MERGED 2026-06-23** — `72e25ec7`. AppLoggerStorage migrated AsyncStorage → MMKV JSI. MAX_ENTRIES 500 → 5000. ProGuard rules patched. VS-010/011/012 resolved. Master is green.
 > Next: `fix/controller-dispatch-safety` (blast-radius violation blocking gatekeeper — routes to Sage/Blake).
 
 ---
@@ -205,16 +206,6 @@
 - [x] **`refactor/burn-down-audit-failures`** — SUPERSEDED ✅ work already in master via subsequent development
   - **Tags:** `[x]` `[AUTH]` `[✅ L-RISK]` `[🍱 Meal]` `[BATCH:branch-salvage]` `[WAVE:1]`
   - **Decision Log (2026-06-23 — CLOSED):** Attempted gatekeeper merge. Rebase revealed `CrewService.ts` was deleted in master (extracted to modular `src/services/CrewService/` directory). Grep confirmed ALL goals already achieved: zero rogue `supabase.auth.getUser()` in services/hooks, `bleGateRef` gone, `AuthContext` has all 5 auth methods with proper Supabase types (better than branch's `unknown` types). Merging would be a regression. Branch `185d41d0` deleted. Wave 2 unblocked — no `useBLEScanner.ts` collision concern remains.
-
-- [ ] **`feat/applogger-mmkv-storage`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[PERF]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[WAVE:1]`
-  - **Goal:** Swap AppLoggerStorage from AsyncStorage to MMKV (JSI, synchronous), increasing telemetry capacity 10x (500→5000 entries) and eliminating async bridge overhead during BLE event bursts.
-  - **Decision Log:** Original MMKV branch (`feat/telemetry-mmkv-upgrade`) was abandoned after master refactored AppLogger to modular `appLogger/` directory — the branch's monolithic `AppLogger.ts` target no longer exists. Intake 2026-06-23 created a fresh plan targeting `AppLoggerStorage.ts` directly. Dependency Proposal included in plan — user approval required before `npm install`.
-  - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-feat-applogger-mmkv-storage.md](./plans/PLAN-feat-applogger-mmkv-storage.md)
-    Key finding: MMKV intent was valid but architecture changed under the branch. Fresh impl against `AppLoggerStorage.ts` is 1 file + package.json — cleaner than rebasing 723 commits of drift.
-    Rejected alternative: Rebase `feat/telemetry-mmkv-upgrade` — 723 commits of drift, monolithic target file no longer exists, rebase cost exceeds re-implementation cost.
-  - **Source of Truth:** 📖 [AppLoggerStorage.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerStorage.ts) · [PLAN-feat-applogger-mmkv-storage.md](./plans/PLAN-feat-applogger-mmkv-storage.md)
-  - **Details:** 2 files: `AppLoggerStorage.ts` + `package.json`. No collisions with any active worktree or Wave 1 task — may execute in parallel with `refactor/burn-down-audit-failures` if desired.
 
 ---
 

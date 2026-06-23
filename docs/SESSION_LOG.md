@@ -1,3 +1,12 @@
+### [MERGE] feat/applogger-mmkv-storage → master @ 72e25ec7 — 2026-06-23
+
+- **Files touched:** `src/services/appLogger/AppLoggerStorage.ts` (MODIFY — MMKV JSI backend replacing AsyncStorage), `src/constants/storageKeys.ts` (MODIFY — TELEMETRY_MMKV_ID key added), `app.config.js` (MODIFY — ProGuard rules for MMKV), `docs/SK8Lytz_App_Master_Reference.md` (MODIFY §2 storage key registry / §4 hook & service registry), `docs/KNOWN_ISSUES.md` (MODIFY — VS-010/VS-011/VS-012 resolved), `docs/SESSION_LOG.md` (MODIFY)
+- **TSC:** ✅  **Jest:** ✅
+- **Attestation:** Anchored to commit `72e25ec7` — cryptographically verified by gatekeeper
+- **Notes:** AsyncStorage → MMKV JSI store for telemetry ring buffer. MAX_ENTRIES scaled 500 → 5000 (10x). Parse-first migration guard on load. ProGuard rules patched for release builds. All VS gaps resolved. Fast-forward merge confirmed.
+
+---
+
 ### [DECISION] 2026-06-23T — Phase 0 Knowledge State: feat/applogger-mmkv-storage
 
 **Analyst:** Reyes

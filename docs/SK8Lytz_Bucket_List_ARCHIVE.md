@@ -3940,4 +3940,15 @@ pm run verify which includes QA tests.
     Rejected alternative: Merge `temp-troubleshoot-backup` as-is — 472 commits of drift, debug artifacts (logcat dumps, `.old.ts` files), emergency override code. Port surgical diff instead.
   - **Source of Truth:** 📖 `temp-troubleshoot-backup` commit `a3146b5f` · [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts) DISCONNECTING state · [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts) scan UUID filter
   - **Details:** 3 files: CREATE `DisconnectService.ts`, MODIFY `BleMachine.ts` (actor wiring), MODIFY `useBLEScanner.ts` (FEF3 UUID only). Do NOT port RSSI threshold changes or debug artifacts.
+
+
+- [x] **`feat/applogger-mmkv-storage`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[PERF]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[WAVE:1]`
+  - **Goal:** Swap AppLoggerStorage from AsyncStorage to MMKV (JSI, synchronous), increasing telemetry capacity 10x (500→5000 entries) and eliminating async bridge overhead during BLE event bursts.
+  - **Decision Log:** Original MMKV branch (`feat/telemetry-mmkv-upgrade`) was abandoned after master refactored AppLogger to modular `appLogger/` directory — the branch's monolithic `AppLogger.ts` target no longer exists. Intake 2026-06-23 created a fresh plan targeting `AppLoggerStorage.ts` directly. Dependency Proposal included in plan — user approval required before `npm install`.
+  - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-feat-applogger-mmkv-storage.md](./plans/PLAN-feat-applogger-mmkv-storage.md)
+    Key finding: MMKV intent was valid but architecture changed under the branch. Fresh impl against `AppLoggerStorage.ts` is 1 file + package.json — cleaner than rebasing 723 commits of drift.
+    Rejected alternative: Rebase `feat/telemetry-mmkv-upgrade` — 723 commits of drift, monolithic target file no longer exists, rebase cost exceeds re-implementation cost.
+  - **Source of Truth:** 📖 [AppLoggerStorage.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerStorage.ts) · [PLAN-feat-applogger-mmkv-storage.md](./plans/PLAN-feat-applogger-mmkv-storage.md)
+  - **Details:** 2 files: `AppLoggerStorage.ts` + `package.json`. No collisions with any active worktree or Wave 1 task — may execute in parallel with `refactor/burn-down-audit-failures` if desired.
 
