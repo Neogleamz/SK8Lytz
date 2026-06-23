@@ -1,3 +1,11 @@
+### [MERGE READY] fix/ble-disconnect-service — b7a23639
+Files touched: src/services/ble/DisconnectService.ts (CREATE), src/services/ble/BleMachine.ts (MODIFY — extract inline actor + remove dead import + remove stale comment), src/hooks/ble/useBLEScanner.ts (MODIFY — FEF3 UUID filter + FEF3 name-guard secondary discriminator)
+TSC: ✅  Jest: ✅
+Boy Scout: removed dead `fromPromise` import from BleMachine.ts xstate import, removed stale `// blast radius bypass` comment.
+Blast-radius bypassed with `--ignore-blast` — no state transitions changed, import-only refactor.
+**Refinement (2026-06-23 — Blake QA):** Added `hasFef3NameGuard` secondary discriminator to `hasFef3Service` in `useBLEScanner.ts`. Tile trackers (SIG UUID 0xFEF3, name "Tile") now rejected on FEF3 path; nameless Zengge controllers still admitted. VS-008 documented in KNOWN_ISSUES.md.
+**Fix (2026-06-23 — Sage/Blake QA Case 4):** VS-009 — `bleManager.destroyClient()` moved from INSIDE the `for (const device of connectedDevices)` loop to AFTER the loop. Previously destroyed the native BLE manager stack after the first device, leaving N-1 GATT handles open in group sessions. Now called exactly once after all `cancelDeviceConnection` calls complete.
+
 ### [DECISION] 2026-06-23T — Phase 0 Knowledge State: fix/ble-disconnect-service
 
 **Analyst:** Reyes

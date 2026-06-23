@@ -466,9 +466,11 @@ Every GATT connection fires this sequence before the device is added to React st
 #### 📝 Auto-Compiled Zengge Protocol Constants (AST Compiler)
 
 ##### 🔌 BLE UUIDs
-- **Service UUID**: `0000ffff-0000-1000-8000-00805f9b34fb` (`ZENGGE_SERVICE_UUID`)
+
+- **Service UUID**: `0000ffff-0000-1000-8000-00805f9b34fb` (`ZENGGE_SERVICE_UUID`) — post-GATT service UUID, visible only after OS caches the GATT table.
 - **Write Characteristic UUID**: `0000ff01-0000-1000-8000-00805f9b34fb` (`ZENGGE_CHARACTERISTIC_UUID`)
 - **Notification Characteristic UUID**: `0000ff02-0000-1000-8000-00805f9b34fb` (`ZENGGE_NOTIFY_UUID`)
+- **Advertisement UUID**: `0000fef3-0000-1000-8000-00805f9b34fb` — Zengge advertisement-layer UUID broadcast pre-GATT connection; FFFF is the post-GATT service UUID visible after the OS caches the GATT table. Used by `useBLEScanner` to detect Zengge controllers on fresh install before any GATT cache exists. Name guard applied: unnamed devices or names matching `ZENGGE_NAME_PREFIXES` pass; all others rejected (blocks Tile trackers sharing the FEF3 SIG registration).
 
 ##### 🛠️ Hardware Constraints
 | Constraint | Value | Description |
@@ -1251,7 +1253,8 @@ This domain is the radio transport spine of SK8Lytz. It owns the entire lifecycl
 ### Services — `src/services/ble/`
 | File | Type | Role |
 |---|---|---|
-| `BleMachine.ts` | XState machine (`setup().createMachine`) | The FSM. Owns states IDLE/SCANNING/RESTORING/CONNECTING/READY/DISCONNECTING/RECOVERING + global FORCE_IDLE. Defines `disconnectService` inline actor. |
+| `BleMachine.ts` | XState machine (`setup().createMachine`) | The FSM. Owns states IDLE/SCANNING/RESTORING/CONNECTING/READY/DISCONNECTING/RECOVERING + global FORCE_IDLE. Imports `disconnectService` from `DisconnectService.ts`. |
+| `DisconnectService.ts` | XState `fromPromise` actor | Cancels all active GATT connections (`cancelDeviceConnection` per device), removes disconnect listener subscriptions, and calls `destroyClient()` on the native BLE manager if it satisfies `DestroyableClient`. Invoked by `BleMachine` in the DISCONNECTING state. Exports: `disconnectService` (actor), `DestroyableClient` (interface, module-internal), `isDestroyable` (type guard, module-internal). |
 | `BleMachine.types.ts` | Types | `BleMachineContext`, `BleMachineEvent` (discriminated union), `BleMachineState`, `BLEPhaseTag`. |
 | `ConnectService.ts` | XState `fromPromise` actor | Connection pipeline: blacklist guard → per-MAC connect with GATT 133 retry → handshake (MTU, listeners, notify monitor, handshake packets). Exports `requestHighPriority`/`requestBalancedPriority`. |
 | `RecoveryService.ts` | XState `fromCallback` actor | 3-phase auto-recovery: Phase 1+2 GATT hammering (backoff), Phase 3 passive sweeper-watch. Exports `MAX_RECOVERY_ATTEMPTS`, `getRecoveryBackoffMs`, `hasExceededMaxRecovery`. |
@@ -1350,7 +1353,7 @@ This domain is the radio transport spine of SK8Lytz. It owns the entire lifecycl
 | **connectService** | manager, targetMacs, registeredMacs, refs, callbacks, enqueueWrite, AbortSignal | `{ devices: Device[] }` | GATT connect (3 attempts, 133 retry), MTU negotiate (Android), register disconnect + notify listeners, write handshake packets, sets adapter/mtu maps. Throws on total failure → machine → IDLE. |
 | **recoveryService** | manager, ghostedDeviceIds, refs, callbacks, getSweepedDevice | sendBack `RECOVERY_COMPLETE`/`RECOVERY_FAIL`/`RECOVERY_PERMANENTLY_FAILED` | `clearWriteQueue()`, GATT reconnect hammering, MTU, re-register listeners, recovery ping. AbortController on cancel. |
 | **heartbeatService** | manager (subset), connectedDevices, adapterMap | sendBack `HEARTBEAT_FAIL{deviceId}` | Interval ping via `enqueueWrite('normal')`; skips if `isWriteQueueActive()`; cancels GATT on failure. Cleared on READY exit. |
-| **disconnectService** (inline) | manager, connectedDevices, disconnectListeners | `{success:true}` | `cancelDeviceConnection` each device, `destroyClient` if available, remove listeners. |
+| **disconnectService** (`DisconnectService.ts`) | manager, connectedDevices, disconnectListeners | `{success:true}` | `cancelDeviceConnection` each device, remove disconnect listener subscriptions, `destroyClient` if manager satisfies `DestroyableClient`. Extracted from inline BleMachine actor (fix/ble-disconnect-service). |
 | **executeWriteToDevice** | payload, targetId, opts, manager, devices, ghosted, mtuMap, adapterMap, stateRefs | `boolean \| 'partial'` | Pads 0x59, sets last-tx payload, debounces normal writes, MTU guard, auto-routes >200B 0x51 to chunked, enqueues. |
 | **executeWriteChunked** | payload, targetId, devices, ghosted, mtuMap, adapterMap | `void` | Builds 0x40 frames, single 'bulk' queue entry, inter-device + inter-chunk gaps. |
 | **executeProtocolResults** | payloads[], opts, manager, devices, ghosted, mtuMap, adapterMap, stateRefs | `boolean` | Per-device adapter `prepareForTransmission`, sequential writes w/ inter-packet delay, rate-limit debounce. |
@@ -1360,7 +1363,7 @@ This domain is the radio transport spine of SK8Lytz. It owns the entire lifecycl
 | **readDeviceRSSI / startRSSIPolling** | manager, callbacks | `number\|null` / cleanup fn | `readRSSIForDevice` poll, threshold callbacks (weak/critical). |
 | **BleWriteQueue (enqueue*/clear/setGeneration)** | priority, execute fn, generation, debounceKey | Promise<bool\|'partial'> | Mutates module queue, drains serially, backpressure drops, idle→priority callbacks. |
 | **BleCharacteristicCache.get/set** | mac (/protocolId) | `BleCacheEntry\|null` / void | AsyncStorage read/write, TTL eviction. |
-| **useBLEScanner** | manager, allDevices, setAllDevices, bleSend, registeredMacs, sandbox | scan API (`scanForPeripherals`, `pendingRegistrations`, `hwCache`, sweeper controls, `scanCallback`) | Signature filter, RSSI gate, telemetry batch→Supabase (+offline queue), staged-device flush, queue interrogation. |
+| **useBLEScanner** | manager, allDevices, setAllDevices, bleSend, registeredMacs, sandbox | scan API (`scanForPeripherals`, `pendingRegistrations`, `hwCache`, sweeper controls, `scanCallback`) | Signature filter (ZENGGE_SERVICE_UUID / BANLANX_SERVICE_UUID / FCF1 / FEF3 pre-GATT UUID / name prefix), RSSI gate, telemetry batch→Supabase (+offline queue), staged-device flush, queue interrogation. FEF3 path (`hasFef3Service`) added (fix/ble-disconnect-service): detects Zengge controllers on fresh install before OS GATT cache is populated; `hasFef3NameGuard` blocks Tile trackers sharing the FEF3 SIG registration. |
 | **useBLEBatterySweep** | manager, bleSend | `{isSweeperActive, startSweeper, stopSweeper, burstScan, batteryTier}` | Battery tier classify, SCAN_START/STOP/PAUSE/RESUME events, Android 12+ budget deferral, throttle cycle, burst timer. |
 | **useBLEInterrogator** | manager, registeredMacs, onDeviceInterrogated | `{hwCache, hwCacheRef, queueDeviceForInterrogation}` | Loads HW cache on mount, owns React state. |
 | **useBLERSSIMonitor** | manager, connectedDevicesRef, connectedDeviceIds, onWeak/Critical | `rssiMap` | Owns RSSI React state, prunes on disconnect. |

@@ -27,9 +27,6 @@ const disconnectService = fromPromise<
   for (const device of connectedDevices) {
     try {
       await bleManager.cancelDeviceConnection(device.id);
-      if (isDestroyable(bleManager)) {
-        bleManager.destroyClient();
-      }
     } catch (e: unknown) {
       AppLogger.warn('[disconnectService] cancelDeviceConnection failed', {
         deviceId: device.id,
@@ -43,6 +40,10 @@ const disconnectService = fromPromise<
       disconnectListeners.current[device.id].remove();
       delete disconnectListeners.current[device.id];
     }
+  }
+  // Destroy native BLE manager stack once — after ALL devices have been disconnected.
+  if (isDestroyable(bleManager)) {
+    bleManager.destroyClient();
   }
   return { success: true };
 });

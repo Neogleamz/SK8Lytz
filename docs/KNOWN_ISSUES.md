@@ -85,15 +85,19 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 
 **Root Cause**: UUID `0000fef3-0000-1000-8000-00805f9b34fb` is in the Bluetooth SIG assigned number space and is registered to Tile, Inc. (tracker beacons). The FEF3 filter added in `useBLEScanner.ts` (commit b7a23639) correctly allows Zengge pre-GATT-connection scan advertisement detection but admits ALL `0xFEF3`-advertising devices — including Tile — because no secondary Zengge discriminator (name prefix or manufacturer data check) is required on the FEF3 branch. `classifyBLEDevice.resolveProductType` returns `'UNKNOWN'` for these devices (no hwPoints, no product_type), and they surface in the wizard `pendingRegistrations` state as unregisterable entries.
 
-**Fix Applied**: NOT YET APPLIED. Task fix/ble-disconnect-service is blocked at QA gate on this issue.
-
-- File: `src/hooks/ble/useBLEScanner.ts` L246-247 and L260
-- Required: `hasFef3Service` must be gated on at least one secondary Zengge signal (name prefix OR manufacturer data presence). Sage must first confirm whether manufacturer data is present in pre-GATT FEF3 advertisement packets before choosing the discriminator.
-- Recommended change: require `isKnownPrefix || !!device.manufacturerData` in addition to the UUID/serviceData match.
+**Fix Applied**: `hasFef3NameGuard` secondary discriminator added in `useBLEScanner.ts` — FEF3 branch now requires `isKnownPrefix || !localName` to pass. Nameless devices (empty localName) pass unconditionally (Zengge controllers). Named devices only pass if name matches ZENGGE_NAME_PREFIXES (blocks Tile, which advertises "Tile" as localName).
 
 **Date**: 2026-06-23
 **Task**: fix/ble-disconnect-service
 **Severity**: Medium (user-visible wizard noise; not a crash or data loss)
+
+---
+
+### [VS-008] FEF3 Name-Guard Limitation
+
+- **Risk:** Zengge controllers advertising with a non-empty name not in ZENGGE_NAME_PREFIXES will not be caught by the FEF3 pre-GATT filter.
+- **Mitigation:** Add new prefixes to ZENGGE_NAME_PREFIXES as new firmware variants are discovered. Nameless Zengge controllers (empty localName/name) are always caught.
+- **Status:** DOCUMENTED — acceptable tradeoff vs. admitting all FEF3 devices including Tile trackers.
 
 ---
 
@@ -117,10 +121,7 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 
 **Root Cause**: `DisconnectService.ts` L30-32 calls `bleManager.destroyClient()` inside the `for (const device of connectedDevices)` loop. `destroyClient()` on `react-native-ble-plx`'s `BleManager` destroys the entire native BLE stack instance. After it fires on iteration 0, the manager is dead; iteration 1's `cancelDeviceConnection` hits a destroyed manager. The correct placement is a single call AFTER the loop completes (all GATT connections cancelled first).
 
-**Fix Applied**: NOT YET APPLIED — gap identified at QA gate.
-
-- File: `src/services/ble/DisconnectService.ts` L27-46
-- Required: Move `if (isDestroyable(bleManager)) { bleManager.destroyClient(); }` to AFTER the `for` loop, not inside it. Only call it once, after all per-device GATT teardown is complete.
+**Fix Applied**: `destroyClient()` moved to after the `for` loop in `DisconnectService.ts`. Called once post-loop, after all per-device GATT cancellations complete.
 
 **Date**: 2026-06-23
 **Task**: fix/ble-disconnect-service
