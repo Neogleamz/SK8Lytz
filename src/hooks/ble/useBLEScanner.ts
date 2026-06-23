@@ -239,6 +239,13 @@ export function useBLEScanner({
     const fcf1Data = device.serviceData ? device.serviceData[FCF1_UUID] : null;
     const hasFcf1Service = !!fcf1Data;
 
+    // FEF3 is the advertisement-layer UUID Zengge controllers broadcast in scan packets.
+    // FFFF (ZENGGE_SERVICE_UUID) is only visible post-GATT-connection. Without this,
+    // fresh-install scans (no OS GATT cache) silently drop all Zengge devices.
+    const FEF3_UUID = '0000fef3-0000-1000-8000-00805f9b34fb';
+    const hasFef3Service = device.serviceUUIDs?.includes(FEF3_UUID)
+      || !!(device.serviceData?.[FEF3_UUID]);
+
     const mfData = device.manufacturerData || fcf1Data;
     let isSymphony = false;
     
@@ -250,7 +257,7 @@ export function useBLEScanner({
     }
 
     const isKnownPrefix = ZENGGE_NAME_PREFIXES.some(p => nameLower.startsWith(p));
-    if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService && !hasFcf1Service) {
+    if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService && !hasFcf1Service && !hasFef3Service) {
       if (!rejectedMacsRef.current.has(device.id)) {
         rejectedMacsRef.current.add(device.id);
         if (__DEV__) {
