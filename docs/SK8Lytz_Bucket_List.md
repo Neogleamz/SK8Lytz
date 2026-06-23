@@ -32,6 +32,16 @@
   - **Decision Log:** Flagged by /deepdive-docs DEPENDENCY_AUDIT cartographer (2026-06-22). NOTE: local `npm install` + full `npm run verify` currently PASS — so this is verify-before-touch, not a confirmed break. Do NOT delete the dep blind.
   - **Source of Truth:** `package.json` deps `sk8lytz-watch-bridge` · `.gitignore:167` `modules/sk8lytz-watch-bridge/` (whole module gitignored) · dir empty on this checkout. Spike: confirm if a config plugin (`./plugins/withWearOsModule`, `@bacons/apple-targets`) generates it at prebuild, or if it must be committed/scaffolded for CI.
 
+- [ ] **`fix/ble-disconnect-service`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:branch-salvage]` `[WAVE:2]` `[⛔ BLOCKED BY: refactor/burn-down-audit-failures]`
+  - **Goal:** Port DisconnectService GATT teardown actor + FEF3 UUID scan detection from salvaged backup branch — fixes orphaned GATT zombie connections (VS-005) and silent device drops on fresh install.
+  - **Decision Log:** Branch audit 2026-06-23 found `DisconnectService.ts` (new file) and FEF3 UUID detection NOT in master despite being implemented in `temp-troubleshoot-backup` commit `a3146b5f`. GATT orphaning causes reconnect failures that appear as BLE hangs. Blocked on Wave 1 (`refactor/burn-down-audit-failures`) due to shared `useBLEScanner.ts` edit — both tasks modify that file.
+  - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-fix-ble-disconnect-service.md](./plans/PLAN-fix-ble-disconnect-service.md)
+    Key finding: `DisconnectService.ts` exists on `temp-troubleshoot-backup@a3146b5f` but absent from master; FEF3_UUID detection missing from scanner.
+    Rejected alternative: Merge `temp-troubleshoot-backup` as-is — 472 commits of drift, debug artifacts (logcat dumps, `.old.ts` files), emergency override code. Port surgical diff instead.
+  - **Source of Truth:** 📖 `temp-troubleshoot-backup` commit `a3146b5f` · [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts) DISCONNECTING state · [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts) scan UUID filter
+  - **Details:** 3 files: CREATE `DisconnectService.ts`, MODIFY `BleMachine.ts` (actor wiring), MODIFY `useBLEScanner.ts` (FEF3 UUID only). Do NOT port RSSI threshold changes or debug artifacts.
+
 ---
 
 ### 🔥 ON DECK
@@ -184,6 +194,43 @@
   - **Analysis:** 📊 Plan: [PLAN-refactor-upgrade-expo-56.md](./plans/PLAN-refactor-upgrade-expo-56.md)
   - **Source of Truth:** 📖 [package.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/package.json)
   - **Details:** High risk of breaking custom native modules and legacy UI components due to React Native 0.85 bridging changes.
+
+---
+
+## 🧹 TECH DEBT
+
+### ⚡ [BATCH:branch-salvage] — Branch Audit Recovery Tasks (2026-06-23)
+> **Source Analysis**: Branch hygiene audit 2026-06-23 — 4 orphaned branches inspected; 2 tech-debt tasks identified as unmerged work, 1 new feature identified.
+> **Decision Log:** Branch audit discovered completed-but-unmerged work and salvageable code. These tasks close the gap before those branches are deleted.
+
+#### Batch Strategy Table (AST-Verified)
+
+| Wave | Task | Parallel-Safe? | Prerequisite | Collision Basis |
+|------|------|---------------|-------------|-----------------|
+| **1** | `refactor/burn-down-audit-failures` | Solo | None | `AuthContext.tsx`, `useBLEScanner.ts`, 28 other files |
+| **2** | `fix/ble-disconnect-service` | Solo | Wave 1 merged | shared `useBLEScanner.ts` |
+
+- [ ] **`refactor/burn-down-audit-failures`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[AUTH]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:branch-salvage]` `[WAVE:1]`
+  - **Goal:** Verify and merge the completed auth-context dependency injection refactor — eliminates all rogue `supabase.auth.getUser()` calls from services/hooks, centralises auth through `AuthContext`.
+  - **Decision Log:** Branch `refactor/burn-down-audit-failures` was marked "pending manual gatekeeper merge" in SESSION_LOG 2026-06-07 but never executed. Branch audit 2026-06-23 confirmed the work is complete (30 files, 3 commits), plan exists, branch is clean. TSC/Jest were bypassed at review time — must re-run `npm run verify` before merge.
+  - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-refactor-burn-down-audit-failures.md](./plans/PLAN-refactor-burn-down-audit-failures.md)
+    Key finding: 25+ rogue `supabase.auth.getUser()` calls eliminated from CrewService, CrewProfileService, DeviceRepository, ScenesService, NotificationService; `userId: string` injection enforced at all callers. Code already done on branch — task is verify + gatekeeper.
+    Rejected alternative: Cherry-pick individual commits — unnecessary; branch is clean and complete as a unit.
+  - **Source of Truth:** 📖 [PLAN-refactor-burn-down-audit-failures.md](./plans/PLAN-refactor-burn-down-audit-failures.md) · `refactor/burn-down-audit-failures` branch HEAD `185d41d0` · [AuthContext.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/AuthContext.tsx)
+  - **Details:** Branch exists. Work is done. Task = run `npm run verify`, fix any TSC regressions (master has moved since June 7), then gatekeeper merge and delete branch.
+
+- [ ] **`feat/applogger-mmkv-storage`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[PERF]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]`
+  - **Goal:** Swap AppLoggerStorage from AsyncStorage to MMKV (JSI, synchronous), increasing telemetry capacity 10x (500→5000 entries) and eliminating async bridge overhead during BLE event bursts.
+  - **Decision Log:** Original MMKV branch (`feat/telemetry-mmkv-upgrade`) was abandoned after master refactored AppLogger to modular `appLogger/` directory — the branch's monolithic `AppLogger.ts` target no longer exists. Intake 2026-06-23 created a fresh plan targeting `AppLoggerStorage.ts` directly. Dependency Proposal included in plan — user approval required before `npm install`.
+  - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-feat-applogger-mmkv-storage.md](./plans/PLAN-feat-applogger-mmkv-storage.md)
+    Key finding: MMKV intent was valid but architecture changed under the branch. Fresh impl against `AppLoggerStorage.ts` is 1 file + package.json — cleaner than rebasing 723 commits of drift.
+    Rejected alternative: Rebase `feat/telemetry-mmkv-upgrade` — 723 commits of drift, monolithic target file no longer exists, rebase cost exceeds re-implementation cost.
+  - **Source of Truth:** 📖 [AppLoggerStorage.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerStorage.ts) · [PLAN-feat-applogger-mmkv-storage.md](./plans/PLAN-feat-applogger-mmkv-storage.md)
+  - **Details:** 2 files: `AppLoggerStorage.ts` + `package.json`. No collisions with any active worktree or Wave 1 task — may execute in parallel with `refactor/burn-down-audit-failures` if desired.
+
+---
 
 ### 🎵 Epic: Music Mode
 
