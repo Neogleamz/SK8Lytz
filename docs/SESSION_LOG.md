@@ -1,3 +1,10 @@
+### [MERGE] fix/crew-membership-presence → master @ 37223566
+
+**Batch:** [BATCH:crew-e2e] Wave 2 of 3
+**Files touched:** CrewSessionManager.ts, CrewService.ts, useCrewSession.ts, DashboardCrewPanel.tsx, useDashboardCrew.ts, CrewMemberDashboard.tsx
+**Result:** member_update now has both sender and receiver; leader member list refreshes live on join/leave; CrewMemberDashboard query fixed (no role column, two-step avatar fetch, role derived from leader_user_id).
+**TSC:** ✅ **Jest:** ✅ **All 8 gates:** ✅
+
 ### [MERGE READY] fix/crew-membership-presence — 95a55823
 
 Files touched: src/services/CrewService/CrewSessionManager.ts, src/services/CrewService/CrewService.ts, src/hooks/useCrewSession.ts, src/components/dashboard/DashboardCrewPanel.tsx, src/hooks/useDashboardCrew.ts, src/components/CrewMemberDashboard.tsx, docs/SK8Lytz_App_Master_Reference.md

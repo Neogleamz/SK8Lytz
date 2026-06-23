@@ -12,9 +12,12 @@
 ## 🚧 ACTIVE SPRINT
 
 - [x] **`fix/crew-broadcast-scene`** — merged `2964d5a4` ✅
-- [/] **`fix/crew-membership-presence`** — `[BATCH:crew-e2e]` `[WAVE:2]`
-  - **Worktree:** `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\fix\crew-membership-presence`
-  - **Plan:** 📎 [PLAN-fix-crew-membership-presence.md](./plans/PLAN-fix-crew-membership-presence.md)
+- [x] **`fix/crew-membership-presence`** — merged `37223566` ✅
+- [⛔ SPIKE] **`feat/crew-scheduled-server-side`** — `[BATCH:crew-e2e]` `[WAVE:3]`
+  - SPIKE-1: pg_cron + pg_net available on Supabase project? → **needs dashboard/CLI confirmation**
+  - SPIKE-2: CRON_SECRET set in edge runtime? → **needs `supabase secrets list`**
+  - SPIKE-3: crew_sessions.is_active default → NON-BLOCKING (Step 4 ships regardless)
+  - **Plan:** 📎 [PLAN-feat-crew-scheduled-server-side.md](./plans/PLAN-feat-crew-scheduled-server-side.md)
 
 ---
 
@@ -67,7 +70,7 @@ at useBLESweeper.ts:145
   - **Decision Log:** Reyes VERIFIED (HIGH) — broadcastScene is a no-op AND broadcastPayload had zero callers AND member receiver type-mismatched. User chose Scope A (full repair). See docs/analysis/crew-broadcast-scene-redundancy.md.
   - **Source of Truth:** PLAN-fix-crew-broadcast-scene.md §Files to Create/Modify (7 files: CrewRealtime.ts, CrewService.ts, types.ts, useCrewLeaderBroadcast.ts [delete], DockedController.tsx, useDashboardController.tsx, DashboardScreen.tsx).
 
-- [/] **`fix/crew-membership-presence`**
+- [x] **`fix/crew-membership-presence`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DATA]` `[M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:crew-e2e]` `[WAVE:2]`
   - **Plan:** 📎 [PLAN-fix-crew-membership-presence.md](./plans/PLAN-fix-crew-membership-presence.md)
   - **Goal:** Leader sees members live + every member renders with real name/avatar. Emit the missing `member_update` broadcast on join/leave; wire the two `() => {}` leader callbacks to refresh member UI; rewrite the `CrewMemberDashboard` query off the non-existent `role` column + `user_profiles` implicit join (use existing `crew_members.display_name` + derived role + explicit avatar query). NO migration needed.
