@@ -53,5 +53,4 @@ export const STORAGE_LEGACY_PRODUCT_CATALOG = 'ng_product_catalog';
 // R-24 FIX: crewHubCollapsed was hardcoded inline in DashboardCrewHub.tsx + DashboardScreen.tsx
 export const STORAGE_CREW_HUB_COLLAPSED = '@Sk8lytz_crewHubCollapsed';
 export const getHardwareConfigKey = (mac: string) => `@sk8_hw_${mac}`;
-
-
+export const TELEMETRY_MMKV_ID = 'sk8lytz_telemetry';
