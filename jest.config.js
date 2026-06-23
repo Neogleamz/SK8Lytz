@@ -10,7 +10,9 @@ module.exports = {
     // Resolve the local Expo module without npm install (mirrors tsconfig paths)
     "^sk8lytz-watch-bridge$": "<rootDir>/src/__mocks__/sk8lytz-watch-bridge.ts",
     "^expo-location$": "<rootDir>/src/__mocks__/expo-location.ts",
-    "^expo-audio$": "<rootDir>/src/__mocks__/expo-audio.ts"
+    "^expo-audio$": "<rootDir>/src/__mocks__/expo-audio.ts",
+    // MMKV is a JSI/Nitro native module — cannot run in Node/Jest; use in-memory mock
+    "^react-native-mmkv$": "<rootDir>/src/__mocks__/react-native-mmkv.ts"
   }
 };
 

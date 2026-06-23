@@ -19,7 +19,7 @@ const store = {
     if (mmkvInstance) mmkvInstance.set(key, value);
   },
   delete: (key: string): void => {
-    if (mmkvInstance) mmkvInstance.delete(key);
+    if (mmkvInstance) mmkvInstance.remove(key);
   },
 };
 
