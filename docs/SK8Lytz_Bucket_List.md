@@ -11,11 +11,8 @@
 
 ## 🚧 ACTIVE SPRINT
 
-- [x] **`fix/crew-broadcast-scene`** — merged `2964d5a4` ✅
-- [x] **`fix/crew-membership-presence`** — merged `37223566` ✅
-- [/] **`feat/crew-scheduled-server-side`** — `[BATCH:crew-e2e]` `[WAVE:3]` — SPIKE CLEARED ✅ (user-confirmed pg_cron/pg_net + secrets 2026-06-22)
-  - **Worktree:** `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\feat\crew-scheduled-server-side`
-  - **Plan:** 📎 [PLAN-feat-crew-scheduled-server-side.md](./plans/PLAN-feat-crew-scheduled-server-side.md)
+> 🏆 **[BATCH:crew-e2e] GOAL COMPLETE** — all 3 waves merged 2026-06-22. Crew Hub functional end-to-end.
+> ⚠️ Wave 3 has DEFERRED MANUAL DEPLOY STEPS (Supabase) — see SESSION_LOG. Code is merged; cron infra is not yet live.
 
 ---
 
@@ -75,8 +72,8 @@ at useBLESweeper.ts:145
   - **Decision Log:** Reyes VERIFIED — 3 sub-bugs (no member_update sender, no-op callbacks, schema-mismatch query). Quinn recommends query-rewrite over migration (session table `crew_members` correctly has no role column; persistent `crew_memberships` is a different table). See docs/analysis/crew-subsystem-e2e-audit.md Flow 4.
   - **Source of Truth:** PLAN-fix-crew-membership-presence.md §Files to Create/Modify (6 files: CrewSessionManager.ts, CrewService.ts, useCrewSession.ts, DashboardCrewPanel.tsx, useDashboardCrew.ts, CrewMemberDashboard.tsx).
 
-- [/] **`feat/crew-scheduled-server-side`**
-  - **Tags:** `[✅ READY]` `[✅ SPIKE CLEARED]` `[CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:crew-e2e]` `[WAVE:3]`
+- [x] **`feat/crew-scheduled-server-side`** — merged `320bfd50` ✅ (⚠️ deferred Supabase deploy — see SESSION_LOG)
+  - **Tags:** `[x]` `[✅ SPIKE CLEARED]` `[CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:crew-e2e]` `[WAVE:3]`
   - **Plan:** 📎 [PLAN-feat-crew-scheduled-server-side.md](./plans/PLAN-feat-crew-scheduled-server-side.md)
   - **⛔ BLOCKED (Rule 5 — Unverified Task Spike Gate):** Run the SPIKE before execution — confirm (1) `pg_cron`+`pg_net` available on the Supabase project, (2) `CRON_SECRET` + service-role env in the edge runtime, (3) `crew_sessions.is_active` insert default. If pg_cron is unavailable the activation mechanism must be redesigned.
   - **Goal:** Server-side scheduled-crew activation: a `pg_cron` job (1-min cadence) → new edge function `activate-scheduled-crews` that flips due `status='scheduled'` sessions to active (service-role, idempotent) and sends Expo push to members; client join error-path + 15-min reminder + notification deep-link.

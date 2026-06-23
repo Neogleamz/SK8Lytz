@@ -1,3 +1,30 @@
+### [EVENT] 2026-06-22 — 🏆 GOAL COMPLETE: [BATCH:crew-e2e] Crew Hub End-to-End Repair
+
+**Orchestration:** /goal autonomous Wave orchestrator (Jordan) — 3 strictly-sequential waves (AST: 3 pairwise collisions, 0 parallelism).
+**All 3 waves merged to master:**
+- Wave 1 @ `2964d5a4` — `fix/crew-broadcast-scene` — leader→member light sync wired end-to-end
+- Wave 2 @ `37223566` — `fix/crew-membership-presence` — live member presence + correct names/avatars
+- Wave 3 @ `320bfd50` — `feat/crew-scheduled-server-side` — pg_cron + edge fn activation + client wiring
+
+**Master is green.** Crew Hub went from ~50% functional to functional end-to-end (code-complete).
+
+**⚠️ DEFERRED MANUAL DEPLOY STEPS (Wave 3 — Supabase CLI not available in session):**
+1. Replace `<PROJECT_REF>` + `<CRON_SECRET>` placeholders in `supabase/migrations/20260622000000_activate_scheduled_crews_cron.sql`
+2. `supabase functions deploy activate-scheduled-crews`
+3. `supabase db push`
+4. Verify: `select jobname, schedule, active from cron.job where jobname='activate-scheduled-crews-every-min';` → 1 row, active=true
+5. After ~2 min: `cron.job_run_details` shows `status='succeeded'` rows every minute
+
+**Don't re-derive:** Until the deferred steps run, scheduled crews remain cosmetic in production — the activation cron does not exist on the project yet. The client + edge fn + migration code is all merged and ready; only deployment is pending.
+
+**Orphan worktrees still present (pre-crew-e2e, untouched):** fix/controller-dispatch-safety, fix/dashboard-styles-perf, fix/protocol-core-integrity.
+
+### [MERGE] feat/crew-scheduled-server-side → master @ 320bfd50
+
+**Batch:** [BATCH:crew-e2e] Wave 3 of 3
+**Result:** Server-side scheduled-crew activation: cron-invoked edge function flips due scheduled sessions to active + Expo push to members; client 15-min local reminder + scheduled-join error path + activation deep-link. is_active explicitly false on scheduled insert.
+**TSC:** ✅ **Jest:** ✅ **All 8 gates:** ✅  **Edge fn:** deno check deferred (CLI absent); manual review against plan.
+
 ### [MERGE READY] feat/crew-scheduled-server-side — 3623b9c5
 
 **Batch:** [BATCH:crew-e2e] Wave 3 of 3
