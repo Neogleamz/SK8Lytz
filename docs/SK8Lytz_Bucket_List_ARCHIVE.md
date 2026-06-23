@@ -3926,4 +3926,7 @@ pm run verify which includes QA tests.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C13-type-safety.md](./plans/PLAN-sweep-C13-type-safety.md)
   - **Source of Truth:** 📖 [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts)
   - **Details:** ~8 files. Prerequisite: Wave 4 fully merged.
+
+
+- [x] **`fix/gatt-conn-133-exception`** — GHOST TASK: already fixed in master. ConnectService.ts:199-206 handles GATT 133 with 3-attempt jittered backoff (GATT_CONNECT_BACKOFF_MS: [500,1500,4000]). Source files cited in plan (useBLEAutoRecovery.ts, useBLESweeper.ts) no longer exist — refactored away. Archived 2026-06-23.
 

@@ -26,13 +26,6 @@
   - **Decision Log:** Logged by /health-sweep during /ship-it Phase 1. High security risk preventing release.
   - **Details:** 5 major flags including ERRORs on telemetry views and disabled RLS on spatial_ref_sys.
 
-- [ ] **`fix/gatt-conn-133-exception`**
-  - **Tags:** `[📝 NEEDS PLAN]` `[LAB]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
-  - **Plan:** 📎 [PLAN-telemetry-gatt-conn-133-exception.md](./plans/PLAN-telemetry-gatt-conn-133-exception.md)
-  - **Goal:** Resolve automated telemetry crash: GattException: status 133 (0x85) during BLE scan discover for HALOZ
-  - **Details:** Found crash telemetry with ID err_091a in file `src/hooks/ble/useBLEAutoRecovery.ts`. Trace: at useBLE.ts:321
-at useBLESweeper.ts:145
-
 - [ ] **`spike/watch-bridge-clean-install`**
   - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[BUILD]` `[M-RISK]` `[Snack]` `[🧠 FOCUSED]`
   - **Goal:** Determine whether the `"sk8lytz-watch-bridge": "file:modules/sk8lytz-watch-bridge"` dependency breaks `npm install` on a clean checkout, given the target dir is empty and gitignored.

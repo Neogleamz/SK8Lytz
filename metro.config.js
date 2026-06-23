@@ -24,6 +24,10 @@ const WEB_SHIMS = {
     __dirname,
     'src/mocks/react-native-vision-camera-worklets.web.js'
   ),
+  'react-native-background-actions': path.resolve(
+    __dirname,
+    'src/mocks/react-native-background-actions.web.js'
+  ),
 };
 
 const originalResolveRequest = config.resolver.resolveRequest;
