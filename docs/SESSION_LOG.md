@@ -1,3 +1,10 @@
+### [MERGE] fix/ble-disconnect-service → master @ b3bd6abc
+
+- **Files touched:** DisconnectService.ts (CREATE), BleMachine.ts (MODIFY — extract inline actor + import), useBLEScanner.ts (MODIFY — FEF3 UUID filter + hasFef3NameGuard), useBLE.ts (blast-radius ACK comment), useOptimisticBLE.ts (blast-radius ACK comment), SK8Lytz_App_Master_Reference.md (MODIFY — §3 FEF3 UUID, §4 DisconnectService row), KNOWN_ISSUES.md (MODIFY — VS-006, VS-007, VS-008, VS-009), SESSION_LOG.md (MODIFY)
+- **TSC:** ✅  **Jest:** ✅
+- **Notes:** Extracted disconnectService actor from BleMachine.ts into standalone DisconnectService.ts. Fixed VS-009 (destroyClient moved post-loop). Added FEF3 pre-GATT scan filter with hasFef3NameGuard secondary discriminator blocking Tile beacons (VS-006/VS-008). Rebase required at gatekeeper time to resolve KNOWN_ISSUES.md conflict with docs commit 56038559.
+- **Date:** 2026-06-23
+
 ### [MERGE READY] fix/ble-disconnect-service — b7a23639
 Files touched: src/services/ble/DisconnectService.ts (CREATE), src/services/ble/BleMachine.ts (MODIFY — extract inline actor + remove dead import + remove stale comment), src/hooks/ble/useBLEScanner.ts (MODIFY — FEF3 UUID filter + FEF3 name-guard secondary discriminator)
 TSC: ✅  Jest: ✅

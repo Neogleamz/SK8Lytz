@@ -3929,4 +3929,15 @@ pm run verify which includes QA tests.
 
 
 - [x] **`fix/gatt-conn-133-exception`** — GHOST TASK: already fixed in master. ConnectService.ts:199-206 handles GATT 133 with 3-attempt jittered backoff (GATT_CONNECT_BACKOFF_MS: [500,1500,4000]). Source files cited in plan (useBLEAutoRecovery.ts, useBLESweeper.ts) no longer exist — refactored away. Archived 2026-06-23.
+
+
+- [x] **`fix/ble-disconnect-service`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:branch-salvage]` `[WAVE:2]`
+  - **Goal:** Port DisconnectService GATT teardown actor + FEF3 UUID scan detection from salvaged backup branch — fixes orphaned GATT zombie connections (VS-005) and silent device drops on fresh install.
+  - **Decision Log:** Branch audit 2026-06-23 found `DisconnectService.ts` (new file) and FEF3 UUID detection NOT in master despite being implemented in `temp-troubleshoot-backup` commit `a3146b5f`. GATT orphaning causes reconnect failures that appear as BLE hangs. Blocked on Wave 1 (`refactor/burn-down-audit-failures`) due to shared `useBLEScanner.ts` edit — both tasks modify that file.
+  - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-fix-ble-disconnect-service.md](./plans/PLAN-fix-ble-disconnect-service.md)
+    Key finding: `DisconnectService.ts` exists on `temp-troubleshoot-backup@a3146b5f` but absent from master; FEF3_UUID detection missing from scanner.
+    Rejected alternative: Merge `temp-troubleshoot-backup` as-is — 472 commits of drift, debug artifacts (logcat dumps, `.old.ts` files), emergency override code. Port surgical diff instead.
+  - **Source of Truth:** 📖 `temp-troubleshoot-backup` commit `a3146b5f` · [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts) DISCONNECTING state · [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts) scan UUID filter
+  - **Details:** 3 files: CREATE `DisconnectService.ts`, MODIFY `BleMachine.ts` (actor wiring), MODIFY `useBLEScanner.ts` (FEF3 UUID only). Do NOT port RSSI threshold changes or debug artifacts.
 

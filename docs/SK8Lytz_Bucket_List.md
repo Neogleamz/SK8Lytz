@@ -13,6 +13,8 @@
 
 > 🏆 **[BATCH:crew-e2e] GOAL COMPLETE** — all 3 waves merged 2026-06-22. Crew Hub functional end-to-end.
 > ✅ Wave 3 Supabase deploy COMPLETE 2026-06-23 — edge function ACTIVE, pg_cron job firing every minute.
+> ✅ **`fix/ble-disconnect-service` MERGED 2026-06-23** — `b3bd6abc`. DisconnectService extracted, VS-009 destroyClient-in-loop fixed, FEF3 pre-GATT filter + Tile guard (VS-006/VS-008) live. Master is green.
+> Next: `fix/controller-dispatch-safety` (blast-radius violation blocking gatekeeper — routes to Sage/Blake).
 
 ---
 
@@ -31,16 +33,6 @@
   - **Goal:** Determine whether the `"sk8lytz-watch-bridge": "file:modules/sk8lytz-watch-bridge"` dependency breaks `npm install` on a clean checkout, given the target dir is empty and gitignored.
   - **Decision Log:** Flagged by /deepdive-docs DEPENDENCY_AUDIT cartographer (2026-06-22). NOTE: local `npm install` + full `npm run verify` currently PASS — so this is verify-before-touch, not a confirmed break. Do NOT delete the dep blind.
   - **Source of Truth:** `package.json` deps `sk8lytz-watch-bridge` · `.gitignore:167` `modules/sk8lytz-watch-bridge/` (whole module gitignored) · dir empty on this checkout. Spike: confirm if a config plugin (`./plugins/withWearOsModule`, `@bacons/apple-targets`) generates it at prebuild, or if it must be committed/scaffolded for CI.
-
-- [ ] **`fix/ble-disconnect-service`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:branch-salvage]` `[WAVE:2]`
-  - **Goal:** Port DisconnectService GATT teardown actor + FEF3 UUID scan detection from salvaged backup branch — fixes orphaned GATT zombie connections (VS-005) and silent device drops on fresh install.
-  - **Decision Log:** Branch audit 2026-06-23 found `DisconnectService.ts` (new file) and FEF3 UUID detection NOT in master despite being implemented in `temp-troubleshoot-backup` commit `a3146b5f`. GATT orphaning causes reconnect failures that appear as BLE hangs. Blocked on Wave 1 (`refactor/burn-down-audit-failures`) due to shared `useBLEScanner.ts` edit — both tasks modify that file.
-  - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-fix-ble-disconnect-service.md](./plans/PLAN-fix-ble-disconnect-service.md)
-    Key finding: `DisconnectService.ts` exists on `temp-troubleshoot-backup@a3146b5f` but absent from master; FEF3_UUID detection missing from scanner.
-    Rejected alternative: Merge `temp-troubleshoot-backup` as-is — 472 commits of drift, debug artifacts (logcat dumps, `.old.ts` files), emergency override code. Port surgical diff instead.
-  - **Source of Truth:** 📖 `temp-troubleshoot-backup` commit `a3146b5f` · [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts) DISCONNECTING state · [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts) scan UUID filter
-  - **Details:** 3 files: CREATE `DisconnectService.ts`, MODIFY `BleMachine.ts` (actor wiring), MODIFY `useBLEScanner.ts` (FEF3 UUID only). Do NOT port RSSI threshold changes or debug artifacts.
 
 ---
 
@@ -208,7 +200,7 @@
 | Wave | Task | Parallel-Safe? | Prerequisite | Collision Basis |
 |------|------|---------------|-------------|-----------------|
 | **1** | ~~`refactor/burn-down-audit-failures`~~ | — | — | SUPERSEDED — master already clean |
-| **2** | `fix/ble-disconnect-service` | Solo | None (Wave 1 superseded) | standalone — no collision |
+| **2** | ~~`fix/ble-disconnect-service`~~ ✅ merged `b3bd6abc` | Solo | None (Wave 1 superseded) | standalone — no collision |
 
 - [x] **`refactor/burn-down-audit-failures`** — SUPERSEDED ✅ work already in master via subsequent development
   - **Tags:** `[x]` `[AUTH]` `[✅ L-RISK]` `[🍱 Meal]` `[BATCH:branch-salvage]` `[WAVE:1]`
