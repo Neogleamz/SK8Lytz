@@ -3692,7 +3692,7 @@ All paths under `c:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\src\protocols\`.
 | `src/services/BleWriteDispatcher.ts` | `ZenggeProtocol` (chunking) | **Authoritative 0x40 chunking caller** (Wave 2). `ZenggeProtocol.buildChunkedFrames()` is the authoritative impl. |
 | `src/services/ble/BleMachine.ts` | `ZENGGE_SERVICE_UUID`, `BANLANX_SERVICE_UUID` | Scan filtering by service UUID. |
 | `src/hooks/ble/useBLEScanner.ts` | `ZENGGE_SERVICE_UUID`, `ZenggeProtocol`, `BANLANX_SERVICE_UUID` | Scan filtering + firmware-from-advertisement parsing. |
-| `src/hooks/useControllerDispatch.ts`, `useProtocolDispatch.ts`, `useProtocolBuilder.ts`, `useMusicMode.ts` | adapters / protocol | Dispatch + builder layer. |
+| `src/hooks/useControllerDispatch.ts`, `useProtocolDispatch.ts`, `useProtocolBuilder.ts`, `useMusicMode.ts` | adapters / protocol | Dispatch + builder layer. **PII note:** all device IDs passed to `AppLogger` from `useControllerDispatch` are scrubbed via `scrubPII()` — raw BLE MACs never enter the telemetry stream from this hook. Inter-device write gaps in `handleMusicChange` are managed via `enqueueDelay` (`BleWriteQueue`) rather than raw `setTimeout`. |
 
 ### HAL bypass leaks (direct `ZenggeProtocol` imports)
 `IControllerProtocol.ts` and `ZenggeAdapter.ts` headers both assert *"This is the ONLY file that should import ZenggeProtocol directly."* That invariant is **violated** by these non-adapter importers (confirmed via grep `from '...ZenggeProtocol'`):
