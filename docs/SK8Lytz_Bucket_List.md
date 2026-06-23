@@ -12,7 +12,7 @@
 ## 🚧 ACTIVE SPRINT
 
 > 🏆 **[BATCH:crew-e2e] GOAL COMPLETE** — all 3 waves merged 2026-06-22. Crew Hub functional end-to-end.
-> ⚠️ Wave 3 has DEFERRED MANUAL DEPLOY STEPS (Supabase) — see SESSION_LOG. Code is merged; cron infra is not yet live.
+> ✅ Wave 3 Supabase deploy COMPLETE 2026-06-23 — edge function ACTIVE, pg_cron job firing every minute.
 
 ---
 
@@ -118,26 +118,29 @@ at useBLESweeper.ts:145
 
 ---
 
-### ⏳ [BATCH:sweep/deep-dive-w2] — `sweep/deep-dive-w2` — BLOCKED
-> **Worktree**: Individual per-cluster · **Type**: Parallel (4 clusters) · **Prerequisite**: Wave 1 fully merged
+### ✅ [BATCH:sweep/deep-dive-w2] — `sweep/deep-dive-w2` — COMPLETE (verified in master 2026-06-23)
+> C5 Error Unwrap ✅ · C8 Memory Leaks ✅ · C11 Accessibility ✅ · C15 FlatList Perf ✅ — all confirmed done via grep verification; no remaining findings.
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — Wave 2 of deep-dive synthesis sweep
 
 ---
 
-### ⏳ [BATCH:sweep/deep-dive-w3] — `sweep/deep-dive-w3` — BLOCKED
-> **Worktree**: Individual per-cluster · **Type**: Parallel (4 clusters) · **Prerequisite**: Wave 2 fully merged
+### ✅ [BATCH:sweep/deep-dive-w3] — `sweep/deep-dive-w3` — COMPLETE (verified in master 2026-06-23)
+
+> C6 Telemetry Context ✅ · C7 Hardcoded Delays ✅ · C9 Re-Entrancy ✅ · C17 Boolean→FSM ✅ — all confirmed done via grep verification.
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — Wave 3 of deep-dive synthesis sweep
 
 ---
 
-### ⏳ [BATCH:sweep/deep-dive-w4] — `sweep/deep-dive-w4` — BLOCKED
-> **Worktree**: Solo · **Type**: Solo · **Prerequisite**: Wave 3 fully merged
+### ✅ [BATCH:sweep/deep-dive-w4] — `sweep/deep-dive-w4` — COMPLETE (verified in master 2026-06-23)
+
+> C10 Storage Key Registry ✅ — confirmed done via grep verification.
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — Wave 4 of deep-dive synthesis sweep
 
 ---
 
-### ⏳ [BATCH:sweep/deep-dive-w5] — `sweep/deep-dive-w5` — BLOCKED
-> **Worktree**: Solo · **Type**: Solo · **Prerequisite**: Wave 4 fully merged
+### ✅ [BATCH:sweep/deep-dive-w5] — `sweep/deep-dive-w5` — COMPLETE (verified in master 2026-06-23)
+
+> C13 Type Safety ✅ — confirmed done via grep verification (no `as unknown as` double casts in target files).
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — Wave 5 of deep-dive synthesis sweep
 
 ---
