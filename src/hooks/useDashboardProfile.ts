@@ -26,7 +26,7 @@ interface UseDashboardProfileOptions {
    * Called when a push notification crew-join tap arrives.
    * DashboardScreen handles this because it owns crew + BLE state.
    */
-  onCrewJoinNotification: (crewId: string) => void;
+  onCrewJoinNotification: (crewId: string, sessionId: string) => void;
 }
 
 export interface UseDashboardProfileResult {
@@ -105,8 +105,8 @@ export function useDashboardProfile({
 
   // ── Push notification init — wires crew join handler ────────────────────
   useEffect(() => {
-    notificationService.setJoinHandler((crewId: string, _sessionId: string) => {
-      onCrewJoinNotificationRef.current(crewId);
+    notificationService.setJoinHandler((crewId: string, sessionId: string) => {
+      onCrewJoinNotificationRef.current(crewId, sessionId);
     });
 
     notificationService.init(false, session?.user?.id).catch(e =>

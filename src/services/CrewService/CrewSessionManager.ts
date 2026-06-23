@@ -29,6 +29,9 @@ export class CrewSessionManager {
         name,
         leader_user_id: userId,
         status: opts?.scheduledAt ? 'scheduled' : 'active',
+        // Scheduled sessions are inactive until the server-side cron
+        // (activate-scheduled-crews) flips them. Immediate sessions are live now.
+        is_active: opts?.scheduledAt ? false : true,
       };
       if (opts?.locationLabel)  insertData.location_label  = opts.locationLabel;
       if (opts?.locationCoords) insertData.location_coords = opts.locationCoords;
@@ -127,7 +130,21 @@ export class CrewSessionManager {
         .single();
       const session = _sessionData as CrewSession;
 
-      if (sessionErr || !session) throw new Error('Crew not found or session expired');
+      if (sessionErr || !session) {
+        // Distinguish a scheduled-but-not-yet-activated session from a truly
+        // missing one, so the joiner sees an actionable message. The server-side
+        // cron (activate-scheduled-crews) will flip it to active at scheduled_at.
+        const { data: _scheduled } = await supabase
+          .from('crew_sessions')
+          .select('scheduled_at,status')
+          .eq('invite_code', code)
+          .eq('status', 'scheduled')
+          .maybeSingle();
+        if (_scheduled) {
+          throw new Error('This crew session has not started yet. You will be notified when it goes live.');
+        }
+        throw new Error('Crew not found or session expired');
+      }
 
       const { count } = await supabase
         .from('crew_members')

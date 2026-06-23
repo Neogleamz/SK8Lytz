@@ -5,6 +5,7 @@ import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/appLogger';
 import { crewService } from '../../services/CrewService';
+import { notificationService } from '../../services/NotificationService';
 import { Spacing } from '../../theme/theme';
 import { LocationPicker } from '../LocationPicker';
 
@@ -55,7 +56,16 @@ export function CrewScheduleScreen() {
       });
 
       if (scheduled && scheduled > new Date()) {
-        // Optional notifications logic can be added later
+        // Schedule a LOCAL 15-min "starting soon" reminder on the leader's device.
+        // The server-side cron (activate-scheduled-crews) owns activation + the
+        // crew-wide "is LIVE" push at scheduled_at. See PLAN-feat-crew-scheduled-server-side.md.
+        const crewLabel = permanentCrews.find(c => c.id === selectedCrewId)?.name || sessionName;
+        await notificationService.sendSessionStartingSoon({
+          sessionId: newSession.id,
+          sessionName,
+          crewName: crewLabel,
+          scheduledAt: scheduled,
+        });
         setStep('landing');
       } else {
         setStep('controller');

@@ -170,8 +170,12 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     isSupportModalVisible,
     setIsSupportModalVisible,
   } = useDashboardProfile({
-    onCrewJoinNotification: (crewId: string) => {
+    onCrewJoinNotification: (crewId: string, sessionId: string) => {
       setPendingJoinCrewId(crewId);
+      // If a session-targeting setter exists in this screen, set it; otherwise the
+      // crew modal opens to the crew and the user picks the now-active session.
+      // (Session-precision deep-link plumbing is a follow-up, not this plan.)
+      void sessionId;
       setIsCrewModalVisible(true);
     },
   });
