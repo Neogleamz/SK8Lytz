@@ -1,3 +1,38 @@
+### [DECISION] 2026-06-23T — Phase 0 Knowledge State: feat/applogger-mmkv-storage
+
+**Analyst:** Reyes
+**Task:** feat/applogger-mmkv-storage
+**Finding:** SoT prime complete for MMKV migration of AppLoggerStorage.ts. All four sources read and verified.
+
+**SESSION_LOG scan:** No prior entries for MMKV, AppLoggerStorage.ts, AsyncStorage bridge latency, or telemetry write performance. This is a cold investigation.
+
+**Master Reference §4 — AppLogger service entry (VERIFIED, lines 4966–5092):**
+- `AppLoggerStorage.ts` documented at line 4967: "116 L — AsyncStorage ring buffer (MAX 500 entries), legacy-key migration, debounced persist"
+- Storage backend: `@react-native-async-storage/async-storage` (documented as the backing store)
+- MAX_ENTRIES: 500 (confirmed in both Master Reference line 5021 and source file line 7)
+- Storage key: `@Sk8lytz_app_settings_logger` (Master Reference line 5006)
+- Legacy migration key: `@Sk8lytz_logs` (noted in Master Reference line 5092 as migratable once all installs past it)
+- Master Reference explicitly flags this as "🟡 Storage-key & buffer-cap owner"
+
+**AppLoggerStorage.ts — source file health (VERIFIED, full 116-line read):**
+- Exists at `src/services/appLogger/AppLoggerStorage.ts` — NOT a stub, fully implemented
+- Storage mechanism: `AsyncStorage.getItem/setItem/removeItem/getAllKeys/multiGet` — 5 distinct call sites
+- MAX_ENTRIES: `const MAX_ENTRIES = 500` (line 7)
+- No platform guards (no `Platform.OS` checks anywhere in the file)
+- STORAGE_KEY imported from `../../constants/storageKeys` as `APP_LOGGER_STORAGE_KEY`
+- LEGACY_KEY hardcoded as `'@Sk8lytz_logs'` (line 6)
+- Methods that touch AsyncStorage: `ensureLoaded` (getItem x2, setItem, removeItem), `executePersist` (setItem), `getStorageStats` (getAllKeys, multiGet), `clear` (removeItem)
+- Debounced persist: 500ms timeout, `persist(force=false)` pattern
+
+**KB (react-native-mmkv): NOT FOUND in INDEX.md.** No entry exists. KB capture is mandatory post-task (or pre-task by Quinn during planning).
+
+**Conflicts: NONE.** Live code matches Master Reference exactly. No contradictions detected.
+
+**Don't re-derive:**
+- The `getStorageStats` method uses `AsyncStorage.getAllKeys()` + `multiGet` to compute TOTAL storage across ALL keys (not just the logger key). This is a cross-key scan — MMKV replacement must decide: replicate this cross-key scan using MMKV's `getAllKeys()`, or scope it to only the logger key. This is a design decision for Quinn/Sage.
+- `ensureLoaded` has a legacy migration path (`@Sk8lytz_logs` → current key). MMKV migration must decide whether to carry this forward or declare the legacy key dead.
+- `AppLoggerStorage` is consumed exclusively by `AppLoggerService.ts` (the singleton facade). It is NOT directly imported by any UI component — blast radius is contained to the service layer.
+
 ### [MERGE] fix/ble-disconnect-service → master @ b3bd6abc
 
 - **Files touched:** DisconnectService.ts (CREATE), BleMachine.ts (MODIFY — extract inline actor + import), useBLEScanner.ts (MODIFY — FEF3 UUID filter + hasFef3NameGuard), useBLE.ts (blast-radius ACK comment), useOptimisticBLE.ts (blast-radius ACK comment), SK8Lytz_App_Master_Reference.md (MODIFY — §3 FEF3 UUID, §4 DisconnectService row), KNOWN_ISSUES.md (MODIFY — VS-006, VS-007, VS-008, VS-009), SESSION_LOG.md (MODIFY)

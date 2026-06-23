@@ -207,7 +207,7 @@
   - **Decision Log (2026-06-23 — CLOSED):** Attempted gatekeeper merge. Rebase revealed `CrewService.ts` was deleted in master (extracted to modular `src/services/CrewService/` directory). Grep confirmed ALL goals already achieved: zero rogue `supabase.auth.getUser()` in services/hooks, `bleGateRef` gone, `AuthContext` has all 5 auth methods with proper Supabase types (better than branch's `unknown` types). Merging would be a regression. Branch `185d41d0` deleted. Wave 2 unblocked — no `useBLEScanner.ts` collision concern remains.
 
 - [ ] **`feat/applogger-mmkv-storage`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[PERF]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]`
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[PERF]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[WAVE:1]`
   - **Goal:** Swap AppLoggerStorage from AsyncStorage to MMKV (JSI, synchronous), increasing telemetry capacity 10x (500→5000 entries) and eliminating async bridge overhead during BLE event bursts.
   - **Decision Log:** Original MMKV branch (`feat/telemetry-mmkv-upgrade`) was abandoned after master refactored AppLogger to modular `appLogger/` directory — the branch's monolithic `AppLogger.ts` target no longer exists. Intake 2026-06-23 created a fresh plan targeting `AppLoggerStorage.ts` directly. Dependency Proposal included in plan — user approval required before `npm install`.
   - **Analysis:** 📊 Branch audit 2026-06-23 · Plan: [PLAN-feat-applogger-mmkv-storage.md](./plans/PLAN-feat-applogger-mmkv-storage.md)
