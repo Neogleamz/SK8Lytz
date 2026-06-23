@@ -1,49 +1,68 @@
 # Implementation Plan: fix/ble-disconnect-service
 
 ## Goal
-Port the DisconnectService GATT teardown actor and FEF3 UUID scan detection from the salvaged `temp-troubleshoot-backup` branch into master. Fixes orphaned GATT connections (VS-005) that leave the stack in a zombie state, and fixes silent Zengge device drops on fresh install where no OS GATT cache exists.
+Extract the inline `disconnectService` XState actor from `BleMachine.ts` into a standalone `DisconnectService.ts` module, and add FEF3 UUID detection to `useBLEScanner.ts`. Fixes orphaned GATT connections (VS-005) and silent Zengge device drops on fresh install where no OS GATT cache has enumerated the FFFF service UUID yet.
 
 ## Source of Truth
-- `temp-troubleshoot-backup` commit `a3146b5f` — DisconnectService.ts + BleMachine.ts wiring + useBLEScanner FEF3 detection
-- `src/services/ble/BleMachine.ts:1-end` — current DISCONNECTING state (inline disconnect logic to replace)
-- `src/hooks/ble/useBLEScanner.ts:1-end` — current scan UUID filter handling
-- `docs/ZENGGE_PROTOCOL_BIBLE.md` §3 — FEF3 is the canonical Zengge GATT service UUID
+- `src/services/ble/BleMachine.ts:10-53` — inline `disconnectService` actor to extract (CURRENT MASTER, verified by Reyes Phase 0)
+- `src/hooks/ble/useBLEScanner.ts:238-253` — current UUID filter block where FEF3 detection slots in (CURRENT MASTER)
+- `temp-troubleshoot-backup` commit `a3146b5f` — FEF3_UUID value `'0000fef3-0000-1000-8000-00805f9b34fb'` and `hasFef3Service` predicate (verified by Morgan Phase 2: `git show temp-troubleshoot-backup:src/hooks/ble/useBLEScanner.ts | grep fef3`)
+- NOTE: `DisconnectService.ts` does NOT exist in `temp-troubleshoot-backup`. The source for the extract is `BleMachine.ts:10-53` in master.
 
-## Prerequisite — WAVE:2 (Hard Stop)
-**`refactor/burn-down-audit-failures` (Wave 1) MUST be merged into master before this worktree is created.**
-Both tasks modify `src/hooks/ble/useBLEScanner.ts` — concurrent edits produce a merge conflict at gatekeeper time.
-Verify: `git log --oneline -5` on master must show the burn-down merge commit before proceeding.
+## Prerequisite — WAVE:2
+Wave 1 (`refactor/burn-down-audit-failures`) was SUPERSEDED — work already in master. No prerequisite action required. Worktree created 2026-06-23.
 
 ## Files to Create / Modify
 
 ### [CREATE] `src/services/ble/DisconnectService.ts`
-Source: `git show temp-troubleshoot-backup:src/services/ble/DisconnectService.ts`
+Source: Extract verbatim from `src/services/ble/BleMachine.ts:10-53` (current master).
 
-Port the GATT teardown XState actor verbatim (with these exceptions):
-- Strip any `console.error` debug lines — use `AppLogger.warn` only
-- Verify no `any` casts — fix if present
-- Actor responsibilities: cancel active connection, unsubscribe disconnect listener, log teardown outcome
+Content to extract:
+- `interface DestroyableClient { destroyClient: () => void; }`
+- `function isDestroyable(manager: unknown): manager is DestroyableClient`
+- `const disconnectService = fromPromise<{ success: boolean }, {...}>(async ({ input }) => { ... })`
+
+Required additions:
+- Add `import { fromPromise } from 'xstate';` at top
+- Add `import { AppLogger } from '../appLogger';`
+- Add `import type { BleMachineContext } from './BleMachine.types';`
+- Add `export { disconnectService };` at bottom (or inline `export const`)
+
+After extraction: `BleMachine.ts:10-53` must be DELETED and replaced with `import { disconnectService } from './DisconnectService';` on one line.
+
+Verify: `cat src/services/ble/DisconnectService.ts` — file exists, exports `disconnectService`, no `any` casts, properly typed.
 
 ### [MODIFY] `src/services/ble/BleMachine.ts`
-Source: `git diff master...temp-troubleshoot-backup -- src/services/ble/BleMachine.ts`
+- DELETE lines 10-53 (the interface, type guard, and disconnectService const — all of it)
+- ADD `import { disconnectService } from './DisconnectService';` in the imports block (line ~5-9)
+- All other lines untouched — `actors: { ..., disconnectService }` at line 61 stays as-is
 
-- Import `DisconnectService` from `./DisconnectService`
-- Wire the actor in the DISCONNECTING state (replaces any inline disconnect invocation)
-- Surgical: only the actor wiring lines — touch nothing else
-
-Verify: `git diff HEAD src/services/ble/BleMachine.ts` — only actor import + DISCONNECTING state change visible.
+Verify: `git diff HEAD src/services/ble/BleMachine.ts` — only: one added import line, lines 10-53 removed.
 
 ### [MODIFY] `src/hooks/ble/useBLEScanner.ts`
-Source: `git diff master...temp-troubleshoot-backup -- src/hooks/ble/useBLEScanner.ts`
+Add FEF3 detection inside the scan callback, immediately after the `hasFcf1Service` block (currently around line 240):
 
-Add FEF3 UUID detection only:
-- Add `const FEF3_UUID = '0000fef3-0000-1000-8000-00805f9b34fb'` near existing UUID constants
-- Add `hasFef3Service` predicate to the scan signature filter (fixes: devices dropped on fresh install with no OS GATT cache)
+```typescript
+// FEF3 is the advertisement-layer UUID Zengge controllers broadcast in scan packets.
+// FFFF (ZENGGE_SERVICE_UUID) is only visible post-GATT-connection. Without this,
+// fresh-install scans (no OS GATT cache) silently drop all Zengge devices.
+const FEF3_UUID = '0000fef3-0000-1000-8000-00805f9b34fb';
+const hasFef3Service = device.serviceUUIDs?.includes(FEF3_UUID)
+  || !!(device.serviceData?.[FEF3_UUID]);
+```
 
-**Do NOT port:**
-- `console.error('[SCAN_CALLBACK_RAW]', ...)` debug line
-- RSSI threshold changes (`-95`/`-90`) — separate evaluation needed, not part of this task
-- Any crash-mode unfiltered scan fallback logic
+Then update the filter guard (currently line 253):
+```typescript
+// BEFORE:
+if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService && !hasFcf1Service) {
+// AFTER:
+if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService && !hasFcf1Service && !hasFef3Service) {
+```
+
+**Do NOT port from the backup branch:**
+- `console.error('[SCAN_CALLBACK_RAW]', ...)` — debug artifact
+- RSSI threshold changes (`-95`/`-90`) — separate evaluation needed
+- The commented-out CRISIS OVERRIDE block — do not carry forward
 
 ## Verify Steps
 1. After DisconnectService creation: `cat src/services/ble/DisconnectService.ts` — file exists, typed, no `any`
