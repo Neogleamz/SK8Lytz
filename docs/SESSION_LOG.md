@@ -40,7 +40,18 @@
 - **Notes:** Extracted disconnectService actor from BleMachine.ts into standalone DisconnectService.ts. Fixed VS-009 (destroyClient moved post-loop). Added FEF3 pre-GATT scan filter with hasFef3NameGuard secondary discriminator blocking Tile beacons (VS-006/VS-008). Rebase required at gatekeeper time to resolve KNOWN_ISSUES.md conflict with docs commit 56038559.
 - **Date:** 2026-06-23
 
+### [MERGE READY] feat/applogger-mmkv-storage — da3bc5fd
+Files touched: src/constants/storageKeys.ts, src/services/appLogger/AppLoggerStorage.ts
+TSC: pending  Jest: pending
+Notes: MMKV JSI store with Platform.OS guard, MAX_ENTRIES 500→5000, legacy AsyncStorage migration path preserved. getStorageStats() scoped to logger-only MMKV key (no cross-app getAllKeys scan). executePersist/clear are now synchronous. Return shape of getStorageStats() kept compatible with AppLoggerService.ts caller (storageBytesEstimate + totalStorageEstimate). Boy Scout: silenced bare JSON.parse cast, removed dead STORAGE_KEY alias, tightened catch formatting.
+**Refinement (2026-06-23 — Sage / Blake QA gaps):**
+
+- [GAP-1 / launch crash] `import { MMKV }` → `import { createMMKV }` + `new MMKV()` → `createMMKV()`. v4 removed the constructor; `MMKV` is now a type only. Files: AppLoggerStorage.ts.
+- [GAP-2 / migration data corruption] Migration block now parses legacy JSON before writing to MMKV. On parse failure: warns via console.warn, skips MMKV write, always removes legacy key. `raw` assigned from validated serialised output so downstream parse at line 60 receives clean data. Files: AppLoggerStorage.ts.
+- [GAP-3 / ProGuard Nitro bridge strip] Appended `-keep class com.margelo.nitro.mmkv.**` and `-keep class com.margelo.mmkv.**` to existing `extraProguardRules` in `expo-build-properties` plugin (managed/CNG workflow — no bare proguard-rules.pro present). Files: app.config.js.
+
 ### [MERGE READY] fix/ble-disconnect-service — b7a23639
+
 Files touched: src/services/ble/DisconnectService.ts (CREATE), src/services/ble/BleMachine.ts (MODIFY — extract inline actor + remove dead import + remove stale comment), src/hooks/ble/useBLEScanner.ts (MODIFY — FEF3 UUID filter + FEF3 name-guard secondary discriminator)
 TSC: ✅  Jest: ✅
 Boy Scout: removed dead `fromPromise` import from BleMachine.ts xstate import, removed stale `// blast radius bypass` comment.

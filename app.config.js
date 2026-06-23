@@ -83,7 +83,7 @@ module.exports = {
             "minSdkVersion": 26,
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
-            "extraProguardRules": "-keep class com.polidea.reactnativeble.** { *; }\n-dontwarn com.polidea.reactnativeble.**\n-keep class com.polidea.rxandroidble2.** { *; }\n-dontwarn com.polidea.rxandroidble2.**\n-keep class com.mrousavy.camera.** { *; }\n-dontwarn com.mrousavy.camera.**\n-keep class com.mrousavy.nitro.** { *; }\n-dontwarn com.mrousavy.nitro.**"
+            "extraProguardRules": "-keep class com.polidea.reactnativeble.** { *; }\n-dontwarn com.polidea.reactnativeble.**\n-keep class com.polidea.rxandroidble2.** { *; }\n-dontwarn com.polidea.rxandroidble2.**\n-keep class com.mrousavy.camera.** { *; }\n-dontwarn com.mrousavy.camera.**\n-keep class com.mrousavy.nitro.** { *; }\n-dontwarn com.mrousavy.nitro.**\n-keep class com.margelo.nitro.mmkv.** { *; }\n-keep class com.margelo.mmkv.** { *; }"
           }
         }
       ],

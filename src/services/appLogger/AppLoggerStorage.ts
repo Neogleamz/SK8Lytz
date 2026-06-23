@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MMKV } from 'react-native-mmkv';
+import { createMMKV } from 'react-native-mmkv';
 import { APP_LOGGER_STORAGE_KEY, TELEMETRY_MMKV_ID } from '../../constants/storageKeys';
 import { LogEntry } from './types';
 
@@ -9,7 +9,7 @@ const MAX_ENTRIES = 5000;
 
 // JSI-based synchronous store on native; null on web (no MMKV support).
 const mmkvInstance = Platform.OS !== 'web'
-  ? new MMKV({ id: TELEMETRY_MMKV_ID })
+  ? createMMKV({ id: TELEMETRY_MMKV_ID })
   : null;
 
 const store = {
@@ -40,13 +40,21 @@ export class AppLoggerStorage {
         // Primary read: synchronous MMKV on native
         let raw: string | undefined = store.get(APP_LOGGER_STORAGE_KEY);
 
-        // Migration: if MMKV empty and legacy AsyncStorage key has data, migrate once
+        // Migration: read from legacy AsyncStorage key, promote to MMKV, then delete.
         if (!raw) {
           const legacy = await AsyncStorage.getItem(LEGACY_KEY);
           if (legacy) {
-            store.set(APP_LOGGER_STORAGE_KEY, legacy);
+            try {
+              const parsed = JSON.parse(legacy) as LogEntry[];
+              const serialised = JSON.stringify(parsed);
+              store.set(APP_LOGGER_STORAGE_KEY, serialised);
+              raw = serialised;
+            } catch {
+              // Corrupt legacy data — discard silently, do not write to MMKV.
+              console.warn('[AppLoggerStorage] Legacy data corrupt — discarding');
+            }
+            // Always remove the legacy key regardless of parse success.
             await AsyncStorage.removeItem(LEGACY_KEY);
-            raw = legacy;
           }
         }
 

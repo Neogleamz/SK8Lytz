@@ -278,7 +278,7 @@ Controls which color pickers the UI renders for a given pattern:
 | `@Sk8lytz_last_group_patterns`       | useDashboardGroups              | Dictionary mapping active groups to their last selected lighting patterns for state restoration                                                 |
 | `@Sk8lytz_scanner_telemetry_queue`   | TelemetryService                | Local buffer of bluetooth scanner telemetry data waiting for background upload                                                                  |
 | `@Sk8lytz_groups_migrated_v2`        | MigrationService                | Boolean flag indicating successful migration of device groups layout to many-to-many model                                                      |
-| `@Sk8lytz_app_settings_logger`       | AppLogger                       | Local configurations and levels for the internal telemetry event logger                                                                         |
+| `@Sk8lytz_app_settings_logger`       | AppLogger (`AppLoggerStorage`)  | MMKV key (migrated from AsyncStorage). Ring buffer of `LogEntry[]`, 5000-entry cap; JSI-synchronous on native, no-op on web.                   |
 | `@Sk8lytz_auth_migration_v1`         | MigrationService                | Flag indicating successful migration of user credentials to v1 schema                                                                           |
 | `supabase.auth.token`                | Supabase / AuthContext          | Persisted JWT authentication token for Supabase client sessions                                                                                 |
 | `@Sk8lytz_offline_eula_accepted`     | ComplianceGate                  | JSON object containing { version: number, acceptedAt: string } indicating whether the user accepted the offline-mode EULA                       |
@@ -4964,7 +4964,7 @@ Not applicable. All mapped files are live, authoritative, and actively reference
 | # | File | Size/role | Top-of-file impact flag |
 |---|------|-----------|-------------------------|
 | 1 | `src/services/appLogger/AppLoggerService.ts` | 344 L — singleton facade. Log levels, throttling, PII redaction, stats, export, cloud upload orchestration | 🔴 **APP-WIDE SINK** — imported by 141 files (905 refs). Any signature change ripples everywhere. |
-| 2 | `src/services/appLogger/AppLoggerStorage.ts` | 116 L — AsyncStorage ring buffer (MAX 500 entries), legacy-key migration, debounced persist | 🟡 Storage-key & buffer-cap owner |
+| 2 | `src/services/appLogger/AppLoggerStorage.ts` | 137 L — **MMKV JSI ring buffer** (MAX 5000 entries), legacy AsyncStorage migration on first load, debounced persist. Platform guard: MMKV active on native (`Platform.OS !== 'web'`); no-op store on web. MMKV instance ID: `sk8lytz_telemetry` (`TELEMETRY_MMKV_ID`). | 🟡 Storage-key & buffer-cap owner |
 | 3 | `src/services/appLogger/AppLoggerCloud.ts` | 163 L — Supabase sinks: `telemetry_errors`, `crash_telemetry`, `telemetry_snapshots`, storage bucket wipe | 🔴 Cloud-write surface. Telemetry master gate lives here (L89–99). |
 | 4 | `src/services/appLogger/index.ts` | 6 L — instantiates `const AppLogger = new AppLoggerService()` and re-exports `EventType`, `LogEntry` | 🟡 Public barrel — the import everyone uses |
 | 5 | `src/services/appLogger/types.ts` | ~200 L — `EventType` string union (~180 events, **no enums** ✅), `LogEntry` interface | 🟡 Event vocabulary. Adding an event = touch here. |
@@ -5018,7 +5018,7 @@ Not applicable. All mapped files are live, authoritative, and actively reference
 | **PII redaction** | `formatPayload` obfuscator | `AppLoggerService.ts:124–149` — 23 key-substring patterns (`email`, `token`, `mac`, `lat`, `peripheral_id`…) → `'[REDACTED]'`. Recursive, cycle-safe via `WeakSet`. |
 | **TX-payload correlation** | `setLastTxPayload` + `flushQueues` | L79–101 — attaches `txPayload` hex if logged within 250 ms; deferred-log queue with 100 ms timeout (L188–195). |
 | **Breadcrumbs** | FlightRecorder, categorized by event prefix | `AppLoggerService.ts:166–172` — BLE/ERROR/NETWORK/NAVIGATION/ACTION. Ring of 50 (`FlightRecorder.ts:9`). |
-| **Buffer cap** | 500 entries, slice on persist | `AppLoggerStorage.ts:7,65–67`. |
+| **Buffer cap** | **5000 entries** (raised from 500), slice on persist | `AppLoggerStorage.ts:8,91–93`. |
 | **Telemetry opt-out gate** | `global_telemetry_enabled !== false` | `AppLoggerCloud.ts:91–98` — if disabled, **buffer is wiped without upload** (privacy-respecting). Flag sourced via `AppSettingsService.fetchAllSettings()` (R-24 routing comment L89–90). |
 | **Admin feature flags** | `useAdminSettings` ↔ `AppSettingsService` | `useAdminSettings.ts:45–62` optimistic update + rollback; logs `HARDWARE_CONFIG_CHANGED`. |
 | **Time-in-state telemetry** | `useTelemetryLedger` | `useTelemetryLedger.ts` — `trackPattern/trackColor/trackMode`, 15-min heartbeat (L26–29), flush-on-background (L207–211), offline retry to AsyncStorage, Supabase RPC `flush_telemetry` (L128). |
@@ -5034,7 +5034,7 @@ Not applicable. All mapped files are live, authoritative, and actively reference
 | `setCurrentUser(userId?)` | string \| undefined | stamps `user_id` on snapshot uploads | `AppLoggerService.ts:24` |
 | `updateKnownDevices(devices)` | `BleDevice[]` | enriches future payloads (rssi/mtu/battery) | L28 |
 | `setLastTxPayload(hex)` | string | correlates TX into next log (≤250 ms) | L79 |
-| `log(event, payload?)` | `EventType`, record | → in-memory buffer → AsyncStorage; CRITICAL events also → cloud fast-lane | L154 |
+| `log(event, payload?)` | `EventType`, record | → in-memory buffer → **MMKV** (`sk8lytz_telemetry` instance, key `@Sk8lytz_app_settings_logger`); CRITICAL events also → cloud fast-lane | L154 |
 | `debug/info/warn/error(msg,…)` | string + ctx | → `log('APP_LOG'/'ERROR_CAUGHT', …)` | L198–221 |
 | `getLogs()` | — | `LogEntry[]` (reversed, newest-first) | L223 |
 | `getStats()` | — | aggregate: modeUsage, patternUsage, colorUsage, devicesDiscovered, totalEvents, storage bytes, avgLoadTimeMs, battery | L266 |
@@ -5062,7 +5062,7 @@ Returns `{ trackPattern, trackColor, trackMode, incrementCounter, injectStreetSu
 
 ### Sinks summary (where do logs actually go?)
 1. **`console`** — only when `__DEV__` (e.g. L96, L177, L184). Never in production.
-2. **AsyncStorage** (`@Sk8lytz_app_settings_logger`) — local ring buffer, 500 cap, the primary persistent sink.
+2. **MMKV** (`sk8lytz_telemetry` instance, key `@Sk8lytz_app_settings_logger`) — local ring buffer, **5000 cap** (JSI-synchronous on native; no-op on web). Migrated from AsyncStorage as of `feat/applogger-mmkv-storage`. The logical key `@Sk8lytz_app_settings_logger` is unchanged; it now maps to an MMKV entry, not an AsyncStorage entry.
 3. **Supabase tables** — `telemetry_errors`, `crash_telemetry`, `telemetry_snapshots` (+ RPC `flush_telemetry` from the ledger).
 4. **Supabase storage bucket** — `sk8lytz-logs` (cleared on `clearLogs`, but no upload writer to it remains in `AppLoggerCloud` — see Archival note).
 5. **In-memory** — FlightRecorder breadcrumbs (50), attached only to crash uploads.
@@ -5159,6 +5159,7 @@ No `[MOVE_TO_ARCHIVE]` for primary source files — all are live and heavily wir
 | `xstate` | `^5.32.0` | Finite state machines (aligns with CLAUDE.md "Use FSM patterns" mandate) |
 | `@xstate/react` | `^6.1.0` | React bindings for XState |
 | `@react-native-async-storage/async-storage` | `^2.2.0` | Offline-first local cache (CLAUDE.md Offline-First Mandate) |
+| `react-native-mmkv` | `^4.3.1` | JSI-based synchronous key-value store; replaces AsyncStorage for AppLogger telemetry ring buffer (`sk8lytz_telemetry` instance). Native only — no-op store on web. |
 
 ### Supabase / Backend
 | Package | Version | Role |
