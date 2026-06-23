@@ -1653,8 +1653,10 @@ The `crewService` singleton is widely consumed; the broadcast wiring is the load
 | `broadcastScene(scene, userId?)` | Realtime | object | void — **NO-OP STUB** |
 | `tryAutoRejoin(displayName, userId?)` | AutoRejoin | — | `Promise<{session, role}|null>` |
 | `subscribe(listener)` / `emit()` | facade | cb | unsubscribe / void (state-change fanout) |
+| `subscribeMembers(listener: (members: CrewMember[]) => void)` | facade | cb | Returns unsubscribe fn; fan-out triggered by `emitMembers`. UI hooks call this to receive live member-list updates published by leader realtime subscriptions. Added in `fix/crew-membership-presence`. |
+| `emitMembers(members: CrewMember[])` | facade | member array | void; stores `latestMembers`, calls all `memberListeners`. Called from leader `subscribeAsLeader` callback in `DashboardCrewPanel.tsx` and `useDashboardCrew.ts`. Added in `fix/crew-membership-presence`. |
 
-Public state on `crewService`: `currentSession`, `currentSessionId`, `currentRole`, `channel`, `broadcastTimer`, `sessionTelemetry`, getter `isInCrew`.
+Public state on `crewService`: `currentSession`, `currentSessionId`, `currentRole`, `channel`, `broadcastTimer`, `sessionTelemetry`, getter `isInCrew`, `latestMembers: CrewMember[]` (latest member list, set by `emitMembers`; default `[]`).
 
 ### `useCrewHub(visible, step)` → returns
 `discoverRadiusMi`/`setDiscoverRadiusMi`, `myCrews`/`setMyCrews`, `permanentCrews`/`setPermanentCrews`, `crewMemberCounts`/`setCrewMemberCounts`, `nearbySessions`/`setNearbySessions`, `nearbySpots`/`setNearbySpots`, `nearbyStatus`/`isLoadingNearby`/`refreshNearby`, `activeSessions`/`setActiveSessions`, `sessionsStatus`/`isLoadingSessions`/`loadActiveSessions`, `isGettingLocation`/`setIsGettingLocation`, `locationLabel`/`setLocationLabel`, `locationCoords`/`setLocationCoords`, `handleDetectLocation`.
