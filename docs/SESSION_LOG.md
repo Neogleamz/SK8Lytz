@@ -1,3 +1,12 @@
+### [MERGE] fix/controller-dispatch-safety → master @ a93e73d2 — 2026-06-23
+
+- **Files touched:** `src/hooks/useControllerDispatch.ts` (MODIFY — scrubPII on all AppLogger device.id calls + enqueueDelay replaces raw setTimeout in handleMusicChange), `src/hooks/useDockedControllerState.ts` (blast-radius ACK — no change), `src/components/DockedController.tsx` (blast-radius ACK — no change), `docs/SK8Lytz_App_Master_Reference.md` (MODIFY — PII scrub + enqueueDelay note in HAL table), `docs/KNOWN_ISSUES.md` (MODIFY — VS-010 organic disconnect BleWriteQueue drain gap documented), `docs/SESSION_LOG.md` (MODIFY)
+- **TSC:** ✅  **Jest:** ✅
+- **Attestation:** Anchored to commit `a93e73d2` — cryptographically verified by gatekeeper
+- **Notes:** PII scrubbing in BLE dispatch logs — raw MAC addresses no longer enter telemetry stream from useControllerDispatch. enqueueDelay (BleWriteQueue) replaces raw setTimeout for inter-device music write gaps. Blast-radius false alarm resolved via ACK comments. Rebase required (master had advanced 2 merges ahead); docs commit conflicted due to Section 12 mismatch between master and worktree file structures — resolved by applying the surgical PII note to the HAL implementation table (§3) where useControllerDispatch appears in master. VS-010 discovered during QA committed to master directly (docs-only, no source change). Fast-forward merge confirmed.
+
+---
+
 ### [DECISION] 2026-06-23T — Phase 0 Audit: fix/controller-dispatch-safety
 
 **Analyst:** Reyes
