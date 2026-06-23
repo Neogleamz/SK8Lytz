@@ -126,3 +126,19 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 **Date**: 2026-06-23
 **Task**: fix/ble-disconnect-service
 **Severity**: High (multi-device disconnect leaves GATT handles and listener subscriptions leaked; reproducible in every group session teardown)
+
+---
+
+## VS-010: Organic BLE Disconnect Does Not Flush BleWriteQueue (2026-06-23)
+
+**Symptom**: On organic (non-recovery) BLE disconnect — device vanishes without triggering the auto-recovery path — any `enqueueDelay` + `safeWrite` pairs still in the `BleWriteQueue` singleton drain against a dead connection. `safeWrite` catches the resulting GATT error, so no crash occurs. However, the queue's single transient-retry logic (`BleWriteQueue.ts:210-222`) fires once per queued entry, adding ~100-150ms of unnecessary retry overhead per entry before resolving `false`.
+
+**Root Cause**: `clearWriteQueue()` is called in `RecoveryService.ts:57` at the entry point of recovery, but is NOT called in the `onDeviceDisconnected` callback registered by `ConnectService.ts:222`. Organic disconnects (device battery dies, skater goes out of range) bypass the recovery path, leaving the queue to drain naturally.
+
+**Fix Applied**: Not applied — pre-existing gap discovered during QA of `fix/controller-dispatch-safety`. The `enqueueDelay` change in `useControllerDispatch.ts:356` surfaces this pre-existing behavior but does not introduce it. No crash or data loss occurs; the retry overhead is bounded by `MAX_QUEUE_DEPTH=8` (`BleWriteQueue.ts:38`) and the `isMusicBusyRef` guard at `useControllerDispatch.ts:314` prevents re-entrant calls while the queue drains.
+
+**Recommended Fix**: Call `clearWriteQueue()` inside the `onDeviceDisconnected` callback in `ConnectService.ts:222` (or wherever organic disconnects are first handled), guarded by a check that recovery is NOT already in progress (to avoid double-clearing).
+
+**Date**: 2026-06-23
+**Task**: fix/controller-dispatch-safety (discovered during QA)
+**Severity**: Low — no crash, no data corruption. Bounded GATT retry overhead on organic disconnect only.
