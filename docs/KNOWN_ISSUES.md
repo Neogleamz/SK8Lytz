@@ -142,3 +142,17 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 **Date**: 2026-06-23
 **Task**: fix/controller-dispatch-safety (discovered during QA)
 **Severity**: Low — no crash, no data corruption. Bounded GATT retry overhead on organic disconnect only.
+
+---
+
+## VS-011: Singleton Protocol Adapter — Stale JSDoc Describing Pre-Fix Behavior (2026-06-23)
+
+**Symptom**: `ZenggeAdapter.ts:13-15` contains a block comment stating "ZenggeAdapter uses its OWN instance so adapter writes have an independent sequence counter." After PROTOCOL_CORE-004 (commit on `fix/protocol-core-integrity`), this is factually inverted — the adapter now uses the SHARED singleton, not an independent instance. Any developer reading the comment will incorrectly believe the adapter has an isolated counter.
+
+**Root Cause**: The JSDoc block was written to describe the OLD design (per-adapter `new ZenggeProtocol()`). The fix at `ZenggeAdapter.ts:47` replaced `private readonly protocol = new ZenggeProtocol()` with `private get protocol() { return ZenggeProtocol.sharedInstance; }` but did not update the file-level class comment that described the rationale for the old design.
+
+**Fix Applied**: Non-blocking documentation gap flagged to Sage during QA of `fix/protocol-core-integrity`. The comment at `ZenggeAdapter.ts:13-15` must be updated to reflect the new design: adapter uses sharedInstance to share ONE monotonic counter with legacy namespace callers, preventing split-brain SeqNum divergence.
+
+**Date**: 2026-06-23
+**Task**: fix/protocol-core-integrity (discovered during QA)
+**Severity**: Low — no runtime defect. Documentation accuracy liability for future maintainers only.
