@@ -3951,4 +3951,11 @@ pm run verify which includes QA tests.
     Rejected alternative: Rebase `feat/telemetry-mmkv-upgrade` — 723 commits of drift, monolithic target file no longer exists, rebase cost exceeds re-implementation cost.
   - **Source of Truth:** 📖 [AppLoggerStorage.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerStorage.ts) · [PLAN-feat-applogger-mmkv-storage.md](./plans/PLAN-feat-applogger-mmkv-storage.md)
   - **Details:** 2 files: `AppLoggerStorage.ts` + `package.json`. No collisions with any active worktree or Wave 1 task — may execute in parallel with `refactor/burn-down-audit-failures` if desired.
+
+
+- [x] **`spike/watch-bridge-clean-install`** 🚀 Merged in 0e5ac05d
+  - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[BUILD]` `[M-RISK]` `[Snack]` `[🧠 FOCUSED]`
+  - **Goal:** Determine whether the `"sk8lytz-watch-bridge": "file:modules/sk8lytz-watch-bridge"` dependency breaks `npm install` on a clean checkout, given the target dir is empty and gitignored.
+  - **Decision Log:** Flagged by /deepdive-docs DEPENDENCY_AUDIT cartographer (2026-06-22). NOTE: local `npm install` + full `npm run verify` currently PASS — so this is verify-before-touch, not a confirmed break. Do NOT delete the dep blind.
+  - **Source of Truth:** `package.json` deps `sk8lytz-watch-bridge` · `.gitignore:167` `modules/sk8lytz-watch-bridge/` (whole module gitignored) · dir empty on this checkout. Spike: confirm if a config plugin (`./plugins/withWearOsModule`, `@bacons/apple-targets`) generates it at prebuild, or if it must be committed/scaffolded for CI.
 
