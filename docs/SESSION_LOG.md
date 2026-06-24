@@ -1,3 +1,11 @@
+### [MERGE] fix/protocol-core-integrity → master @ f6867d92
+
+- **Files touched:** `src/protocols/ZenggeAdapter.ts` (PROTOCOL_CORE-004: `new ZenggeProtocol()` → `private get protocol() { return ZenggeProtocol.sharedInstance; }` — shared monotonic counter), `docs/SK8Lytz_App_Master_Reference.md` (§3 ZenggeAdapter entry + bug-fix annotation updated for PROTOCOL_CORE-004), `docs/KNOWN_ISSUES.md` (VS-011: stale JSDoc entry filed by Blake during QA)
+- **TSC:** ✅  **Jest:** ✅
+- **Notes:** ZenggeProtocol.ts structural divergence resolved via rebase — master's handler-delegation architecture accepted; worktree monolithic form discarded. PROTOCOL_CORE-005 confirmed pre-shipped on master (streamPixelFrame uses HW_CONSTRAINTS.maxPoints=300 via handler). Net behavioral delta: ZenggeAdapter now routes through sharedInstance, eliminating split-brain SeqNum between adapter and BleWriteDispatcher. Worktree torn down. Branch deleted. Master HEAD: f6867d92.
+
+---
+
 ### [DECISION] 2026-06-23T — Phase 0 Audit: fix/protocol-core-integrity
 
 **Analyst:** Reyes
