@@ -1,3 +1,44 @@
+### [DECISION] 2026-06-23T — Phase 0 Audit: fix/dashboard-styles-perf
+
+**Analyst:** Reyes
+**Task:** fix/dashboard-styles-perf
+**Branch:** fix/dashboard-styles-perf (HEAD: 33bedf94)
+**Commits ahead of master (a43b8e7d):** 3 commits — `86409fb3` fix(theme): strongly type Shadows to remove bare casts | `a9306fd1` chore: pre-verify state | `33bedf94` chore: drop session log from worktree
+
+**Files changed vs master (VERIFIED by direct file read):**
+
+- `src/theme/theme.ts` — MODIFIED (the only source file change)
+- `docs/SESSION_LOG.md` — DROPPED from worktree (chore commit 33bedf94)
+
+**What theme.ts diff contains (VERIFIED):**
+
+- Master uses post-expression `as ViewStyle` / `as TextStyle` casts on `Shadows` and `TextShadows` objects (master lines 70–98)
+- Worktree replaces casts with explicit object-level type annotations: `Shadows: { soft: ViewStyle; medium: ViewStyle; glow: (color: string) => ViewStyle; } = { ... }` and `TextShadows: { glow: (color: string, radius?: number) => TextStyle; } = { ... }` — removes all `as ViewStyle` / `as TextStyle` casts (worktree lines 70–104, +6 lines net)
+- This resolves THEME-005 (explicit ViewStyle/TextStyle casts at master lines 76, 82, 88, 95)
+
+**Plan file (VERIFIED):** EXISTS at `docs/plans/PLAN-fix-dashboard-styles-perf.md`
+
+**Plan coverage:**
+
+- `DashboardStyles.ts`: SKIPPED — plan annotation present (`// SKIPPED: modifications already completed and merged in commit ce3572f16`). File is byte-for-byte identical to master. VERIFIED.
+- `theme.ts`: DONE — type casts removed, explicit annotations applied. VERIFIED.
+- `src/utils/patternColors.ts`: Identical on both sides — not in plan, consistent with DashboardStyles.ts SKIPPED logic.
+
+**GAPS:** NONE — worktree covers all open plan items. DashboardStyles.ts skip is properly annotated.
+
+**REBASE NOTE:** A rebase was attempted and aborted (log entry: `rebase (abort): returning to refs/heads/fix/dashboard-styles-perf`). Branch HEAD (33bedf94) is NOT rebased onto current master (a43b8e7d). Rebase onto master is required before fast-forward merge is possible.
+
+**Prior SESSION_LOG entries:** None for this task (cold investigation).
+
+**Don't re-derive:**
+
+- `DashboardStyles.ts` skip is legitimate — master already has static StyleSheet.create, getDimensionStyles(), and backward-compat createDashboardStyles() shim. The work was pre-shipped.
+- The only real source diff is `theme.ts`: +6 lines net — explicit type annotations replacing bare `as` casts on Shadows/TextShadows.
+- A rebase onto master is required before gatekeeper. The abort left the branch at its pre-rebase HEAD.
+- `patternColors.ts` is identical on both sides — no action needed.
+
+---
+
 ### [MERGE] fix/controller-dispatch-safety → master @ a93e73d2 — 2026-06-23
 
 - **Files touched:** `src/hooks/useControllerDispatch.ts` (MODIFY — scrubPII on all AppLogger device.id calls + enqueueDelay replaces raw setTimeout in handleMusicChange), `src/hooks/useDockedControllerState.ts` (blast-radius ACK — no change), `src/components/DockedController.tsx` (blast-radius ACK — no change), `docs/SK8Lytz_App_Master_Reference.md` (MODIFY — PII scrub + enqueueDelay note in HAL table), `docs/KNOWN_ISSUES.md` (MODIFY — VS-010 organic disconnect BleWriteQueue drain gap documented), `docs/SESSION_LOG.md` (MODIFY)
