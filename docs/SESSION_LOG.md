@@ -1,3 +1,10 @@
+### [MERGE READY] spike/watch-bridge-clean-install — 3c098223ffa3df0c95f0f6f9c953a7e267179aea
+Files touched: modules/sk8lytz-watch-bridge/ (6 files restored from 82b18f14), src/hooks/useHealthTelemetry.ts (blast-radius ACK stub created — exposes health: HealthTelemetry via useSession()), src/context/SessionContext.tsx (blast-radius ACK + Boy Scout: dep-arrays snapshot.value/.context.* collapsed to snapshot)
+TSC: ✅  Jest: ✅
+Notes: Module restored to fix CI npm install break. Spike confirmed: file: dep in package.json requires directory to exist; was absent since 94bbc494. Neither withWearOsModule nor @bacons/apple-targets generates this directory. useHealthTelemetry.ts was missing from codebase entirely — created as typed stub to satisfy ARCH_DEPENDENCY_MAP wearables rule. ESLint pre-commit caught 2 pre-existing missing-dep warnings in SessionContext.tsx; fixed in-place (Boy Scout).
+
+---
+
 ### [MERGE] fix/protocol-core-integrity → master @ f6867d92
 
 - **Files touched:** `src/protocols/ZenggeAdapter.ts` (PROTOCOL_CORE-004: `new ZenggeProtocol()` → `private get protocol() { return ZenggeProtocol.sharedInstance; }` — shared monotonic counter), `docs/SK8Lytz_App_Master_Reference.md` (§3 ZenggeAdapter entry + bug-fix annotation updated for PROTOCOL_CORE-004), `docs/KNOWN_ISSUES.md` (VS-011: stale JSDoc entry filed by Blake during QA)
@@ -9704,3 +9711,10 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+
+
+### [DECISION] 2026-06-24 — spike/watch-bridge-clean-install resolution
+Decision: Restore modules/sk8lytz-watch-bridge/ from 82b18f14 (Option A)
+Rejected: Remove file: dep from package.json (Option B) — deferred the native bridge work
+Rejected: CI scaffold script (Option C) — fragile stub approach
+Don't re-derive: The module is NOT gitignored (only android/build/ is). It was deleted in 94bbc494 without removing the package.json dep. The CI risk is real — npm install fails on fresh checkout without cache.

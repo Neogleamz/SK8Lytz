@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-06-10 | **21-Domain Cartographer Synthesis Completed** — watchOS + Wear OS companion apps, Expo native bridge module (sk8lytz-watch-bridge), watch-preferred health priority system, bidirectional phoneâ†”watch session sync, Speed push to watch, VS-002 gitignore fix. v3.9.1 | Source of Truth: artifacts/deepdive_docs/_
+_Last Updated: 2026-06-24 | **spike/watch-bridge-clean-install** — sk8lytz-watch-bridge module restored from 82b18f14 (6 files); useHealthTelemetry stub added (src/hooks/useHealthTelemetry.ts); §4 hook row corrected; startListening registered in I/O registry. v3.9.2 | Source of Truth: artifacts/deepdive_docs/_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -994,11 +994,11 @@ The app implements a **Mathematical Consumption Modeling** system using real-tim
 
 #### Watch & Health Domain (`src/hooks/`, `modules/`, `src/services/`)
 
-| Hook / Service            | Consumer           | Owns                                                                                              |
-| :------------------------ | :----------------- | :------------------------------------------------------------------------------------------------ |
-| `useHealthTelemetry`      | `SessionContext`   | Phone/watch health polling, watch-preferred priority logic, HR/cal/peak/avg state, `mergeWatchHealth()` |
-| `WatchBridge` (native module) | `SessionContext` | Phone↔watch session state sync, command relay (START/STOP), health data relay via native DataLayer/WCSession |
-| `SpeedTrackingService`    | `SessionContext`   | GPS speed push to watch via `WatchBridge.sendMetricUpdate()` during active sessions               |
+| Hook / Service                | Consumer                                | Owns                                                                                                                                                                                                                                                                   |
+| :---------------------------- | :-------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useHealthTelemetry`          | Dashboard HUD, Crew Hub, Street mode UI | Thin wrapper — calls `useSession()`, returns `HealthTelemetry` snapshot (HR, speed, calories) for watch-bridge consumers. File: `src/hooks/useHealthTelemetry.ts`. Platform: iOS/Android (web: returns null/zero via SessionContext). Dependencies: `useSession()`.    |
+| `WatchBridge` (native module) | `SessionContext`                        | Phone↔watch session state sync, command relay (START/STOP), health data relay via native DataLayer/WCSession                                                                                                                                                           |
+| `SpeedTrackingService`        | `SessionContext`                        | GPS speed push to watch via `WatchBridge.sendMetricUpdate()` during active sessions                                                                                                                                                                                    |
 
 ---
 
@@ -3141,13 +3141,14 @@ Note: `src/domain_files_dump.txt` surfaced in grep but is OUT of UTILS scope (ro
 ## 4. Hook/Service I/O Registry (native bridge methods exposed to JS)
 
 ### `WatchBridge` (Expo native module `sk8lytz-watch-bridge`) — JS-facing surface
-*Typed declaration source: `src/__mocks__/sk8lytz-watch-bridge.ts:23-31` (only declaration present; native impl missing).*
+_Typed declaration source: `modules/sk8lytz-watch-bridge/src/index.ts` (native impl restored from 82b18f14 in spike/watch-bridge-clean-install)._
 
 | Method | Direction | Input shape (observed) | Output |
 |---|---|---|---|
 | `syncSessionState(state)` | phone → watch (persistent) | `{ status, speed, heartRate, calories, startTime, totalDuration, distance, avgSpeed, peakHR }` → DataClient `/sk8lytz/state` | `Promise<void>` |
 | `sendMetricUpdate(metrics)` | phone → watch (live) | `{ speed, calories, heartRate, distance }` (`SpeedTrackingService.ts:370`) → MessageClient `/sk8lytz/metrics` | `Promise<void>` |
 | `isWatchReachable()` | phone query | — | `Promise<boolean>` |
+| `startListening()` | phone (init) | — | `void` — activates native event subscriptions; no-op stub on iOS (WCSession activates in `OnCreate`); called internally by `addWatchCommandListener` and `addWatchHealthListener` before subscribing |
 | `addWatchCommandListener(cb)` | watch → phone | receives `/sk8lytz/command` payloads (`START_SESSION` / `STOP_SESSION` / JSON `WRITE_COLOR` / `EXECUTE_PATTERN`) | unsubscribe fn |
 | `addWatchHealthListener(cb)` | watch → phone | receives `/sk8lytz/health` `{ heartRate, calories, status, startTimeMs }` | unsubscribe fn |
 
