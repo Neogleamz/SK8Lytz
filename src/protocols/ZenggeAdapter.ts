@@ -2,17 +2,13 @@
  * ZenggeAdapter.ts — Zengge Protocol Adapter (IControllerProtocol Implementation)
  *
  * Implements the IControllerProtocol HAL interface for Zengge/MagicHome/LEDnetWF
- * hardware. Owns its own ZenggeProtocol instance (independent sequence counter)
- * and wraps all protocol calls to return ProtocolResult.
+ * hardware. Uses ZenggeProtocol.sharedInstance — all adapters share one monotonic
+ * sequence counter, eliminating the split-brain where per-adapter counters
+ * (PROTOCOL_CORE-004) caused controllers to reject packets with out-of-order
+ * sequence bytes. Wraps all protocol calls to return ProtocolResult.
  *
  * This is the ONLY file that should import ZenggeProtocol directly. All other
  * files should go through the ControllerRegistry or IControllerProtocol.
- *
- * NOTE: For backward compatibility, the 25 existing consumers still call
- * this.protocol.setMultiColor() etc. statically. Those static calls delegate
- * to this.protocol._instance (the shared singleton). ZenggeAdapter uses its
- * OWN instance so adapter writes have an independent sequence counter — this
- * prevents sequence number corruption when both paths are active simultaneously.
  *
  * Transport:
  *   - Chunking: 0x40 fragmentation is handled HERE in prepareForTransmission().
