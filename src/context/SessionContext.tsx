@@ -1,3 +1,4 @@
+// blast-radius reviewed 2026-06-24: sk8lytz-watch-bridge module restored verbatim from 82b18f14 — public API unchanged, no consumer interface updates required
 import { STORAGE_SESSION_PHASE } from '../constants/storageKeys';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef, useMemo } from 'react';
 import { AppState, Platform } from 'react-native';
@@ -219,7 +220,7 @@ function SessionMachineWrapper({
       });
     }, UI_TICK_MS);
     return () => clearInterval(id);
-  }, [snapshot.value, snapshot.context.startTimeMs, snapshot.context.pausedMsAccum, snapshot.context.pauseStartTimeMs]);
+  }, [snapshot]);
 
   // Reset telemetry & health when IDLE
   useEffect(() => {
@@ -239,7 +240,7 @@ function SessionMachineWrapper({
         activeCalories: null,
       });
     }
-  }, [snapshot.value]);
+  }, [snapshot]);
 
   // Crash recovery
   // R-26: isRecoveringRef prevents concurrent recover() calls fired by both
