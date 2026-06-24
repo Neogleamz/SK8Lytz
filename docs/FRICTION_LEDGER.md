@@ -481,6 +481,17 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Evolution Proposal (at 3 occurrences):** Add a post-merge step to `fortress-gatekeeper.ps1` that detects whether `package.json` changed in the merge diff, and if so, automatically runs `npm install` on master before declaring "master is green."
 - **Status:** MONITORING
 
+### [FRICTION-047] Docs Commits After Verify Stale the Attestation
+- **First Observed:** 2026-06-24
+- **Observed By:** 🚀 Taylor
+- **Occurrences:** 1 / 3
+- **Trigger:** Avery and Reyes wrote SESSION_LOG / Master Reference updates after `npm run verify` ran in the worktree, making the attestation stale before the gatekeeper received control.
+- **Pattern:** The verify attestation is anchored to HEAD at the time it runs. Any commit after verify (docs, SESSION_LOG, blast-radius ACKs) creates a new HEAD, causing the gatekeeper to reject the stale attestation and require a second verify pass.
+- **Root Cause Theory:** Docs parity and SESSION_LOG write-back happen at Phase 5.5/5.6 (Avery) but verify runs at Phase 6 (Taylor). If Taylor triggers verify before receiving the final worktree state, any post-verify commit breaks the chain.
+- **Impact:** Gatekeeper skips the merge on first pass; Taylor must re-run verify from scratch, doubling merge time.
+- **Evolution Proposal (at 3 occurrences):** Enforce in the start-task Phase 6 prompt: "Taylor runs `npm run verify` AFTER receiving the worktree — not before. Avery and SESSION_LOG commits must be in the worktree before Taylor begins."
+- **Status:** MONITORING
+
 ### [FRICTION-028] Autonomous Gatekeeper Execution Override
 
 - **First Observed:** 2026-06-15
