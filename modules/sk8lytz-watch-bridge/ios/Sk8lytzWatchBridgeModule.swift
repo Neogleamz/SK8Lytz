@@ -51,6 +51,8 @@ public class Sk8lytzWatchBridgeModule: Module, WCSessionDelegate {
     AsyncFunction("isWatchReachable") { () -> Bool in
       return self.session?.isReachable ?? false
     }
+
+    Function("startListening") {}
   }
 
   // MARK: - WCSessionDelegate
