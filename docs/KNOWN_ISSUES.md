@@ -156,3 +156,20 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 **Date**: 2026-06-23
 **Task**: fix/protocol-core-integrity (discovered during QA)
 **Severity**: Low — no runtime defect. Documentation accuracy liability for future maintainers only.
+
+---
+
+## VS-012: Watch Bridge iOS startListening — Missing Native Function Definition (2026-06-24)
+
+**Symptom**: On iOS, any component calling `WatchBridge.addWatchCommandListener()` or `WatchBridge.addWatchHealthListener()` crashes at runtime with a NativeModule function-not-found exception before the listener subscription is returned. The crash occurs because `nativeModule.startListening()` is called unconditionally in the JS layer for both methods, but the iOS Swift module does not declare a `startListening` function in its `ModuleDefinition`.
+
+**Root Cause**: `modules/sk8lytz-watch-bridge/src/index.ts:118` and `:162` call `nativeModule.startListening()` unconditionally on any non-web platform. The Kotlin (Android) module at `Sk8lytzWatchBridgeModule.kt:53` defines `Function("startListening")` because Android requires explicit MessageClient listener registration. The Swift (iOS) module at `Sk8lytzWatchBridgeModule.swift:17-54` does NOT define `startListening` — it is not needed on iOS because `WCSession.default.activate()` in `OnCreate` automatically arms the delegate callbacks. The JS layer does not distinguish platforms when calling `startListening`, so iOS receives a call to an undefined native function.
+
+**Fix Applied**: Not yet applied — discovered during QA of `spike/watch-bridge-clean-install`. Two fix paths exist:
+
+- Option A (preferred): Add `Function("startListening") {}` as a no-op to `Sk8lytzWatchBridgeModule.swift` inside `definition()`. Satisfies the cross-platform JS contract without any behavioral change on iOS.
+- Option B: Wrap `nativeModule.startListening()` in `src/index.ts` with `if (Platform.OS === 'android')`. Lower blast radius but hides the contract asymmetry.
+
+**Date**: 2026-06-24
+**Task**: spike/watch-bridge-clean-install (discovered during QA)
+**Severity**: High — confirmed runtime crash on iOS for any consumer of `addWatchCommandListener` or `addWatchHealthListener`. Affects all watch-bridge-enabled sessions on iOS devices.
