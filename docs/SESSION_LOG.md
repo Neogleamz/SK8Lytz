@@ -1,3 +1,66 @@
+### [DECISION] 2026-06-23T — Phase 0 Audit: fix/protocol-core-integrity
+
+**Analyst:** Reyes
+**Task:** fix/protocol-core-integrity
+**Branch:** fix/protocol-core-integrity
+**Worktree:** `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\fix\protocol-core-integrity`
+
+**Branch state (INFERRED — no git tool, derived from file comparison):**
+- Worktree files differ from master on 2 of 3 plan-scoped files.
+- Third file (ZenggeProtocol.ts) differs in a way that reveals a major structural conflict — see below.
+
+**Files changed vs master (VERIFIED by direct file read):**
+
+1. `src/protocols/ZenggeAdapter.ts` — MODIFIED
+2. `src/hooks/useProtocolBuilder.ts` — IDENTICAL to master (byte-for-byte match verified)
+3. `src/protocols/ZenggeProtocol.ts` — STRUCTURALLY DIVERGED (see conflict below)
+
+**Per-file diff summary (VERIFIED):**
+
+- `ZenggeAdapter.ts`:
+  - Master L47: `private readonly protocol = new ZenggeProtocol();` (own instance, independent counter)
+  - Worktree L47: `private get protocol() { return ZenggeProtocol.sharedInstance; }` (shared singleton, PROTOCOL_CORE-004 fix)
+  - Master doc comment L13-15 claims "OWN instance so adapter writes have an independent sequence counter" — this is the old behavior. Worktree changes this to shared singleton and rewrites the comment to match (L44-47).
+  - `prepareForTransmission()`: Both sides identical — pass-through (PROTOCOL_CORE-001 fix already present on master).
+  - buildMusicConfig(): Identical on both sides.
+  - Net: the only behavioral change is the protocol field — new ZenggeProtocol() → ZenggeProtocol.sharedInstance. VERIFIED.
+
+- `useProtocolBuilder.ts`:
+  - Worktree is byte-for-byte identical to master. VERIFIED.
+  - The PROTOCOL_CORE-003 fix comment is already present on master (L119-124 on both sides).
+  - The matrixStyle/bldMic conflation fix is already on master.
+  - STATUS: Pre-shipped — no diff.
+
+- `ZenggeProtocol.ts` — CRITICAL STRUCTURAL CONFLICT DETECTED:
+  - Master: All methods (`queryHardwareSettings`, `writeHardwareSettings`, `setMusicConfig`, `setMultiColor`, `turnOn`, `turnOff`, `streamPixelFrame`, `setCandleMode`, `setCustomMode`, `setCustomModeCompact`, `setCustomModeExtended`, `setCustomModeExtendedCompact`, `setSessionTime`, `clearRfRemotes`, `queryRfRemoteState`, `parseRfRemoteState`, `oracleMusicMic26`, `oracleMusicMic27`, etc., `padStaticColorfulPayload`, `buildChunkedFrames`) are DELEGATED to `require('./handlers/*.ts')` stubs. Handler files exist at `src/protocols/handlers/{dynamicEffectHandler,hardwareSettingsHandler,legacyHandler,musicModeHandler,stateHandler,staticColorHandler}.ts`.
+  - Worktree: All methods are INLINE (full implementations embedded directly in the class body). NO handlers directory exists in the worktree.
+  - Shared: Both sides have the `sharedInstance` getter, `getNextChunkSeqByte()`, and the namespace facade. Both sides have the PROTOCOL_CORE-004 fix in the namespace (_shared = ZenggeProtocol.sharedInstance).
+  - The worktree's ZenggeProtocol.ts is the older monolithic form. Master has been refactored into a handler-delegation architecture after this branch was created.
+
+**Plan coverage:**
+
+- `ZenggeAdapter.ts`: DONE — PROTOCOL_CORE-004 fix (shared instance) applied. VERIFIED.
+- `useProtocolBuilder.ts`: PRE-SHIPPED — Identical to master. PROTOCOL_CORE-003 fix already merged. No diff needed.
+- `ZenggeProtocol.ts`: STRUCTURAL CONFLICT — worktree is the old monolithic form; master has been refactored to handler delegation. The worktree does NOT include the hardcoded 54-pixel max removal (PROTOCOL_CORE-005 — streamPixelFrame now uses HW_CONSTRAINTS.maxPoints=300 on both sides, so this may also be pre-shipped). The removal of the 54-pixel cap appears on both master and worktree. STATUS: Needs Sage to reconcile.
+
+**PROTOCOL_CORE-005 status (streamPixelFrame):**
+- Worktree ZenggeProtocol.ts L630: `const safePx = pixels.slice(0, HW_CONSTRAINTS.maxPoints);` — cap is 300. VERIFIED.
+- Master delegates to handler; cannot verify handler inline, but the plan fix (remove 54-pixel hardcoded max) was the intended change.
+
+**Blast-radius (VERIFIED):**
+- ZenggeAdapter.ts: changing `new ZenggeProtocol()` to `ZenggeProtocol.sharedInstance` affects all sequence number generation for adapter-dispatched commands. No consumers import ZenggeAdapter directly (HAL boundary); no additional files flagged.
+- ZenggeProtocol.ts: the structural conflict means the worktree is incompatible with master's handler architecture. Merging the worktree's monolithic ZenggeProtocol.ts onto master WILL OVERWRITE the handler-delegation refactor and delete the handler files' effect (they would still exist but be unreferenced by the inline methods).
+
+**Prior SESSION_LOG entries:** One prior entry — SESSION_LOG line 182 notes "fix/protocol-core-integrity" as an orphan worktree pre-crew-e2e, untouched. No task-specific prior investigation.
+
+**Don't re-derive:**
+- useProtocolBuilder.ts fix is PRE-SHIPPED on master — identical on both sides. No diff, no action needed.
+- ZenggeAdapter.ts PROTOCOL_CORE-004 fix is DONE in worktree — only change is `new ZenggeProtocol()` → `ZenggeProtocol.sharedInstance`.
+- ZenggeProtocol.ts is the most critical issue: master has been refactored to handler delegation AFTER this worktree was branched. The worktree cannot be cleanly merged without reconciling the inline implementations against the handler files. This is a REBASE CONFLICT, not a plan gap.
+- The handlers directory (`src/protocols/handlers/`) exists ONLY on master, not in the worktree. A rebase will surface conflicts in every delegated method.
+
+---
+
 ### [MERGE] fix/dashboard-styles-perf → master @ 4839c774
 
 - **Files touched:** `src/theme/theme.ts` (MODIFY — explicit ViewStyle/TextStyle annotations replacing as-casts), `docs/SESSION_LOG.md` (MODIFY)
