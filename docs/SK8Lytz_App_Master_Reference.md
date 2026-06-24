@@ -3661,7 +3661,7 @@ All paths under `c:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\src\protocols\`.
 |---|---|---|---|
 | `IControllerProtocol.ts` | 12,433 | **The HAL contract.** Defines `IControllerProtocol` interface, `ProtocolResult`, and all shared structs (`RGB`, `HardwareSettingsResult`, `CustomModeStep`, `MusicConfig`, `FirmwareInfo`, `RfRemoteState`). Zero byte-math. | ✅ full |
 | `ControllerRegistry.ts` | 4,114 | **Runtime protocol resolver.** Holds the ordered adapter registry; resolves a BLE advertisement → adapter. | ✅ full |
-| `ZenggeAdapter.ts` | 11,710 | **Zengge HAL adapter.** Implements `IControllerProtocol`; wraps a private `ZenggeProtocol` instance; returns `ProtocolResult`. | ✅ full |
+| `ZenggeAdapter.ts` | 11,710 | **Zengge HAL adapter.** Implements `IControllerProtocol`; accesses `ZenggeProtocol.sharedInstance` via a `private get protocol()` accessor (not a per-instance field) — all adapters share one monotonic sequence counter (PROTOCOL_CORE-004 fix); returns `ProtocolResult`. | ✅ full |
 | `BanlanxAdapter.ts` | 13,815 | **BanlanX SP621E HAL adapter.** Implements `IControllerProtocol`; constructs raw `0xA0` packets inline (self-contained, no separate protocol class). | ✅ full |
 | `ZenggeProtocol.ts` | 24,247 | **Zengge byte-math facade (MONOLITH, S4-flagged ~53KB per header note).** Class + merged namespace. Delegates almost all opcode construction to `./handlers/*` via `require()`. Owns sequence counter, checksum, `wrapCommand`, RF remote (0x2A) inline, chunking statics. | ✅ full |
 
@@ -3766,6 +3766,7 @@ Every semantic member of `IControllerProtocol` (cited `IControllerProtocol.ts`),
 ### Bug-fix annotations embedded in adapters (cite-worthy)
 - `ZenggeAdapter.buildPowerOn/Off`: prior code used `0x56 0xAA/0xAB` (SCENE DELETE opcode) — corrected to `0x71`.
 - `ZenggeAdapter.buildMusicConfig`: previously hardcoded `0x26` (Light Bar), blocking all `0x27` Light Screen patterns — now honors `config.matrixStyle`.
+- `ZenggeAdapter` protocol field (PROTOCOL_CORE-004): prior code stored a `private readonly protocol = new ZenggeProtocol()` per-adapter instance field, creating split-brain sequence counters when `BleWriteDispatcher` also held its own `ZenggeProtocol` instance. Fixed by replacing the field with `private get protocol() { return ZenggeProtocol.sharedInstance; }` — all callers now share one monotonic `messageCounter`.
 
 ---
 
@@ -3775,7 +3776,7 @@ Every semantic member of `IControllerProtocol` (cited `IControllerProtocol.ts`),
 |---|---|---|---|
 | `deviceId` semantics | MAC address | Opaque UUID | `ControllerRegistry.ts` L99 docstring: *"@param deviceId The BLE device ID (MAC on Android, UUID on iOS)."* |
 | FFT engine residency | Same (Zengge=software AudioContext; BanlanX=hardware) | Same | `requiresSoftwareFFT` is hardware-driven, not OS-driven. No OS branching in Protocol Core. |
-| MTU / chunking | Negotiated MTU passed into `prepareForTransmission`; chunk limit = `mtu - 3` (ATT overhead) | Same | `ZenggeAdapter.ts` L20-21 + L254-258. Protocol Core does not branch on OS; MTU is supplied by transport (`useBLE`/`BleWriteDispatcher`). |
+| MTU / chunking | Negotiated MTU passed into `prepareForTransmission`; chunk limit = `mtu - 3` (ATT overhead) | Same | `ZenggeAdapter.ts` L13-16 (header comment) + L248-254 (`prepareForTransmission`). Protocol Core does not branch on OS; MTU is supplied by transport (`useBLE`/`BleWriteDispatcher`). |
 | Base64 manufacturer data parsing | `Buffer.from(mfrData,'base64')` | Same | `BanlanxAdapter.matchesAdvertisement` L93. Cross-platform via `buffer` polyfill. |
 
 **Finding:** Protocol Core is **OS-agnostic** by design. The only OS-dependent fact is the meaning of `deviceId` (MAC vs UUID), handled by the *caller* (adapter-map keys), not by branching inside the HAL. Zero `Platform.OS` checks in any of the 5 assigned files.
