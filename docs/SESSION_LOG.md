@@ -1,3 +1,11 @@
+### [MERGE] spike/watch-bridge-clean-install → master @ 57a2e9b4
+
+- **Files touched:** `modules/sk8lytz-watch-bridge/` (6 files restored from 82b18f14 — package.json, index.ts, tsconfig.json, Sk8lytzWatchBridgeModule.kt, Sk8lytzWatchBridgeModule.swift, CMakeLists.txt), `src/hooks/useHealthTelemetry.ts` (new typed stub, satisfies ARCH_DEPENDENCY_MAP wearables rule), `src/context/SessionContext.tsx` (blast-radius ACK + Boy Scout dep-array fix), `ios/Sk8lytzWatchBridgeModule.swift` (startListening no-op added — VS-012 resolved), `docs/SK8Lytz_App_Master_Reference.md` (§1 header + §4 Hook table + §4 I/O Registry updated), `docs/KNOWN_ISSUES.md` (VS-012 entry added)
+- **TSC:** ✅  **Jest:** ✅
+- **Notes:** Spike confirmed CI npm install break — `file:` dep in package.json requires directory to exist; was absent since 94bbc494. Option A (restore module from git history 82b18f14) selected over Option B (remove dep) and Option C (CI scaffold). VS-012 (missing startListening on iOS) resolved in same pass. Worktree torn down. Branch deleted. Master HEAD: 57a2e9b4.
+
+---
+
 ### [MERGE READY] spike/watch-bridge-clean-install — 3c098223ffa3df0c95f0f6f9c953a7e267179aea
 Files touched: modules/sk8lytz-watch-bridge/ (6 files restored from 82b18f14), src/hooks/useHealthTelemetry.ts (blast-radius ACK stub created — exposes health: HealthTelemetry via useSession()), src/context/SessionContext.tsx (blast-radius ACK + Boy Scout: dep-arrays snapshot.value/.context.* collapsed to snapshot)
 TSC: ✅  Jest: ✅
