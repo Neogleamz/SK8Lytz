@@ -470,7 +470,19 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** User fury, broken promises, and severe erosion of trust because the agent confidently lies about completing a task.
 - **Status:** MONITORING
 
+### [FRICTION-046] node_modules Junction Masks Missing npm install After New Dep Merge
+- **First Observed:** 2026-06-23
+- **Observed By:** ⚒️ Sage
+- **Occurrences:** 2 / 3
+- **Trigger:** A new npm dependency (`react-native-mmkv`) was installed in a worktree, merged to master via gatekeeper, then master's `package-lock.json` diverged — the junction to worktree's node_modules had masked the missing install during the session.
+- **Pattern:** When a worktree junctions `node_modules` to master's copy, newly installed packages exist in the worktree's `package-lock.json` but NOT in master's physical `node_modules`. After the worktree merges, master's `package-lock.json` reflects the new dep but `node_modules` is stale. The next verify or build on master silently fails or uses cached stale types.
+- **Root Cause Theory:** The junction is one-directional at the filesystem level. `npm install` in the worktree writes to master's node_modules (via junction), but the `package-lock.json` update is worktree-local and only syncs to master at merge time. Master never gets the `npm install` signal after the gatekeeper runs.
+- **Impact:** Intermittent `npm run verify` failures on master after any dep-adding worktree merges. Requires a manual `npm install` on master as a recovery step — easily missed.
+- **Evolution Proposal (at 3 occurrences):** Add a post-merge step to `fortress-gatekeeper.ps1` that detects whether `package.json` changed in the merge diff, and if so, automatically runs `npm install` on master before declaring "master is green."
+- **Status:** MONITORING
+
 ### [FRICTION-028] Autonomous Gatekeeper Execution Override
+
 - **First Observed:** 2026-06-15
 - **Observed By:** ?? Jordan
 - **Occurrences:** 1 / 3
