@@ -29,12 +29,9 @@
 /* eslint-disable unused-imports/no-unused-vars, react-hooks/exhaustive-deps */
 /* global global, requestAnimationFrame */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useEffect, useRef, useCallback, useMemo, startTransition } from 'react';
 import { ActivityIndicator, Alert, AppState, AppStateStatus, BackHandler, Linking, PanResponder, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions, RefreshControl, InteractionManager } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ExpoLinking from 'expo-linking';
-import DeviceItem from '../components/DeviceItem';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { BLEContext } from '../context/BLEContext';
 import type { Device } from 'react-native-ble-plx';
@@ -64,7 +61,6 @@ import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
 import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
 import { useDashboardCrew } from '../hooks/useDashboardCrew';
-import { STORAGE_FAVORITES, STORAGE_CREW_HUB_COLLAPSED } from '../constants/storageKeys';
 
 import { useHardwareNotifications, BLEDeviceMinimal, ProbedHardwareConfig } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
@@ -361,27 +357,16 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   });
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
 
-  const [crewInitialStep, setCrewInitialStep] = useState<'landing' | 'join' | 'create' | 'map'>('landing');
-  const [isCrewHubCollapsed, setIsCrewHubCollapsed] = useState(false);
-
-  // ── Deep Link Handling ─────────────────────────────────────────────────────
-  const [initialDeepLinkCode, setInitialDeepLinkCode] = useState<string | null>(null);
+  // ── Deep Link Handling + Crew Hub collapsed state → useDashboardCrewHub ──────
+  const {
+    crewInitialStep,
+    setCrewInitialStep,
+    isCrewHubCollapsed,
+    toggleCrewHubCollapse,
+    initialDeepLinkCode,
+    setInitialDeepLinkCode,
+  } = useDashboardCrewHub();
   useCrewDeepLink(setInitialDeepLinkCode, setCrewInitialStep, setIsCrewModalVisible);
-
-  // Load Crew Hub collapsed state on mount
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_CREW_HUB_COLLAPSED)
-      .then(res => { if (res !== null) setIsCrewHubCollapsed(res === 'true'); })
-      .catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_CREW_HUB_COLLAPSED, event: 'load_failed', error: String(e), payload_size: 0, ssi: 0 }));
-  }, []);
-
-  const toggleCrewHubCollapse = useCallback(() => {
-    setIsCrewHubCollapsed(prev => {
-      const next = !prev;
-      AsyncStorage.setItem(STORAGE_CREW_HUB_COLLAPSED, String(next)).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_CREW_HUB_COLLAPSED, event: 'save_failed', error: String(e), payload_size: 0, ssi: 0 }));
-      return next;
-    });
-  }, []);
 
   // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
   useEffect(() => {

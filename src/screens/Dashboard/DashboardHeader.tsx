@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, Platform, Linking } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, Linking } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemePalette } from '../../theme/theme';
 
@@ -7,7 +7,7 @@ interface DashboardHeaderBannersProps {
   batteryTier?: string;
   isBluetoothEnabled: boolean;
   Colors: ThemePalette;
-  styles: Record<string, any>;
+  styles: Record<string, ReturnType<typeof StyleSheet.create>[string]>;
 }
 
 export const DashboardHeaderBanners = React.memo(({
