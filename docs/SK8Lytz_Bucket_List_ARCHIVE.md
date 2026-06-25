@@ -4024,4 +4024,15 @@ pm run verify which includes QA tests.
     Rejected alternative: `// @ts-ignore` for logger type — rejected per No-`any` Law.
   - **Source of Truth:** 📖 [staticColorHandler.ts:3](src/protocols/handlers/staticColorHandler.ts#L3) + [staticColorHandler.ts:51](src/protocols/handlers/staticColorHandler.ts#L51)
   - **Details:** Same file — combined worktree. Two changes: narrow `any` type + correct speed comment.
+
+
+- [x] **`fix/music-mode-dep-array`** 🚀 Merged in 428ff383
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:2]` `[⛔ BLOCKED BY: fix/protocol-audit Wave 1]`
+  - **Goal:** Add `handleMusicChange` to `useEffect` dep array in `useMusicMode.ts:116` to prevent stale 0x73 config when `micSensitivity` or `brightness` change programmatically.
+  - **Decision Log:** Audit VERIFIED (MEDIUM) — `handleMusicChange` useCallback (deps include sensitivity, brightness) is recreated on those changes, but the re-send useEffect holds a stale closure. Impact: programmatic brightness/sensitivity changes (session restore, parent state) dispatch stale 0x73 to hardware.
+  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-007, MEDIUM) · Plan: [PLAN-fix-music-mode-dep-array.md](./plans/PLAN-fix-music-mode-dep-array.md)
+    Key finding: `useEffect` dep array at line 116 missing `handleMusicChange`; `micSensitivity`/`brightness` changes produce stale closure.
+    Rejected alternative: Adding sensitivity+brightness directly — rejected; adding `handleMusicChange` is the complete transitive fix.
+  - **Source of Truth:** 📖 [useMusicMode.ts:116](src/hooks/useMusicMode.ts#L116)
+  - **Details:** One dep added to the array. Wave 2 because `useMusicMode` imports `useProtocolDispatch` (modified in Wave 1 F-003).
 

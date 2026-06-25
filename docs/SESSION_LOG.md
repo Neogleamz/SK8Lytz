@@ -1,3 +1,36 @@
+### [EVENT] GOAL COMPLETE — [BATCH:fix/protocol-audit] — 2026-06-24
+
+**All 7 tasks merged. Master is green at `428ff383`.**
+
+**Session:** BLE Protocol Defect Audit → `/intake` all 8 findings → `/goal` execute 2-wave batch  
+**Personas active:** Reyes (audit) · Quinn (plans) · Casey (batch routing) · Sage ×7 (execution) · Taylor (gatekeeper)
+
+**What shipped:**
+
+| Task | Commit | Finding Fixed |
+| ---- | ------ | ------------- |
+| fix/adapter-chunking-comment | `ad1055ad` | False JSDoc claiming prepareForTransmission auto-chunks (it doesn't) |
+| fix/dispatcher-padding-dead-code | `79a027c0` | Permanently unreachable padStaticColorfulPayload call removed |
+| fix/hw-settings-segments-haloz | `fe1f64ea` | Classic 0x63 binary parser: PATH B — comment documents WHY segments=1 is correct for single-segment classic devices; no segment field exists in this format |
+| fix/protocol-dispatch-mtu-guard | `91058b4b` | 0x51 MTU guard added to _dispatchToDevices; oversized payloads routed through writeChunked |
+| fix/settled-mode-direction | `9d573667` | Direction byte inversion fixed: `(dir===1?0:1)` → `dir & 0x01` |
+| fix/static-color-handler-cleanup | `ec3174eb` | any→AppLoggerLike\|null; stale 1-31 speed comment → accurate 1-100 |
+| fix/music-mode-dep-array | `428ff383` | handleMusicChange added to useMusicMode useEffect dep array |
+
+**Key F-001 audit finding (don't re-derive):** HALOZ (current firmware) uses JSON-inner 0x63 format → NOT affected by classic binary path. Classic binary format has NO documented segment byte — `segments:1` is intentional and correct for single-segment classic devices. Protocol Bible §0x63 only documents ledPoints at payload[8-9].
+
+**Next session:** ON DECK has `fix/supabase-db-security-advisors` (TRIAGE, NEEDS PLAN) as highest-priority item.
+
+---
+
+### [MERGE] fix/music-mode-dep-array @ `428ff383` — Wave 2 complete 2026-06-24
+
+**File:** `src/hooks/useMusicMode.ts:116` — one dep added (`handleMusicChange`)  
+**TSC:** ✅ **Jest:** ✅ **All gates:** ✅  
+**Worktree:** torn down, branch deleted. Batch COMPLETE.
+
+---
+
 ### [MERGE] BATCH:fix/protocol-audit Wave 1 — All 6 tasks merged 2026-06-24
 
 **Merged by:** Taylor (gatekeeper) — 6 parallel subagents → sequential gatekeeper pass  

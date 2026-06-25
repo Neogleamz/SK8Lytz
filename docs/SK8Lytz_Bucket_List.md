@@ -19,8 +19,10 @@
 > ✅ **`fix/dashboard-styles-perf` MERGED 2026-06-23** — `4839c774`. Explicit ViewStyle/TextStyle annotations in theme.ts replacing as-casts. Zero runtime changes. Master is green.
 > ✅ **`fix/protocol-core-integrity` MERGED 2026-06-23** — `f6867d92`. ZenggeAdapter now uses ZenggeProtocol.sharedInstance (PROTOCOL_CORE-004). Split-brain SeqNum between adapter and BleWriteDispatcher eliminated. Master is green.
 > ✅ **`spike/watch-bridge-clean-install` MERGED 2026-06-24** — `57a2e9b4`. sk8lytz-watch-bridge module restored from 82b18f14. CI npm install break fixed. VS-012 (iOS startListening missing) resolved. Master is green.
-> ✅ **[BATCH:fix/protocol-audit] Wave 1 — ALL 6 TASKS MERGED 2026-06-24** — `ec3174eb` (HEAD). 6 BLE protocol defects patched in parallel: `ad1055ad` fix/adapter-chunking-comment · `79a027c0` fix/dispatcher-padding-dead-code · `fe1f64ea` fix/hw-settings-segments-haloz · `91058b4b` fix/protocol-dispatch-mtu-guard · `9d573667` fix/settled-mode-direction · `ec3174eb` fix/static-color-handler-cleanup. Master is green.
-> 🚧 **Currently executing:** `fix/music-mode-dep-array` — Wave 2 (solo, Wave 1 prerequisite now met)
+> 🏆 **[BATCH:fix/protocol-audit] GOAL COMPLETE** — all 7 tasks merged 2026-06-24. Wave 1 (6 parallel) + Wave 2 (solo) complete.
+> ✅ Wave 1 (6 parallel) — `ec3174eb` — adapter-chunking-comment · dispatcher-padding-dead-code · hw-settings-segments-haloz · protocol-dispatch-mtu-guard · settled-mode-direction · static-color-handler-cleanup. Master is green.
+> ✅ Wave 2 (solo) — Completed: fix/music-mode-dep-array @ `428ff383` ✅. handleMusicChange dep array fix. Master is green.
+> Currently executing: none
 
 ---
 
@@ -46,7 +48,7 @@
 #### Batch Strategy Table (AST-Verified — `node tools/ast-parser.js --collision-matrix artifacts/protocol_audit_clusters.json`)
 
 | Wave | Task | Parallel-Safe? | Prerequisite | Collision Basis |
-|------|------|---------------|-------------|-----------------|
+| ---- | ---- | -------------- | ----------- | --------------- |
 | **1** | `fix/hw-settings-segments-haloz` | ✅ 6 parallel | None | `hardwareSettingsHandler.ts` only |
 | **1** | `fix/dispatcher-padding-dead-code` | ✅ 6 parallel | None | `BleWriteDispatcher.ts` only |
 | **1** | `fix/protocol-dispatch-mtu-guard` | ✅ 6 parallel | None | `useProtocolDispatch.ts` only |
@@ -56,16 +58,6 @@
 | **2** | `fix/music-mode-dep-array` | Solo | Wave 1 merged | imports `useProtocolDispatch` (modified in F-003/Wave 1) |
 
 > AST output: `total_collisions: 1` (fix/protocol-dispatch-mtu-guard ↔ fix/music-mode-dep-array via `useProtocolDispatch.ts`). Wave 1: 6-parallel. Wave 2: 1 solo.
-
-- [ ] **`fix/music-mode-dep-array`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:2]` `[⛔ BLOCKED BY: fix/protocol-audit Wave 1]`
-  - **Goal:** Add `handleMusicChange` to `useEffect` dep array in `useMusicMode.ts:116` to prevent stale 0x73 config when `micSensitivity` or `brightness` change programmatically.
-  - **Decision Log:** Audit VERIFIED (MEDIUM) — `handleMusicChange` useCallback (deps include sensitivity, brightness) is recreated on those changes, but the re-send useEffect holds a stale closure. Impact: programmatic brightness/sensitivity changes (session restore, parent state) dispatch stale 0x73 to hardware.
-  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-007, MEDIUM) · Plan: [PLAN-fix-music-mode-dep-array.md](./plans/PLAN-fix-music-mode-dep-array.md)
-    Key finding: `useEffect` dep array at line 116 missing `handleMusicChange`; `micSensitivity`/`brightness` changes produce stale closure.
-    Rejected alternative: Adding sensitivity+brightness directly — rejected; adding `handleMusicChange` is the complete transitive fix.
-  - **Source of Truth:** 📖 [useMusicMode.ts:116](src/hooks/useMusicMode.ts#L116)
-  - **Details:** One dep added to the array. Wave 2 because `useMusicMode` imports `useProtocolDispatch` (modified in Wave 1 F-003).
 
 ---
 
