@@ -1,3 +1,14 @@
+### [DECISION] 2026-06-25 — MTU guard single-packet invariant coupling (ship-it Phase 1.5 finding)
+
+**Decision:** Leave `useProtocolDispatch.ts` MTU guard (F-003) as-is for this release.
+**Finding (Morgan):** The guard at lines 45–59 only routes packets matching `p[0] === 0x51 && p.length > 200` through `writeChunked`; any non-oversized siblings in the same `ProtocolResult.packets[]` would be silently dropped. This is a latent correctness gap.
+**Why safe today:** Every current `IControllerProtocol` implementation uses `toResult()` → single-packet results. `ZenggeAdapter.toResult()` (L59-61) and `BanlanxAdapter` never co-package an oversized 0x51 with a normal packet. Mixing is structurally impossible with today's builders.
+**Rejected:** Patching the guard now (add `executeProtocolResults` call for non-oversized remainder) — correct fix but out of scope for this release; zero live trigger path means risk is deferred.
+**Don't re-derive:** The guard's safety depends on the single-packet invariant in `toResult()`. If any future adapter returns a multi-packet `ProtocolResult` containing an oversized 0x51, non-oversized siblings will be dropped silently. File a TRIAGE hardening task before adding any multi-packet builder.
+**Follow-up:** TRIAGE task — harden MTU guard to dispatch non-oversized remainder through `executeProtocolResults`.
+
+---
+
 ### [EVENT] GOAL COMPLETE — [BATCH:fix/protocol-audit] — 2026-06-24
 
 **All 7 tasks merged. Master is green at `428ff383`.**
