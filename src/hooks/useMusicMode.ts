@@ -113,7 +113,7 @@ export function useMusicMode({
       musicPatternId, micSensitivity, brightness, micSource,
       musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
     );
-      }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
+      }, [handleMusicChange, musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
 
   /**
    * Track previous activeMode to detect MUSIC → other transitions.
