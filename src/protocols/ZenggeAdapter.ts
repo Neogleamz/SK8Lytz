@@ -179,8 +179,13 @@ export class ZenggeAdapter implements IControllerProtocol {
 
   /**
    * Extended 0x51 format (323 bytes) for 0xA3 hardware.
-   * This REQUIRES chunked transmission — prepareForTransmission() will
-   * automatically apply 0x40 fragmentation when the packet exceeds MTU.
+   * Returns a raw 323-byte 0x51 extended payload (NOT V2-wrapped, NOT 0x40-chunked).
+   * Chunking responsibility by caller:
+   *   - writeToDevice path → _executeWriteToDeviceInternal:155 detects 0x51 + length > 200
+   *     and routes to executeWriteChunked automatically. ✅ SAFE.
+   *   - executeProtocolResults path (_dispatchToDevices) → has MTU guard added in F-003.
+   *     ✅ SAFE after fix/protocol-dispatch-mtu-guard merged.
+   *   - prepareForTransmission() is a PASS-THROUGH — it does NOT chunk. Do not rely on it.
    */
   buildCustomModeExtended(steps: CustomModeStep[], direction: number = 0x80): ProtocolResult {
     const extSteps = steps.map(s => ({ mode: s.mode, speed: s.speed, color1: s.color1, color2: s.color2, dir: s.dir ?? direction }));
