@@ -1,9 +1,15 @@
 import { ZenggeProtocol, HardwareSettings, HW_CONSTRAINTS, IC_TYPES, COLOR_SORTING_RGB, icTypeIndex, colorSortingIndex } from '../ZenggeProtocol';
 
-let _appLogger: any;
-function getAppLogger() {
+/** Minimal logger interface shared by AppLogger and the console fallback. */
+interface ILogger {
+  debug?: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+}
+
+let _appLogger: ILogger | null = null;
+function getAppLogger(): ILogger {
   if (!_appLogger) {
-    try { _appLogger = require('../../services/AppLogger').AppLogger; } catch (_e) { _appLogger = console; }
+    try { _appLogger = (require('../../services/AppLogger').AppLogger) as ILogger; } catch (_e) { _appLogger = console; }
   }
   return _appLogger;
 }
@@ -80,9 +86,16 @@ function getAppLogger() {
     // JSON-inner format (0x63 at index 1):
     //   [0]=0x00  [1]=0x63  [2]=0x00  [3]=icType  [4]=0x00
     //   [5]=segments  [6]=pts_hi  [7]=pts_lo  [8]=X  [9]=colorSorting
-    // Classic format (0x63 at index 0):
+    // Classic binary format (0x63 at index 0) — 12-byte response:
     //   [0]=0x63  [1]=?  [2]=?  [3]=icType  [4]=?  [5]=?  [6]=?  [7]=?
     //   [8]=pts_lo  [9]=pts_hi  [10]=colorSorting  [11]=checksum
+    // NOTE (F-001 2026-06-24): Protocol Bible §0x63 documents ONLY payload[8-9] for ledPoints
+    // (little-endian swapped). No segment byte is documented for this format. Hardware captures
+    // for the classic binary path are unavailable. `segments: 1` (single-segment) is the safe
+    // fallback — it prevents the 10-segment HW_CONSTRAINTS default from corrupting ring devices.
+    // Do NOT read payload[5] for segments here: its meaning is unverified and must not be assumed
+    // to mirror the JSON-inner format. Revisit only after a hardware capture of an older-firmware
+    // controller confirms the byte layout. Source: ZENGGE_PROTOCOL_BIBLE.md §0x63, line 562.
     let icType: number, ledPoints: number, colorSorting: number;
 
     if (is63AtIndex1 && isJsonFormat) {
@@ -109,7 +122,8 @@ function getAppLogger() {
         detected: true,
       };
     } else {
-      // Classic 12-byte format
+      // Classic binary format — only ledPoints (little-endian) and icType/colorSorting are known.
+      // segments is NOT present in this format (see comment block above). Single-segment default below.
       icType = payload[3] & 0xFF;
       ledPoints = ((payload[9] & 0xFF) << 8) | (payload[8] & 0xFF);
       colorSorting = payload[10] & 0xFF;
@@ -121,7 +135,7 @@ function getAppLogger() {
 
     return {
       ledPoints: (ledPoints > 0 && ledPoints <= 2048) ? ledPoints : HW_CONSTRAINTS.defaultPoints,
-      segments: 1,
+      segments: 1, // F-001: classic binary format has no verified segment byte — single-segment is the safe default
       icType,
       icName: IC_TYPES[icType] || 'WS2812B',
       colorSorting,
