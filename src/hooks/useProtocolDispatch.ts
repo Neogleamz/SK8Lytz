@@ -18,7 +18,7 @@ export function useProtocolDispatch() {
   const { connectedDevices, getAdapterForDevice, executeProtocolResults, writeChunked } = context;
 
   const _dispatchToDevices = useCallback(
-    (
+    async (
       builder: (adapter: ReturnType<typeof getAdapterForDevice>) => ProtocolResult,
       targetDeviceId?: string,
       opts?: { lowPriority?: boolean }
@@ -38,9 +38,29 @@ export function useProtocolDispatch() {
         return { targetDeviceId: device.id, result };
       });
 
+      // MTU GUARD: 0x51 extended payloads (323B) must route through writeChunked.
+      // executeProtocolResults → _executeProtocolResultsInternal has no MTU check and would
+      // attempt to write 323B in a single characteristic write — silent GATT drop on all MTUs.
+      // This mirrors the guard in executeRawPayload:114 and executeWriteToDevice:155.
+      const hasOversized0x51 = payloads.some(
+        ({ result }) => result.packets.some(p => p[0] === 0x51 && p.length > 200)
+      );
+      if (hasOversized0x51) {
+        // Route each oversized packet through writeChunked per device
+        const writes = payloads.map(({ targetDeviceId: devId, result }) =>
+          Promise.all(
+            result.packets
+              .filter(p => p[0] === 0x51 && p.length > 200)
+              .map(p => writeChunked(p, devId))
+          )
+        );
+        await Promise.all(writes);
+        return true;
+      }
+
       return executeProtocolResults(payloads, opts);
     },
-    [connectedDevices, getAdapterForDevice, executeProtocolResults]
+    [connectedDevices, getAdapterForDevice, executeProtocolResults, writeChunked]
   );
 
   const setPower = useCallback((isOn: boolean, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
