@@ -9874,12 +9874,3 @@ Decision: Restore modules/sk8lytz-watch-bridge/ from 82b18f14 (Option A)
 Rejected: Remove file: dep from package.json (Option B) — deferred the native bridge work
 Rejected: CI scaffold script (Option C) — fragile stub approach
 Don't re-derive: The module is NOT gitignored (only android/build/ is). It was deleted in 94bbc494 without removing the package.json dep. The CI risk is real — npm install fails on fresh checkout without cache.
-
-### [MERGE READY] sweep/docked-controller — 0734d66c
-- **Files touched:**
-  - `src/components/controller/DockedController.styles.ts` (MODIFY — export DockedControllerStyles type)
-  - `src/components/docked/DockedHeader.tsx` (MODIFY — replace `styles: any` with `DockedControllerStyles`; tighten Colors prop to Pick<ThemePalette>)
-- **TSC:** ✅  **Jest:** ✅  **No-any guard:** ✅
-- **HAL parity confirmed:** DockedController has zero direct ZenggeProtocol imports; all protocol calls route through useControllerDispatch → getAdapterForDevice → IControllerProtocol
-- **useDockedState:** Already wired as 4-context facade (ThemeContext, AppConfigContext, FavoritesContext, BLEContext → single hook)
-- **DockedHeader + useDockedState:** Both existed pre-task; only type violation (`styles: any`) remained as work item
