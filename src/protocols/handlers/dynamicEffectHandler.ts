@@ -1,11 +1,16 @@
-import { ZenggeProtocol, HardwareSettings, HW_CONSTRAINTS, IC_TYPES, COLOR_SORTING_RGB, icTypeIndex, colorSortingIndex } from '../ZenggeProtocol';
+import { ZenggeProtocol, HW_CONSTRAINTS } from '../ZenggeProtocol';
 
-let _appLogger: any;
-function getAppLogger() {
+type AppLoggerLike = {
+  log: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
+let _appLogger: AppLoggerLike | null = null;
+function getAppLogger(): AppLoggerLike {
   if (!_appLogger) {
     try { _appLogger = require('../../services/AppLogger').AppLogger; } catch (_e) { _appLogger = console; }
   }
-  return _appLogger;
+  return _appLogger!;
 }
 
 // Hardware confirmed via Oracle lab 2026-04-23

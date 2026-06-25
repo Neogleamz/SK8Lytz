@@ -1,4 +1,3 @@
-// Acknowledged Monolith (S4): This file is a monolith > 30KB (approx. 53.4KB). Component extraction is flagged for future refactoring.
 /**
  * Zengge BLE Controller Protocol Implementation
  * Supports Magic Home / LEDnetWF / Zengge Symphony controllers
