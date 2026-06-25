@@ -46,9 +46,10 @@ export async function executeWriteToDevice(
   adapterMap: AdapterMapLike,
   stateRefs: BleWriteStateRefs
 ): Promise<boolean | 'partial'> {
-  // BUFFER LOCKOUT DEFENSE (R-19): delegated to ZenggeProtocol.padStaticColorfulPayload()
-  // Source: tools/ZENGGE_PROTOCOL_BIBLE.md §0x59 MINIMUM PIXELS
-  payload = ZenggeProtocol.padStaticColorfulPayload(payload);
+  // BUFFER LOCKOUT DEFENSE (R-19): enforced upstream in setMultiColor():44 (staticColorHandler.ts)
+  // before wrapCommand() is called. Payloads here are already V2-wrapped (payload[0]=0x00),
+  // so padStaticColorfulPayload() would be a no-op. The defense is NOT re-applied here.
+  // Source: Protocol Bible §0x59 MINIMUM PIXELS — minimum 12 pixels, enforced at construction.
 
   const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
   AppLogger.setLastTxPayload(hexString);
