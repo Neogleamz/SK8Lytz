@@ -89,3 +89,6 @@ export const createDockedControllerStyles = (Colors: ThemePalette) => StyleSheet
     flex: 1, justifyContent: 'space-evenly'
   }
 });
+
+/** Typed return of createDockedControllerStyles — use in sub-components that receive `styles` as a prop. */
+export type DockedControllerStyles = ReturnType<typeof createDockedControllerStyles>;

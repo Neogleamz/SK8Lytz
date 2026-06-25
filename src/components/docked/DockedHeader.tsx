@@ -2,16 +2,15 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LOCAL_PRODUCT_CATALOG } from '../../constants/ProductCatalog';
+import type { DockedControllerStyles } from '../controller/DockedController.styles';
+import type { ThemePalette } from '../../theme/theme';
 
 interface DockedHeaderProps {
   lockedProduct?: string;
   activeProduct: string;
   setActiveProduct: (id: string) => void;
-  Colors: {
-    primary: string;
-    accent: string;
-  };
-  styles: any;
+  Colors: Pick<ThemePalette, 'primary' | 'accent'>;
+  styles: DockedControllerStyles;
 }
 
 export default function DockedHeader({ lockedProduct, activeProduct, setActiveProduct, Colors, styles }: DockedHeaderProps) {
