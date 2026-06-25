@@ -22,7 +22,8 @@
 > 🏆 **[BATCH:fix/protocol-audit] GOAL COMPLETE** — all 7 tasks merged 2026-06-24. Wave 1 (6 parallel) + Wave 2 (solo) complete.
 > ✅ Wave 1 (6 parallel) — `ec3174eb` — adapter-chunking-comment · dispatcher-padding-dead-code · hw-settings-segments-haloz · protocol-dispatch-mtu-guard · settled-mode-direction · static-color-handler-cleanup. Master is green.
 > ✅ Wave 2 (solo) — Completed: fix/music-mode-dep-array @ `428ff383` ✅. handleMusicChange dep array fix. Master is green.
-> Currently executing: none
+> 🚧 **[BATCH:sweep/deep-dive-w1] EXECUTING (5 parallel)** — 2026-06-25 `/goal` autonomous. Worktrees live from `497a2f6e`.
+> Currently executing: sweep/dashboard-extraction · sweep/protocol-monolith · sweep/docked-controller · sweep/split-brain · sweep/circular-deps
 
 ---
 
