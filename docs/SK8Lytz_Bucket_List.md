@@ -36,6 +36,97 @@
 
 ### 🔥 ON DECK
 
+### ⚡ [BATCH:fix/protocol-audit] — BLE Protocol Defect Patch Series
+
+> **Source Analysis**: 📊 Protocol Defect Audit 2026-06-24 — 8 confirmed defects (1 CRITICAL, 2 HIGH, 4 MEDIUM, 1 LOW) across BLE dispatch, hardware settings parsing, and React Native hooks. Read-only audit conducted session 2026-06-24.
+> **Decision Log:** File-and-line evidence confirmed for all 8 findings. AST-verified wave assignments via `node tools/ast-parser.js --collision-matrix artifacts/protocol_audit_clusters.json`.
+
+#### Batch Strategy Table (AST-Verified — `node tools/ast-parser.js --collision-matrix artifacts/protocol_audit_clusters.json`)
+
+| Wave | Task | Parallel-Safe? | Prerequisite | Collision Basis |
+|------|------|---------------|-------------|-----------------|
+| **1** | `fix/hw-settings-segments-haloz` | ✅ 6 parallel | None | `hardwareSettingsHandler.ts` only |
+| **1** | `fix/dispatcher-padding-dead-code` | ✅ 6 parallel | None | `BleWriteDispatcher.ts` only |
+| **1** | `fix/protocol-dispatch-mtu-guard` | ✅ 6 parallel | None | `useProtocolDispatch.ts` only |
+| **1** | `fix/adapter-chunking-comment` | ✅ 6 parallel | None | `ZenggeAdapter.ts` only |
+| **1** | `fix/settled-mode-direction` | ✅ 6 parallel | None | `dynamicEffectHandler.ts` only |
+| **1** | `fix/static-color-handler-cleanup` | ✅ 6 parallel | None | `staticColorHandler.ts` only |
+| **2** | `fix/music-mode-dep-array` | Solo | Wave 1 merged | imports `useProtocolDispatch` (modified in F-003/Wave 1) |
+
+> AST output: `total_collisions: 1` (fix/protocol-dispatch-mtu-guard ↔ fix/music-mode-dep-array via `useProtocolDispatch.ts`). Wave 1: 6-parallel. Wave 2: 1 solo.
+
+- [ ] **`fix/hw-settings-segments-haloz`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:1]`
+  - **Goal:** Fix `hardwareSettingsHandler.ts:124` — read `payload[5]` for segments in the classic 0x63 binary response branch instead of hardcoding `segments: 1`.
+  - **Decision Log:** Audit VERIFIED (CRITICAL) — HALOZ devices (product_id=163, 2 segments) receive `hwSettings.segments=1` after classic 0x63 binary response, breaking the ring visualizer. JSON-inner branch correctly reads `payload[5]`; binary branch does not.
+  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-001, CRITICAL) · Plan: [PLAN-fix-hw-settings-segments-haloz.md](./plans/PLAN-fix-hw-settings-segments-haloz.md)
+    Key finding: `hardwareSettingsHandler.ts:124` — `segments: 1` hardcoded while `payload[5]` holds the real value; JSON-inner branch (line 104) reads it correctly.
+    Rejected alternative: Reading only in JSON branch — rejected; binary response is the primary path for HALOZ controllers.
+  - **Source of Truth:** 📖 [hardwareSettingsHandler.ts:124](src/protocols/handlers/hardwareSettingsHandler.ts#L124)
+  - **Details:** Phase 1 (mandatory pre-edit): audit full hwSettings pipeline for additional hardcoding (8 files). Phase 2: surgical fix at line 124.
+
+- [ ] **`fix/dispatcher-padding-dead-code`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:1]`
+  - **Goal:** Remove unreachable `padStaticColorfulPayload` call in `BleWriteDispatcher.ts:51`; update comment to locate the real minimum-pixel enforcement at `staticColorHandler.setMultiColor:44`.
+  - **Decision Log:** Audit VERIFIED (MEDIUM) — V2-wrapped payloads always start with `0x00`; the `payload[0] !== 0x59` guard permanently fires and returns unchanged. Real defense is `Math.max(12, ...)` in `setMultiColor:44`.
+  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-002, MEDIUM) · Plan: [PLAN-fix-dispatcher-padding-dead-code.md](./plans/PLAN-fix-dispatcher-padding-dead-code.md)
+    Key finding: `padStaticColorfulPayload` reads `payload[0]` but V2 wrapping happens upstream — guard is permanently true, call is dead code.
+    Rejected alternative: Moving guard pre-wrap — rejected; enforcement is stronger at the source (`setMultiColor`).
+  - **Source of Truth:** 📖 [BleWriteDispatcher.ts:51](src/services/BleWriteDispatcher.ts#L51)
+  - **Details:** One-line removal + comment update. Zero runtime behavioral change.
+
+- [ ] **`fix/protocol-dispatch-mtu-guard`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:1]`
+  - **Goal:** Add 0x51 MTU interception inside `_dispatchToDevices` (useProtocolDispatch) to prevent silent GATT drops of 323-byte 0x51 extended payloads via `executeProtocolResults`.
+  - **Decision Log:** Audit VERIFIED (HIGH) — `executeProtocolResults → _executeProtocolResultsInternal` has no MTU check; `prepareForTransmission._mtu` is unused. A 323-byte characteristic write silently drops on all real MTUs. Fix mirrors existing guard in `executeRawPayload:114`.
+  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-003, HIGH) · Plan: [PLAN-fix-protocol-dispatch-mtu-guard.md](./plans/PLAN-fix-protocol-dispatch-mtu-guard.md)
+    Key finding: `_dispatchToDevices` routes 0x51 payloads to `executeProtocolResults` with no size check; both safe paths (`writeToDevice`, `executeRawPayload`) already guard — only this path is missing.
+    Rejected alternative: Fixing `_executeProtocolResultsInternal` directly — rejected; fix belongs at the API layer.
+  - **Source of Truth:** 📖 [useProtocolDispatch.ts:20](src/hooks/useProtocolDispatch.ts#L20)
+  - **Details:** Add has-oversized-0x51 check + writeChunked routing before the existing `executeProtocolResults` call. Add `writeChunked` to dep array.
+
+- [ ] **`fix/adapter-chunking-comment`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:1]`
+  - **Goal:** Replace false "prepareForTransmission() will automatically apply 0x40 fragmentation" JSDoc in `ZenggeAdapter.ts:182-183` with accurate chunking responsibility map.
+  - **Decision Log:** Audit VERIFIED (HIGH) — `prepareForTransmission` takes `_mtu` (underscore-prefixed, intentionally unused) and returns result unchanged. False comment is the primary mechanism allowing F-003 to survive code review.
+  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-004, HIGH) · Plan: [PLAN-fix-adapter-chunking-comment.md](./plans/PLAN-fix-adapter-chunking-comment.md)
+    Key finding: `prepareForTransmission` `_mtu` parameter is unused; function is a pass-through.
+    Rejected alternative: Implementing real chunking in `prepareForTransmission` — rejected; chunking belongs at the dispatcher layer where MTU context is available.
+  - **Source of Truth:** 📖 [ZenggeAdapter.ts:182](src/protocols/ZenggeAdapter.ts#L182)
+  - **Details:** Comment-only change. Zero logic impact. Unblocks safe code review of F-003.
+
+- [ ] **`fix/settled-mode-direction`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:1]`
+  - **Goal:** Fix direction byte inversion in `dynamicEffectHandler.setSettledMode:52` — `(direction === 1 ? 0 : 1)` → `(direction === 1 ? 1 : 0)`.
+  - **Decision Log:** Audit VERIFIED (MEDIUM) — Protocol Bible §0x41: dir=0=forward, dir=1=reverse. Current code sends the opposite byte. Function is `@DEPRECATED` / DiagnosticLab only; no production callers.
+  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-005, MEDIUM) · Plan: [PLAN-fix-settled-mode-direction.md](./plans/PLAN-fix-settled-mode-direction.md)
+    Key finding: `(direction === 1 ? 0 : 1)` ternary inverts the bit; Protocol Bible confirms 1=reverse.
+    Rejected alternative: Removing the deprecated function — rejected; deprecation doesn't justify removal in this scope.
+  - **Source of Truth:** 📖 [dynamicEffectHandler.ts:52](src/protocols/handlers/dynamicEffectHandler.ts#L52)
+  - **Details:** One-line ternary fix. Deprecated function; no production impact.
+
+- [ ] **`fix/static-color-handler-cleanup`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:1]`
+  - **Goal:** Fix stale speed-range comment (lines 51-53) + `any` type violation (line 3) in `staticColorHandler.ts`.
+  - **Decision Log:** Audit VERIFIED — F-006 (MEDIUM): comment claims hardware range 1-31 but 0xA3 chipset accepts 1-100 (oracle-confirmed; `ANIM_SPEED_MAX=100` in code is correct). F-008 (LOW): `let _appLogger: any` violates No-`any` Law; structural `AppLoggerLike` type resolves circular import.
+  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-006 + F-008, MEDIUM+LOW combined) · Plan: [PLAN-fix-static-color-handler-cleanup.md](./plans/PLAN-fix-static-color-handler-cleanup.md)
+    Key finding: Stale comment misleads speed debugging; `any` cast active in production.
+    Rejected alternative: `// @ts-ignore` for logger type — rejected per No-`any` Law.
+  - **Source of Truth:** 📖 [staticColorHandler.ts:3](src/protocols/handlers/staticColorHandler.ts#L3) + [staticColorHandler.ts:51](src/protocols/handlers/staticColorHandler.ts#L51)
+  - **Details:** Same file — combined worktree. Two changes: narrow `any` type + correct speed comment.
+
+- [ ] **`fix/music-mode-dep-array`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:fix/protocol-audit]` `[WAVE:2]` `[⛔ BLOCKED BY: fix/protocol-audit Wave 1]`
+  - **Goal:** Add `handleMusicChange` to `useEffect` dep array in `useMusicMode.ts:116` to prevent stale 0x73 config when `micSensitivity` or `brightness` change programmatically.
+  - **Decision Log:** Audit VERIFIED (MEDIUM) — `handleMusicChange` useCallback (deps include sensitivity, brightness) is recreated on those changes, but the re-send useEffect holds a stale closure. Impact: programmatic brightness/sensitivity changes (session restore, parent state) dispatch stale 0x73 to hardware.
+  - **Analysis:** 📊 Protocol Defect Audit 2026-06-24 (F-007, MEDIUM) · Plan: [PLAN-fix-music-mode-dep-array.md](./plans/PLAN-fix-music-mode-dep-array.md)
+    Key finding: `useEffect` dep array at line 116 missing `handleMusicChange`; `micSensitivity`/`brightness` changes produce stale closure.
+    Rejected alternative: Adding sensitivity+brightness directly — rejected; adding `handleMusicChange` is the complete transitive fix.
+  - **Source of Truth:** 📖 [useMusicMode.ts:116](src/hooks/useMusicMode.ts#L116)
+  - **Details:** One dep added to the array. Wave 2 because `useMusicMode` imports `useProtocolDispatch` (modified in Wave 1 F-003).
+
+---
+
 ### 🚀 Epic: Crew Hub End-to-End Repair — `[BATCH:crew-e2e]`
 
 > **Source Analysis**: 🕵️ Reyes E2E audit — 📊 [crew-subsystem-e2e-audit.md](./analysis/crew-subsystem-e2e-audit.md) + [crew-broadcast-scene-redundancy.md](./analysis/crew-broadcast-scene-redundancy.md). Crew feature ~50% functional; light-sync, membership presence, and scheduled-crew activation all broken.

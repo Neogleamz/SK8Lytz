@@ -1,3 +1,65 @@
+### [ARTIFACT] Protocol Defect Audit — Intake Complete 2026-06-24
+
+**Session:** 2026-06-24 — `/intake` for all 8 confirmed BLE protocol defects  
+**Analyst:** Reyes (research) → Quinn (plans) → Casey (batch routing)
+
+**Plans created:**
+
+| Slug | Severity | File | Wave |
+| ---- | -------- | ---- | ---- |
+| [PLAN-fix-hw-settings-segments-haloz.md](./plans/PLAN-fix-hw-settings-segments-haloz.md) | CRITICAL (F-001) | `hardwareSettingsHandler.ts:124` | 1 |
+| [PLAN-fix-dispatcher-padding-dead-code.md](./plans/PLAN-fix-dispatcher-padding-dead-code.md) | MEDIUM (F-002) | `BleWriteDispatcher.ts:51` | 1 |
+| [PLAN-fix-protocol-dispatch-mtu-guard.md](./plans/PLAN-fix-protocol-dispatch-mtu-guard.md) | HIGH (F-003) | `useProtocolDispatch.ts:20` | 1 |
+| [PLAN-fix-adapter-chunking-comment.md](./plans/PLAN-fix-adapter-chunking-comment.md) | HIGH (F-004) | `ZenggeAdapter.ts:182-183` | 1 |
+| [PLAN-fix-settled-mode-direction.md](./plans/PLAN-fix-settled-mode-direction.md) | MEDIUM (F-005) | `dynamicEffectHandler.ts:52` | 1 |
+| [PLAN-fix-static-color-handler-cleanup.md](./plans/PLAN-fix-static-color-handler-cleanup.md) | MEDIUM+LOW (F-006+F-008) | `staticColorHandler.ts:3,51` | 1 |
+| [PLAN-fix-music-mode-dep-array.md](./plans/PLAN-fix-music-mode-dep-array.md) | MEDIUM (F-007) | `useMusicMode.ts:116` | 2 |
+
+**Batch registered:** `[BATCH:fix/protocol-audit]` in `🔥 ON DECK` — Wave 1 (6 parallel), Wave 2 (1 solo, blocked by Wave 1).  
+AST-verified: `artifacts/protocol_audit_clusters.json` — 1 collision (fix/protocol-dispatch-mtu-guard ↔ fix/music-mode-dep-array via `useProtocolDispatch.ts`).
+
+---
+
+### [DECISION] 2026-06-24 — F-001 Deep Pipeline Audit: hwSettings segments propagation
+
+**Analyst:** Reyes  
+**Task:** fix/hw-settings-segments-haloz (CRITICAL)  
+**Type:** Read-only audit — no code changed
+
+**Pipeline confirmed (end-to-end call chain):**
+
+```
+BLE 0x63 notification
+  → useHardwareNotifications.onDataReceived (useHardwareNotifications.ts:147)
+  → BlePayloadParser.parseLedPayload (BlePayloadParser.ts:46)
+  → ZenggeAdapter.parseSettingsResponse (ZenggeAdapter.ts:102-103)
+  → ZenggeProtocol.parseHardwareSettingsResponse (ZenggeProtocol.ts:167-168)
+  → hardwareSettingsHandler.parseHardwareSettingsResponse [BUG at line 124]
+  → segments=1 → DeviceRepository.updateConfig (useHardwareNotifications.ts:197)
+  → DeviceStorage.saveDevices (MMKV/AsyncStorage)
+  → useDashboardGroups.deviceConfigs sync (canSyncSegments trigger)
+  → VisualizerUnit.tsx:98 — deviceSegments=1 (wrong for 2-segment devices)
+```
+
+**Key findings beyond original F-001 scope:**
+
+1. **`payload[5]` byte is UNVERIFIED in classic binary format.** Code comment says `[5]=?`. Protocol Bible §0x63 only documents `payload[8-9]` for ledPoints; does NOT document the segment byte in the classic 12-byte binary response. Plan Phase 2 is BLOCKED until verified.
+
+2. **HALOZ (current firmware) is NOT affected.** HALOZ sends JSON-inner envelope format which uses the correct branch (lines 88-110). Classic binary format affects older-firmware controllers of unspecified product types.
+
+3. **`HW_CONSTRAINTS.defaultSegments = 10` is WRONG fallback.** Original plan used it; corrected. HALOZ needs `defaultSegments=2` (ProductCatalog). Fallback `1` is safer than `10` for unknown-segments classic devices.
+
+4. **Two downstream hardcodes found in DeviceRepositoryService.ts:**
+   - Line 209: `segments: validSegments ?? 1` — DB upsert default (acceptable when no hwSettings available)
+   - Line 484: `segments: device.segments || 1` — pending sync flush (downstream of the parse bug)
+   Both are propagation consequences of F-001, not independent root causes.
+
+5. **Visual impact only:** `numLEDs` in `useControllerDispatch.ts:50` does NOT use segments — it uses `hwSettings?.ledPoints` only. Hardware receives the correct 8-pixel pattern and auto-mirrors to the 2nd segment per Protocol Bible §segments. The broken segments value only corrupts the VisualizerUnit ring renderer.
+
+**Don't re-derive:** HALOZ uses JSON-inner format → correct branch. Classic binary format `payload[5]` is unknown. The fix must be preceded by a Protocol Bible or hardware-capture verification step (Plan Phase 1.8).
+
+---
+
 ### [MERGE] spike/watch-bridge-clean-install → master @ 57a2e9b4
 
 - **Files touched:** `modules/sk8lytz-watch-bridge/` (6 files restored from 82b18f14 — package.json, index.ts, tsconfig.json, Sk8lytzWatchBridgeModule.kt, Sk8lytzWatchBridgeModule.swift, CMakeLists.txt), `src/hooks/useHealthTelemetry.ts` (new typed stub, satisfies ARCH_DEPENDENCY_MAP wearables rule), `src/context/SessionContext.tsx` (blast-radius ACK + Boy Scout dep-array fix), `ios/Sk8lytzWatchBridgeModule.swift` (startListening no-op added — VS-012 resolved), `docs/SK8Lytz_App_Master_Reference.md` (§1 header + §4 Hook table + §4 I/O Registry updated), `docs/KNOWN_ISSUES.md` (VS-012 entry added)
