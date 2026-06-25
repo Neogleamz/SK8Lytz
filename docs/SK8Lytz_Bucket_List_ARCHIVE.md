@@ -4035,4 +4035,66 @@ pm run verify which includes QA tests.
     Rejected alternative: Adding sensitivity+brightness directly — rejected; adding `handleMusicChange` is the complete transitive fix.
   - **Source of Truth:** 📖 [useMusicMode.ts:116](src/hooks/useMusicMode.ts#L116)
   - **Details:** One dep added to the array. Wave 2 because `useMusicMode` imports `useProtocolDispatch` (modified in Wave 1 F-003).
+
+
+- [x] **`fix/crew-broadcast-scene`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:crew-e2e]` `[WAVE:1]`
+  - **Plan:** 📎 [PLAN-fix-crew-broadcast-scene.md](./plans/PLAN-fix-crew-broadcast-scene.md)
+  - **Goal:** Repair leader→member light sync end-to-end. Delete the dead `broadcastScene`/`onCrewSceneChange` path; expose+wire `broadcastPayload` as the leader broadcast; fix the member receiver to route the `number[]` payload via a new `applyCrewPayload` handle into `writeToDevice` (not `applyCloudScene`).
+  - **Decision Log:** Reyes VERIFIED (HIGH) — broadcastScene is a no-op AND broadcastPayload had zero callers AND member receiver type-mismatched. User chose Scope A (full repair). See docs/analysis/crew-broadcast-scene-redundancy.md.
+  - **Source of Truth:** PLAN-fix-crew-broadcast-scene.md §Files to Create/Modify (7 files: CrewRealtime.ts, CrewService.ts, types.ts, useCrewLeaderBroadcast.ts [delete], DockedController.tsx, useDashboardController.tsx, DashboardScreen.tsx).
+
+
+- [x] **`fix/crew-membership-presence`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DATA]` `[M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:crew-e2e]` `[WAVE:2]`
+  - **Plan:** 📎 [PLAN-fix-crew-membership-presence.md](./plans/PLAN-fix-crew-membership-presence.md)
+  - **Goal:** Leader sees members live + every member renders with real name/avatar. Emit the missing `member_update` broadcast on join/leave; wire the two `() => {}` leader callbacks to refresh member UI; rewrite the `CrewMemberDashboard` query off the non-existent `role` column + `user_profiles` implicit join (use existing `crew_members.display_name` + derived role + explicit avatar query). NO migration needed.
+  - **Decision Log:** Reyes VERIFIED — 3 sub-bugs (no member_update sender, no-op callbacks, schema-mismatch query). Quinn recommends query-rewrite over migration (session table `crew_members` correctly has no role column; persistent `crew_memberships` is a different table). See docs/analysis/crew-subsystem-e2e-audit.md Flow 4.
+  - **Source of Truth:** PLAN-fix-crew-membership-presence.md §Files to Create/Modify (6 files: CrewSessionManager.ts, CrewService.ts, useCrewSession.ts, DashboardCrewPanel.tsx, useDashboardCrew.ts, CrewMemberDashboard.tsx).
+
+
+- [x] **`feat/crew-scheduled-server-side`** — merged `320bfd50` ✅ (⚠️ deferred Supabase deploy — see SESSION_LOG)
+  - **Tags:** `[x]` `[✅ SPIKE CLEARED]` `[CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:crew-e2e]` `[WAVE:3]`
+  - **Plan:** 📎 [PLAN-feat-crew-scheduled-server-side.md](./plans/PLAN-feat-crew-scheduled-server-side.md)
+  - **⛔ BLOCKED (Rule 5 — Unverified Task Spike Gate):** Run the SPIKE before execution — confirm (1) `pg_cron`+`pg_net` available on the Supabase project, (2) `CRON_SECRET` + service-role env in the edge runtime, (3) `crew_sessions.is_active` insert default. If pg_cron is unavailable the activation mechanism must be redesigned.
+  - **Goal:** Server-side scheduled-crew activation: a `pg_cron` job (1-min cadence) → new edge function `activate-scheduled-crews` that flips due `status='scheduled'` sessions to active (service-role, idempotent) and sends Expo push to members; client join error-path + 15-min reminder + notification deep-link.
+  - **Decision Log:** User chose server-side activation 2026-06-22. Reyes found scheduling entirely cosmetic (no activation; members can't join scheduled rows). Quinn chose pg_cron+pg_net→edge function (reuses proven push-batch code; cron can't reuse the JWT-gated notify-crew-session fn). See docs/analysis/crew-subsystem-e2e-audit.md Flow 2.
+  - **Source of Truth:** PLAN-feat-crew-scheduled-server-side.md §Files to Create/Modify (2 NEW: activate-scheduled-crews/index.ts, 20260622000000_activate_scheduled_crews_cron.sql; + CrewSessionManager.ts, CrewScheduleScreen.tsx, useDashboardProfile.ts, DashboardScreen.tsx).
+
+### 🧹 Epic: Deep-Dive QA Synthesis Sweep
+
+> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — 55-agent orthogonal QA fleet. ~195 verified findings across 30 guardrails.
+
+#### Batch Strategy Table (AST-Verified — `ast-parser.js --collision-matrix`)
+
+| Wave | Clusters | Parallel-Safe? | Prerequisite |
+|------|----------|---------------|-------------|
+| **1** | C1 (BLE Queue), C2 (Dashboard), C3 (Protocol), C4 (Docked), C12 (Build), C14 (Split-Brain), C16 (Circular Deps) | ✅ 7 parallel | None |
+| **2** | C5 (Error Unwrap), C8 (Memory Leaks), C11 (A11y), C15 (FlatList) | ✅ 4 parallel | Wave 1 merged |
+| **3** | C6 (Telemetry), C7 (Delays), C9 (Re-Entrancy), C17 (Boolean→FSM) | ✅ 4 parallel | Wave 2 merged |
+| **4** | C10 (Storage Keys) | Solo | Wave 3 merged |
+| **5** | C13 (Type Safety) | Solo | Wave 4 merged |
+
+
+- [x] **`sweep/ble-write-queue`**
+  - **Tags:** `[x]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Route all direct writeCharacteristicWithoutResponseForDevice calls through BleWriteDispatcher.enqueue().
+  - **Decision Log:** Deep-dive fleet found 7 R-01 violations — direct BLE writes bypassing queue lock in HeartbeatService, InterrogatorService, BlePingService. Risk: packet interleaving during concurrent ops.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C01-ble-write-queue.md](./plans/PLAN-sweep-C01-ble-write-queue.md)
+  - **Source of Truth:** 📖 [HeartbeatService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/HeartbeatService.ts#L46)
+  - **Details:** 7 instances across 3 files. All must route through BleWriteDispatcher.
+
+
+- [x] **`sweep/build-config`**
+  - **Tags:** `[x]` `[BUILD]` `[⚠️ H-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Add missing Android 14+ foreground service permissions and fix stale web shim targets.
+  - **Decision Log:** Missing FOREGROUND_SERVICE_HEALTH/DATA_SYNC permissions cause SecurityException crash on Android 14+. Critical runtime impact.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C12-build-config.md](./plans/PLAN-sweep-C12-build-config.md)
+  - **Source of Truth:** 📖 [app.config.js](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/app.config.js#L43)
+  - **Details:** 2 files: app.config.js + metro.config.js. Quick fix, high impact.
+
+
+- [x] **`refactor/burn-down-audit-failures`** — SUPERSEDED ✅ work already in master via subsequent development
+  - **Tags:** `[x]` `[AUTH]` `[✅ L-RISK]` `[🍱 Meal]` `[BATCH:branch-salvage]` `[WAVE:1]`
+  - **Decision Log (2026-06-23 — CLOSED):** Attempted gatekeeper merge. Rebase revealed `CrewService.ts` was deleted in master (extracted to modular `src/services/CrewService/` directory). Grep confirmed ALL goals already achieved: zero rogue `supabase.auth.getUser()` in services/hooks, `bleGateRef` gone, `AuthContext` has all 5 auth methods with proper Supabase types (better than branch's `unknown` types). Merging would be a regression. Branch `185d41d0` deleted. Wave 2 unblocked — no `useBLEScanner.ts` collision concern remains.
 
