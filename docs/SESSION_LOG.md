@@ -1,3 +1,26 @@
+### [ARTIFACT] /intake — BATCH:sweep/deep-dive-w1 remaining 5 clusters — 2026-06-25
+
+**Session:** 2026-06-25 — `/intake` to onboard 5 remaining Wave 1 clusters that had plans but no board entries.
+**Analyst:** Casey (board check) → Quinn (plan verification) → Casey (schema + placement)
+
+**Tasks added to ON DECK under BATCH:sweep/deep-dive-w1 WAVE:1:**
+
+| Slug | Cluster | Size | Key Finding |
+| ---- | ------- | ---- | ----------- |
+| `sweep/dashboard-extraction` | C2 | 🥩 Feast | DashboardScreen.tsx 57 KB — 17 findings, listener leak, inline storage key |
+| `sweep/protocol-monolith` | C3 | 🥩 Feast | ZenggeProtocol.ts 55 KB + SpatialEngine 59 KB + effectProcessors.ts 35 KB |
+| `sweep/docked-controller` | C4 | 🍱 Meal | DockedController.tsx 57 KB — 3 panels already extracted; Header + useDockedState remain |
+| `sweep/split-brain` | C14 | 🍪 Snack | useDashboardGroups bypasses GroupRepository; useCrewSession duplicates stat writes |
+| `sweep/circular-deps` | C16 | 🍱 Meal | 4 import cycles: appLogger chain + CrewService internal modules |
+
+**Flags (Sage must verify at execution time):**
+- C3: `staticColorHandler.ts` + `dynamicEffectHandler.ts` may already exist from protocol-audit work — check before creating [NEW] files.
+- C4: BuilderPanel/ProEffectsPanel/MusicPanel already extracted — scope is DockedHeader + useDockedState only.
+
+**Plans confirmed at:** `docs/plans/PLAN-sweep-C02/C03/C04/C14/C16-*.md`
+
+---
+
 ### [DECISION] 2026-06-25 — MTU guard single-packet invariant coupling (ship-it Phase 1.5 finding)
 
 **Decision:** Leave `useProtocolDispatch.ts` MTU guard (F-003) as-is for this release.
