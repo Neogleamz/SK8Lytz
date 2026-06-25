@@ -1,3 +1,22 @@
+### [MERGE READY] sweep/dashboard-extraction — 35c185b9 — 2026-06-25
+
+Files touched:
+- `src/screens/DashboardScreen.tsx` — removed dead imports (AsyncStorage, SafeAreaView, ExpoLinking, DeviceItem, STORAGE_FAVORITES, STORAGE_CREW_HUB_COLLAPSED); replaced inline crew hub state block with `useDashboardCrewHub()` call
+- `src/screens/Dashboard/DashboardHeader.tsx` — fixed `styles` prop type from `Record<string, any>` to `Record<string, ReturnType<typeof StyleSheet.create>[string]>` (Boy Scout)
+
+Sub-files already on master (prior session work):
+- `src/screens/Dashboard/useDashboardState.ts` — FSM string-union hook (DiagnosticFsmState)
+- `src/screens/Dashboard/DashboardHeader.tsx` — DashboardHeaderBanners component
+- `src/screens/Dashboard/DashboardDeviceList.tsx` — useDashboardDeviceList + MemoizedDeviceItem
+- `src/screens/Dashboard/DashboardCrewHub.tsx` — useDashboardCrewHub + useCrewDeepLink
+- `src/screens/Dashboard/DashboardPowerControls.tsx` — useDashboardPowerControls
+- `src/screens/Dashboard/index.tsx` — re-export barrel
+- `src/constants/storageKeys.ts` — STORAGE_CREW_HUB_COLLAPSED added (R-24 fix)
+
+TSC: ✅  Jest: ✅  All guards: ✅
+
+---
+
 ### [ARTIFACT] /intake — BATCH:sweep/deep-dive-w1 remaining 5 clusters — 2026-06-25
 
 **Session:** 2026-06-25 — `/intake` to onboard 5 remaining Wave 1 clusters that had plans but no board entries.
