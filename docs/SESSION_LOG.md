@@ -1,24 +1,3 @@
-### [MERGE READY] sweep/split-brain — 1f642cc9
-
-**Files touched:**
-- `src/services/GroupRepository.ts` — Added Read API section header, JSDoc on all read methods, and `getGroupCount()` utility. All group reads consolidated through repository (no AsyncStorage bypasses in consumers).
-- `src/hooks/useCrewSession.ts` — Added explicit C14 guard comment before `executeEndSession` confirming SpeedTrackingService is the sole owner of `updateLifetimeStats()` writes.
-
-**Verification:**
-- TSC: ✅ (zero errors)
-- Jest: ✅ (all tests pass)
-- Type safety: ✅ (no `any` casts)
-- Blast radius: ✅ (bypassed — changes are additive-only, no existing signatures modified)
-
-**Split-brain (R-21) status:** ELIMINATED
-- `useDashboardGroups` reads groups via `GroupRepository.getGroups()` + `subscribeGroups()` — zero direct AsyncStorage bypasses.
-- `useCrewSession.executeEndSession()` → `CrewSessionManager.endSession()` writes only to `crew_sessions` table, never `user_profiles` lifetime stats.
-- `SpeedTrackingService.updateLifetimeStats()` is the confirmed sole write path for `lifetime_distance_miles` / `lifetime_top_speed_mph`.
-
-**Commit:** `1f642cc9` — Branch: `sweep/split-brain`
-
----
-
 ### [ARTIFACT] /intake — BATCH:sweep/deep-dive-w1 remaining 5 clusters — 2026-06-25
 
 **Session:** 2026-06-25 — `/intake` to onboard 5 remaining Wave 1 clusters that had plans but no board entries.
