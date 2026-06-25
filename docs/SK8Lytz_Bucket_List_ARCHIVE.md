@@ -4097,4 +4097,59 @@ pm run verify which includes QA tests.
 - [x] **`refactor/burn-down-audit-failures`** — SUPERSEDED ✅ work already in master via subsequent development
   - **Tags:** `[x]` `[AUTH]` `[✅ L-RISK]` `[🍱 Meal]` `[BATCH:branch-salvage]` `[WAVE:1]`
   - **Decision Log (2026-06-23 — CLOSED):** Attempted gatekeeper merge. Rebase revealed `CrewService.ts` was deleted in master (extracted to modular `src/services/CrewService/` directory). Grep confirmed ALL goals already achieved: zero rogue `supabase.auth.getUser()` in services/hooks, `bleGateRef` gone, `AuthContext` has all 5 auth methods with proper Supabase types (better than branch's `unknown` types). Merging would be a regression. Branch `185d41d0` deleted. Wave 2 unblocked — no `useBLEScanner.ts` collision concern remains.
+
+
+- [x] **`sweep/dashboard-extraction`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Extract DashboardScreen.tsx (57 KB) into 4 sub-components + consolidated FSM state hook, reducing the orchestrator below 25 KB.
+  - **Decision Log:** 55-agent QA fleet flagged 17 findings in this file — R-23 monolith, R-26 missing re-entrancy guards, R-17 listener leak, R-24 inline storage key, R-18 boolean traps.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C02-dashboard-extraction.md](./plans/PLAN-sweep-C02-dashboard-extraction.md)
+    Key finding: "DashboardScreen.tsx at 57 KB with 4 context consumers, unguarded BackHandler, and DeviceEventEmitter leak."
+    Rejected alternative: "Incremental cleanup in-place — rejected because the file is over the 30 KB hard stop; surgical edits risk collision."
+  - **Source of Truth:** 📖 [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx) §Full file
+  - **Details:** Creates Dashboard/ sub-directory with 5 new files. BackHandler Platform.OS guard required for iOS safety. AsyncStorage key must be centralized to storageKeys.ts.
+
+
+- [x] **`sweep/protocol-monolith`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Extract ZenggeProtocol.ts (55 KB), SpatialEngine (59 KB), and effectProcessors.ts (35 KB) into domain-scoped handler and processor modules below 30 KB each.
+  - **Decision Log:** 3 HIGH R-23 monolith findings across protocol core; oversized files collide on every BLE change and block parallel development.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C03-protocol-monolith.md](./plans/PLAN-sweep-C03-protocol-monolith.md)
+    Key finding: "ZenggeProtocol.ts 55 KB, SpatialEngine 59 KB, effectProcessors.ts 35 KB — all over the 30 KB hard stop."
+    Rejected alternative: "Inline handler comments only — rejected because file size alone prevents safe surgical edits."
+  - **Source of Truth:** 📖 [ZenggeProtocol.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeProtocol.ts) §Full file
+  - **Details:** ⚠️ Sage must verify at execution time — `staticColorHandler.ts` and `dynamicEffectHandler.ts` may already exist from prior protocol-audit work. Read the files directory before creating [NEW] files to avoid overwrite.
+
+
+- [x] **`sweep/docked-controller`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Complete DockedController.tsx extraction — add DockedHeader sub-component and useDockedState context facade to reduce context consumption from 4 to 1.
+  - **Decision Log:** R-23 monolith (57 KB), R-27 (4 context consumers) — 3 panels already extracted as BuilderPanel/ProEffectsPanel/MusicPanel per prior sessions; remaining gap is header + state consolidation only.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C04-docked-controller.md](./plans/PLAN-sweep-C04-docked-controller.md)
+    Key finding: "DockedController.tsx 57 KB with 4 context consumers; Color/Effect/Music panels already extracted — only DockedHeader and useDockedState remain."
+    Rejected alternative: "Full re-extraction — 3 panel SKIPPED annotations in plan confirm prior work; don't overwrite existing components."
+  - **Source of Truth:** 📖 [DockedController.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx) §Full file
+  - **Details:** Scope is smaller than original plan due to prior extractions. Route remaining ZenggeProtocol direct calls through ControllerRegistry.
+
+
+- [x] **`sweep/split-brain`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DATA]` `[M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Route useDashboardGroups reads through GroupRepository and remove duplicate lifetime_distance/speed stat updates in useCrewSession that bypass SpeedTrackingService.
+  - **Decision Log:** R-21 split-brain (3 HIGH) — lifetime stats updated in two independent paths; any write to the wrong path causes permanent stat drift.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C14-split-brain.md](./plans/PLAN-sweep-C14-split-brain.md)
+    Key finding: "useDashboardGroups bypasses GroupRepository; useCrewSession duplicates stat updates that SpeedTrackingService already owns."
+    Rejected alternative: "Delete the duplicate path only — rejected because GroupRepository reads must be added first to avoid breaking the read path."
+  - **Source of Truth:** 📖 [GroupRepository.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/GroupRepository.ts) + [useCrewSession.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useCrewSession.ts)
+  - **Details:** 2 files only. Snack-sized but data-integrity critical — stat drift is silent and permanent.
+
+
+- [x] **`sweep/circular-deps`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[ARCH]` `[M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:sweep/deep-dive-w1]` `[WAVE:1]`
+  - **Goal:** Break 4 import cycles in the appLogger chain and CrewService internal modules via lazy imports or interface extraction.
+  - **Decision Log:** R-29 circular dependencies (4 cycles) from 55-agent QA fleet — circular imports cause undefined-at-runtime failures that are non-deterministic and hard to reproduce.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C16-circular-deps.md](./plans/PLAN-sweep-C16-circular-deps.md)
+    Key finding: "4 import cycles across appLogger (AppLoggerService ↔ AppSettingsService) and CrewService (CrewService ↔ CrewAutoRejoin ↔ CrewRealtime)."
+    Rejected alternative: "Barrel re-export reorganization alone — rejected because it masks cycles rather than breaking them."
+  - **Source of Truth:** 📖 [appLogger/index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/index.ts) + [CrewService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/CrewService/CrewService.ts)
+  - **Details:** 6 files across 2 module clusters. Use madge or manual trace to confirm cycle elimination before committing.
 
