@@ -49,7 +49,7 @@ function getAppLogger() {
       Math.min(255, Math.max(0, bg.g | 0)),
       Math.min(255, Math.max(0, bg.b | 0)),
       Math.max(1, Math.min(255, speed | 0)),
-      (direction === 1 ? 0 : 1) & 0x01,
+      direction & 0x01, // Protocol Bible §0x41: 1=reverse, 0=forward
       0x00, // static trailer byte 1
       0xF0, // static trailer byte 2
     ];
