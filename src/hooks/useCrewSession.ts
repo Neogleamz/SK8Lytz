@@ -70,6 +70,10 @@ export function useCrewSession(
   }, [user?.id, onSessionReady, setErrorMsg]);
 
 
+  // C14 (R-21): lifetime_distance / lifetime_top_speed writes are intentionally
+  // NOT performed here. SpeedTrackingService.updateLifetimeStats() is the single
+  // owner of those writes — called from saveSession() and flushPendingSessionQueue().
+  // Adding a second write path here would cause permanent stat drift.
   const executeEndSession = async () => {
     const currentSessionId = currentSession?.id;
     AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId ? scrubPII(currentSessionId) : undefined, crewName: currentSession?.name ? scrubPII(currentSession?.name) : undefined, role: 'leader', reason: 'explicit_end', payload_size: 0, ssi: 0 });

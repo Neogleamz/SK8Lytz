@@ -104,21 +104,34 @@ class GroupRepository {
     }
   }
 
+  // ─── Read API (C14: R-21 consolidation) ────────────────────────────────────
+  // ALL group reads must flow through these methods. No consumer should read
+  // AsyncStorage directly for groups — subscribe via subscribeGroups() instead.
+
+  /** Returns a defensive copy of all in-memory groups. */
   getGroups(): CustomGroup[] {
     return [...this.groups];
   }
 
+  /** Returns the group matching the given ID, or undefined if not found. */
   getGroupById(groupId: string): CustomGroup | undefined {
     return this.groups.find(g => g.id === groupId);
   }
 
+  /** Case-insensitive lookup by group name. */
   getGroupByName(name: string): CustomGroup | undefined {
     return this.groups.find(g => g.name.toLowerCase() === name.toLowerCase());
   }
 
+  /** Returns all groups that include the given MAC address (normalized to uppercase). */
   getGroupsByDeviceId(mac: string): CustomGroup[] {
     const normalizedMac = mac.toUpperCase();
     return this.groups.filter(g => g.deviceIds?.map(m => m.toUpperCase()).includes(normalizedMac));
+  }
+
+  /** Returns the total number of in-memory groups. */
+  getGroupCount(): number {
+    return this.groups.length;
   }
 
   async setGroups(groups: CustomGroup[]): Promise<void> {
