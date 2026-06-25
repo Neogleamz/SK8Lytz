@@ -1,3 +1,25 @@
+### [MERGE READY] sweep/protocol-monolith — adf61bee
+
+**Date:** 2026-06-25
+**Branch:** sweep/protocol-monolith (Wave 1, BATCH:sweep/deep-dive-w1)
+
+**Summary:** C3 Protocol Monolith Decomposition. All three monolith targets (ZenggeProtocol.ts ~54KB, SpatialEngine.ts ~59KB, effectProcessors.ts ~35KB) were already extracted below 30KB by prior protocol-audit batch work committed to master. This worktree applied Boy Scout cleanup to the already-extracted handler files within plan scope.
+
+**Files touched:**
+- `src/protocols/ZenggeProtocol.ts` — removed stale S4 monolith comment (file is 24KB, extraction complete)
+- `src/protocols/handlers/dynamicEffectHandler.ts` — removed 5 dead imports, fixed `any` cast → typed AppLoggerLike
+- `src/protocols/handlers/musicModeHandler.ts` — removed all 6 dead imports, fixed `any` cast → typed AppLoggerLike
+
+**Monolith sizes (verified):**
+- ZenggeProtocol.ts: 24,247 bytes (~23.7KB) ✅ under 25KB facade target
+- SpatialEngine.ts: 28,822 bytes (~28.2KB) ✅ under 30KB
+- spatial/effectProcessors.ts: 27,944 bytes (~27.3KB) ✅ under 30KB
+
+**TSC:** ✅  **Jest:** ✅  **All 8 verify gates:** ✅
+**Blast-radius note:** --ignore-blast used; change to ZenggeProtocol.ts was comment-only (no interface/payload changes).
+
+---
+
 ### [ARTIFACT] /intake — BATCH:sweep/deep-dive-w1 remaining 5 clusters — 2026-06-25
 
 **Session:** 2026-06-25 — `/intake` to onboard 5 remaining Wave 1 clusters that had plans but no board entries.
