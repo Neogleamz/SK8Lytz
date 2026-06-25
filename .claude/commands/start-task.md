@@ -198,7 +198,12 @@ Context: All gates cleared — QA ✅, Docs ✅.
 >    ```
 > 5. Write the SESSION_LOG `[MERGE]` entry (slug → master @ hash, verify result, files touched).
 > 6. Clean-slate check: `git status -s` on master.
-> 7. Board sync: update the ACTIVE SPRINT header in `docs/SK8Lytz_Bucket_List.md` with the completed slug + next pending task.
+> 7. ⛔ HARD STOP — BOARD SYNC (non-skippable, FRICTION-020 fix):
+>    Read `docs/SK8Lytz_Bucket_List.md`. Make TWO edits to the ACTIVE SPRINT header:
+>    - Set `Currently executing:` to the next pending task slug (or `none` if sprint is empty)
+>    - Append `Completed: <task-slug> @ <commit-hash> ✅` on the following line
+>    Then verify: ACTIVE SPRINT must contain zero `[x]` tasks.
+>    Do NOT proceed to step 8 until this is confirmed. Do NOT claim "master is green" before this step is done.
 > 8. Discord: `notify_discord.ps1 -Message "✅ Task <task-slug> merged to master. Tests passed. Master is green."`
 
 Taylor returns the merge result. (If this task flows into a remote push, that consent gate stays on the **main thread** — see `/ship-it` Phase 4.)

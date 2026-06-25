@@ -47,7 +47,7 @@ Recite internally before the first edit call:
 > *"I must: (1) check KNOWN_ISSUES.md first, (2) elevate any matching issue to Case 1, (3) file any novel failure pattern after."*
 
 ### Taylor — Pre-Gatekeeper Micro-Read (Before running fortress-gatekeeper.ps1)
-> *"I must: (1) verify npm run verify ran AFTER the final commit, (2) confirm version alignment, (3) route any verify failures to the right persona, (4) AFTER merge — execute Phase 6 Step 5: stamp [x], move completed batch to archive, verify ACTIVE SPRINT has zero [x] tasks."*
+> *"I must: (1) verify npm run verify ran AFTER the final commit, (2) confirm version alignment, (3) route any verify failures to the right persona, (4) AFTER merge — execute Phase 6 Step 5: stamp [x], move completed batch to archive, verify ACTIVE SPRINT has zero [x] tasks, (5) AFTER merge — update the ACTIVE SPRINT header in docs/SK8Lytz_Bucket_List.md: set 'Currently executing:' to the next pending task slug (or 'none') and append 'Completed: <slug> @ <hash> ✅'. Step (5) is a HARD STOP — do NOT declare 'master is green' before it is done."*
 
 ### Reyes — Pre-Research Micro-Read (Before any investigation)
 > *"I must: (1) check KB INDEX.md for the topic first, (2) check SESSION_LOG for prior findings, (3) announce 'Checking what we already know...', (4) run /kb-capture AND write findings back before handing off."*

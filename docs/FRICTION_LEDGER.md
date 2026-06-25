@@ -69,7 +69,8 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Pattern:** Agent stamped `[x]` but left tasks in ACTIVE SPRINT, and forgot to update the bucket list entirely after merge until yelled at.
 - **Root Cause (Updated):** Manual workflow instructions (Phase 6 Step 5) and micro-reads in `prime-directive.md` are insufficient to combat context-window fatigue during complex merges. Text-based rules are being ignored.
 - **Impact:** User fury. Board is split-truth. 3 complete batches (19 tasks) sat un-archived.
-- **Status:** PROPOSAL SENT
+- **Status:** ✅ RESOLVED — Evolution Implemented 2026-06-24
+- **Fix Applied:** Taylor micro-read in `prime-directive.md` upgraded with explicit item (5): board header sync is a HARD STOP before "master is green." `safety-protocol.md` Rule 12.2 added as a named rule. `start-task.md` Phase 6 Step 7 upgraded from soft guidance to `⛔ HARD STOP` with exact two-edit format.
 
 ---
 
@@ -272,8 +273,8 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Pattern:** ortress-gatekeeper.ps1 calls uto-archiver.js which silently removes the completed task entry from SK8Lytz_Bucket_List.md entirely. The ACTIVE SPRINT header is never updated. From the user's perspective: tasks vanish without a trace and the "Currently executing" banner becomes stale/wrong after every merge.
 - **Root Cause Theory:** The auto-archiver was designed to move entries to ARCHIVE to keep the file clean, but it leaves no [x] stamp or progress indicator in the ACTIVE SPRINT block. The "Currently executing" line in the ACTIVE SPRINT header is never auto-updated Ã¢â‚¬â€� it must be manually edited, which the agent forgets to do under the post-merge rush.
 - **Impact:** User loses visibility into what was just completed vs. what is pending. Forces manual board audits. Erodes trust in the board as a source of truth. User has complained multiple times.
-- **Proposed Fix:** After every gatekeeper merge, the agent MUST immediately update the ACTIVE SPRINT header Currently executing: line to reflect the NEXT pending task AND add a Completed: <slug> @ <hash> ? line. This is a non-optional post-merge step, same priority as SESSION_LOG update.
-- **Status:** PROPOSAL SENT
+- **Status:** ✅ RESOLVED — Evolution Implemented 2026-06-24
+- **Fix Applied:** `safety-protocol.md` Rule 12.2 added — Taylor MUST update the ACTIVE SPRINT header (Currently executing + Completed line) as a HARD STOP before declaring "master is green." Enforced in Taylor micro-read (`prime-directive.md` item 5) and `start-task.md` Phase 6 Step 7 (⛔ HARD STOP with exact two-edit format).
 
 ### [FRICTION-021] Blast Radius Bypass Without Evidence
 - **First Observed:** 2026-06-08

@@ -45,6 +45,10 @@ $APK  = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\android\app\build\outputs\apk\relea
   node tools/auto-archiver.js --task <slug>
   ```
 - **⛔ Rule 12.1: SESSION_LOG [MERGE] Companion**: Immediately after every successful gatekeeper merge, BEFORE running the auto-archiver, append a `[MERGE]` entry to `docs/SESSION_LOG.md`.
+- **⛔ Rule 12.2: ACTIVE SPRINT Header Sync (FRICTION-020 fix)**: Immediately after every successful gatekeeper merge, Taylor MUST edit `docs/SK8Lytz_Bucket_List.md` to:
+  1. Set `Currently executing:` to the next pending task slug (or `none` if sprint is empty)
+  2. Append `Completed: <slug> @ <hash> ✅` on the line below it
+  This step is a HARD STOP — "master is green" cannot be declared until the board header reflects reality. The auto-archiver removes the completed task entry but does NOT update the header. That is Taylor's job, every time, no exceptions.
 
 ## Tool Playbook (Proven PowerShell Commands)
 
