@@ -31,6 +31,17 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 
 ## ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¯Â¿Â½Ãƒâ€šÃ‚Â´ Active Friction Events (Open ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã¯Â¿Â½ Under Monitoring)
 
+### [FRICTION-029] Parallel-Wave Subagents Writing Shared SESSION_LOG
+- **First Observed:** 2026-06-25
+- **Observed By:** Casey (during /goal BATCH:sweep/deep-dive-w1)
+- **Occurrences:** 1 / 3
+- **Trigger:** /goal launched 5 parallel subagents from one base commit; each was instructed (per the execution contract + sub-agent rules) to append a `[MERGE READY]` entry to `docs/SESSION_LOG.md` in its worktree.
+- **Pattern:** All 5 branches modified the SAME file (SESSION_LOG.md) from the SAME base commit. A sequential gatekeeper pass rebases each branch onto the moved master HEAD — guaranteeing a rebase conflict on SESSION_LOG for branches 2–N (the gatekeeper aborts + preserves on conflict). The orchestrator had to manually normalize SESSION_LOG out of every branch (restore-to-master + commit) so branches carried only their disjoint source, then record all log entries centrally post-merge.
+- **Root Cause Theory:** The sub-agent SESSION_LOG-on-completion rule and the /goal contract were written for SOLO/sequential waves where one branch touches the log at a time. They don't account for parallel waves where N branches collide on the shared log file. The gatekeeper's FRICTION-027 auto-commit guard handles MASTER's dirty log, not worktree-committed log entries.
+- **Impact:** ~10 min of manual git surgery (normalize 4 worktrees, regenerate attestations post-normalization, then central logging). Recoverable, but every parallel wave will re-incur this.
+- **Status:** MONITORING
+- **Candidate Fix (at 3 strikes):** Amend the /goal + sub-agent contract so parallel-wave agents do NOT write SESSION_LOG in-worktree; instead they return the [MERGE READY] payload to the orchestrator, who writes ALL entries centrally after the merge pass. (Solo/sequential tasks keep the current in-worktree behavior.)
+
 ### [FRICTION-028] Ignored File Overwrite & Data Loss
 - **First Observed:** 2026-06-11
 - **Observed By:** Reyes
