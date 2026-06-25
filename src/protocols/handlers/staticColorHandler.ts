@@ -1,6 +1,11 @@
 import { ZenggeProtocol, HardwareSettings, HW_CONSTRAINTS, IC_TYPES, COLOR_SORTING_RGB, icTypeIndex, colorSortingIndex } from '../ZenggeProtocol';
 
-let _appLogger: any;
+type AppLoggerLike = {
+  log: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
+let _appLogger: AppLoggerLike | null = null;
 function getAppLogger() {
   if (!_appLogger) {
     try { _appLogger = require('../../services/AppLogger').AppLogger; } catch (_e) { _appLogger = console; }
@@ -48,9 +53,8 @@ function getAppLogger() {
     const paddedColors = new Array(numPoints).fill(colors[0] || { r: 0, g: 0, b: 0 });
     for (let i = 0; i < Math.min(numPoints, colors.length); i++) paddedColors[i] = colors[i];
 
-    // Speed mapping: user-facing 0–100 → hardware 1–31.
-    // Previously 0x00 (CASCADE) was HARDCODED to speed=1 — that was wrong, made animations look frozen.
-    // Fix: pass speed through for ALL transition types, properly clamped to 1–31.
+    // Speed: hardware range 1–100 on 0xA3 chipset (oracle-confirmed 2026-04-23, Protocol Bible §0x59).
+    // Clamp applied below — ANIM_SPEED_MIN=1, ANIM_SPEED_MAX=100.
     const safeSpeed = Math.max(ZenggeProtocol.ANIM_SPEED_MIN, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, Math.round(speed) || 16));
     const hwDir = direction === 1 ? 1 : 0;
 
