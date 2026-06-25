@@ -1,3 +1,22 @@
+### [MERGE] BATCH:fix/protocol-audit Wave 1 — All 6 tasks merged 2026-06-24
+
+**Merged by:** Taylor (gatekeeper) — 6 parallel subagents → sequential gatekeeper pass  
+**Wave:** 1 of 2 — fix/music-mode-dep-array (Wave 2) still pending
+
+| Slug | Commit | File | Finding |
+| ---- | ------ | ---- | ------- |
+| fix/adapter-chunking-comment | `ad1055ad` | `ZenggeAdapter.ts:182-183` | False JSDoc replaced with accurate chunking responsibility map |
+| fix/dispatcher-padding-dead-code | `79a027c0` | `BleWriteDispatcher.ts:51` | Unreachable `padStaticColorfulPayload` call removed; comment updated |
+| fix/hw-settings-segments-haloz | `fe1f64ea` | `hardwareSettingsHandler.ts:88-130` | PATH B: classic binary 0x63 has no segment field; comment documents WHY segments=1 is correct; Boy Scout: `any` → `AppLoggerLike` |
+| fix/protocol-dispatch-mtu-guard | `91058b4b` | `useProtocolDispatch.ts:_dispatchToDevices` | 0x51 MTU guard added; oversized payloads routed through `writeChunked`; dep array updated |
+| fix/settled-mode-direction | `9d573667` | `dynamicEffectHandler.ts:52` | `(direction===1?0:1)` → `direction & 0x01`; Protocol Bible §0x41 citation added |
+| fix/static-color-handler-cleanup | `ec3174eb` | `staticColorHandler.ts:3,51-53` | `any` → `AppLoggerLike\|null`; stale 1-31 speed comment → accurate 1-100 with oracle citation |
+
+**Master HEAD:** `ec3174eb`  
+**Worktrees:** all 6 torn down and branches deleted. Fortress state clean.
+
+---
+
 ### [ARTIFACT] Protocol Defect Audit — Intake Complete 2026-06-24
 
 **Session:** 2026-06-24 — `/intake` for all 8 confirmed BLE protocol defects  
