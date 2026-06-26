@@ -466,7 +466,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         AppLogger.log('BLE_QUEUE_REPLAY', { deviceId: scrubPII(deviceId), payloadLen: lastSentPayloadRef.current.length });
         optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
       }
-    }), [speed, brightness, writeToDevice, optimisticWrite]);
+    // NOTE: loadFavorite (L561) is declared after this hook — TypeScript TS2448 prevents
+    // adding it to this dep array without reordering hooks (forbidden per monolith guardrail).
+    // applyCloudScene and applySpatialSegments are declared above and are included.
+    // loadFavorite stale-closure risk is documented in SESSION_LOG; deferred to hook-reorder task.
+    }), [speed, brightness, writeToDevice, optimisticWrite, applyCloudScene, applySpatialSegments]);
 
 
     // (useStreetMode and useSessionTracking placed higher up context)

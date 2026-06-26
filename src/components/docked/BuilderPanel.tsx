@@ -7,7 +7,6 @@ import { BuilderNode, CustomBuilderPreset, PositionalMathBuffer } from '../../pr
 import { useTheme } from '../../context/ThemeContext';
 import { useGradients } from '../../hooks/useGradients';
 import { useSharedFavorites } from '../../context/FavoritesContext';
-import FavoritePromptModal from './FavoritePromptModal';
 import { Spacing } from '../../theme/theme';
 import { AppLogger } from '../../services/appLogger';
 
@@ -45,7 +44,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
 }) => {
   const { Colors, isDark } = useTheme();
   const { saveGradient } = useGradients();
-  const { openFavoritePrompt, saveFavorite, promptState, promptName, setPromptName, closePrompt } = useSharedFavorites();
+  const { openFavoritePrompt } = useSharedFavorites();
 
   const [viewMode, setViewMode] = useState<ViewMode>('LIBRARY');
   const [editingPreset, setEditingPreset] = useState<CustomBuilderPreset | undefined>();
@@ -53,7 +52,6 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   const [presetNameInput, setPresetNameInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
-  const [suggestionChips, setSuggestionChips] = useState<string[]>([]);
 
   React.useEffect(() => {
     if (onViewModeChange) {
@@ -117,22 +115,9 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   };
 
   const handleHeartClick = () => {
-    setSuggestionChips(['Custom Wash', 'Neon Fade', 'Builder Vibe']);
+    // suggestionChips dropped — cosmetic hint array consumed by the removed duplicate modal;
+    // the surviving DockedController FavoritePromptModal does not expose that prop.
     openFavoritePrompt(undefined, presetNameInput.trim() || 'Custom Gradient');
-  };
-
-  const handleConfirmFavorite = () => {
-    const name = promptName.trim() || 'Custom Gradient';
-    saveFavorite({
-      mode: 'BUILDER',
-      speed,
-      brightness,
-      builderNodes,
-      builderFillMode,
-      builderTransitionType,
-      builderDirection,
-    }, name);
-    closePrompt();
   };
 
   // ── BUILDER VIEW — occupies exact same space as library, no modal overlay ──
@@ -215,18 +200,6 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
             </View>
           </View>
         </Modal>
-
-        <FavoritePromptModal
-          visible={promptState === 'NAMING_FAVORITE'}
-          Colors={Colors}
-          promptName={promptName}
-          onChangePromptName={setPromptName}
-          favPromptTargetId={null}
-          suggestionChips={suggestionChips}
-          onDelete={() => {}}
-          onCancel={closePrompt}
-          onSave={handleConfirmFavorite}
-        />
       </View>
     );
   }
