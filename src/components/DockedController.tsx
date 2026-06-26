@@ -205,6 +205,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // Ref indirection for captureEntireState — declared here to break the TDZ forward reference.
     const captureEntireStateRef = useRef<(override?: Record<string, unknown>) => Record<string, unknown> | null>(() => null);
 
+    // Ref indirection for loadFavorite — declared here to break the TDZ forward reference.
+    // loadFavorite (from useLoadFavorite, ~L561) is defined after the imperative handle; this ref
+    // lets the exposed handle always invoke the latest closure without a hook reorder. Set every
+    // render below the useLoadFavorite call. Mirrors captureEntireStateRef / onReconcileRef.
+    const loadFavoriteRef = useRef<(fav: IFavoriteState) => void>(() => {});
+
     /**
      * Stable ref wrapper for the onReconcile callback.
      * Updated every render so it always closes over the latest applyCloudScene.
@@ -446,7 +452,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         // Wire format is a raw number[] (CrewRealtime.ts:59) — NOT a CloudScenePayload.
         void writeToDevice(payload);
       },
-      loadFavorite,
+      loadFavorite: (fav: IFavoriteState) => loadFavoriteRef.current(fav),
       setActiveMode,
       setBrightness,
       setSpeed,
@@ -459,10 +465,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         AppLogger.log('BLE_QUEUE_REPLAY', { deviceId: scrubPII(deviceId), payloadLen: lastSentPayloadRef.current.length });
         optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
       }
-    // NOTE: loadFavorite (L561) is declared after this hook — TypeScript TS2448 prevents
-    // adding it to this dep array without reordering hooks (forbidden per monolith guardrail).
-    // applyCloudScene and applySpatialSegments are declared above and are included.
-    // loadFavorite stale-closure risk is documented in SESSION_LOG; deferred to hook-reorder task.
+    // loadFavorite is invoked via loadFavoriteRef.current (set every render after useLoadFavorite,
+    // below) — the ref bridge keeps the exposed handle from going stale without a hook reorder
+    // (loadFavorite's const is declared after this hook). Mirrors the onReconcileRef pattern, so it
+    // does NOT need to appear in this dep array. applyCloudScene/applySpatialSegments are declared
+    // above and remain included.
     }), [speed, brightness, writeToDevice, optimisticWrite, applyCloudScene, applySpatialSegments]);
 
 
@@ -588,6 +595,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       ledPoints: hwSettings?.ledPoints,
       brtFactor,
     });
+
+    // Keep the imperative-handle bridge current — updated every render so ref.current always holds
+    // the latest loadFavorite closure (see loadFavoriteRef declaration). Fixes the stale-closure bug
+    // for crew scene-apply / crew loadout sync / voice callers of the exposed handle.
+    loadFavoriteRef.current = loadFavorite;
 
 
 
