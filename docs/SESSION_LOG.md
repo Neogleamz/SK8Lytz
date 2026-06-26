@@ -1,3 +1,12 @@
+### [DECISION] 2026-06-26 — /ship-it: OVERRIDE the Supabase security-advisor release gate
+
+**Decision:** Proceed with the app release despite Phase 1 health-sweep finding 3 ERROR + 112 WARN Supabase security advisors. User explicitly chose "Ship app anyway (override)."
+**Rationale:** Every flagged advisor is server-side Postgres/Supabase config (RLS policies, SECURITY DEFINER fns/views, search_path, auth settings). The APK bundle contains none of it; an app release neither changes nor worsens the DB posture. DB security is tracked separately as `fix/supabase-db-security-advisors` (TRIAGE).
+**Accepted risk (explicit):** Production data currently sits behind 46 "RLS Policy Always True" policies + 54 client-executable SECURITY DEFINER functions + 3 ERRORs (RLS disabled on spatial_ref_sys, 2 SECURITY DEFINER views). This is a real, live exposure that this release does NOT address.
+**Don't re-derive:** This override applies to THIS release only. `fix/supabase-db-security-advisors` remains the highest-priority TRIAGE item and must be fixed on its own track. Do not treat the gate as permanently waived.
+
+---
+
 ### [MERGE] fix/docked-loadfavorite-stale-handle @ 77f61ce7 — 2026-06-26
 
 **Completes the deferred remainder of `fix/docked-stale-imperative-handle` — that finding is now FULLY resolved.**
