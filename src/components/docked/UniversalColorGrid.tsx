@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Spacing } from '../../theme/theme';
-import type { UniversalSlidersFooterProps } from './UniversalSlidersFooter';
+import type { UniversalSlidersFooterProps } from './universalSliders.types';
 
 // Duplicated locally to break R-29 circular dependency without violating S4 bounds
 const PRESET_COLORS = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#4B0082', '#9400D3', '#FF00FF', '#FFFFFF', '#000000'];

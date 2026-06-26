@@ -26,45 +26,10 @@ import { useAuth } from '../context/AuthContext';
 import type { ViewState } from '../types/ViewState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface RegisteredDevice {
-  id?: string;
-  user_id?: string;
-  device_mac: string;
-  device_name: string;
-  custom_name?: string;
-  /** Product type — must match a `ProductProfile.id` in LOCAL_PRODUCT_CATALOG. */
-  product_type: 'HALOZ' | 'SOULZ' | 'RAILZ' | string;
-  position: 'Left' | 'Right' | null;
-  group_names?: string[];
-  group_ids?: string[];
-  /** @deprecated MIGRATION-SHIM: Legacy scalar field. Use group_ids[] instead. Remove at v3.9.0 */
-  group_id?: string;
-  /** @deprecated MIGRATION-SHIM: Legacy scalar field. Use group_names[] instead. Remove at v3.9.0 */
-  group_name?: string;
-  led_points?: number;
-  segments?: number;
-  ic_type?: string;
-  color_sorting?: string;
-  rssi_at_register?: number;
-  // Secondary fingerprint for MAC-rotation fallback
-  firmware_ver?: number;
-  led_version?: number;
-  ble_version?: number;
-  product_id?: number;
-  product_id_confirmed_at?: string | null;
-  rf_mode?: string;
-  rf_paired_count?: number;
-  factory_name?: string;
-  manufacturer_data?: string;
-  // Location natively captured during registration
-  last_lat?: number;
-  last_lng?: number;
-  // Offline sync state
-  is_pending_sync?: boolean;
-  registered_at?: string;
-  updated_at?: string;
-}
+// RegisteredDevice is defined in services/deviceRepository/types.ts to keep it
+// as a leaf import (no barrel back-edge). Re-exported here for backward compat.
+import type { RegisteredDevice } from '../services/deviceRepository/types';
+export type { RegisteredDevice } from '../services/deviceRepository/types';
 
 export type ClaimStatus =
   | 'unclaimed'           // No row in DB — safe to register

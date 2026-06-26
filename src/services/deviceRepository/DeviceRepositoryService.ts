@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { scrubPII } from '../../utils/piiScrubber';
 import { locationService } from '../LocationService';
 import { LOCAL_PRODUCT_CATALOG } from '../../constants/ProductCatalog';
-import type { RegisteredDevice } from '../../hooks/useRegistration';
+import type { RegisteredDevice } from './types';
 import type { CustomGroup, DeviceSettings } from '../../types/dashboard.types';
 import GroupRepository from '../GroupRepository';
 import { DeviceStorage } from './DeviceStorage';

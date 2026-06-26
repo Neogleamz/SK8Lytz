@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { AppLogger } from '../appLogger';
-import type { RegisteredDevice } from '../../hooks/useRegistration';
+import type { RegisteredDevice } from './types';
 
 export class DeviceCloudSync {
   /**

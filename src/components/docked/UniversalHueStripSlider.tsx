@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import NeonHueStrip from '../NeonHueStrip';
-import type { UniversalSlidersFooterProps } from './UniversalSlidersFooter';
+import type { UniversalSlidersFooterProps } from './universalSliders.types';
 
 // Duplicated locally to break R-29 circular dependency without violating S4 bounds
 const hueToHex = (hue: number) => {

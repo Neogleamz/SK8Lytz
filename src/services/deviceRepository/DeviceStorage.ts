@@ -6,7 +6,7 @@ import {
   STORAGE_REGISTERED_DEVICES,
   CONFIGS_KEY as GLOBAL_CONFIGS_KEY,
 } from '../../constants/storageKeys';
-import type { RegisteredDevice } from '../../hooks/useRegistration';
+import type { RegisteredDevice } from './types';
 import type { DeviceSettings } from '../../types/dashboard.types';
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────

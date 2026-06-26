@@ -5,8 +5,7 @@ import TacticalSlider from '../TacticalSlider';
 import { PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
 import { AppLogger } from '../../services/appLogger';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
-import type { UniversalSlidersFooterProps } from './UniversalSlidersFooter';
-// R-29: Safe type-only import, compiles away at runtime.
+import type { UniversalSlidersFooterProps } from './universalSliders.types';
 
 export const UniversalTacticalSliders = React.memo(function UniversalTacticalSliders(props: UniversalSlidersFooterProps) {
   const {

@@ -1,4 +1,4 @@
-import type { RegisteredDevice } from '../../hooks/useRegistration';
+import type { RegisteredDevice } from './types';
 import type { DeviceSettings } from '../../types/dashboard.types';
 
 export type Listener = () => void;
