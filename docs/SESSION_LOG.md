@@ -1,3 +1,38 @@
+### [EVENT] GOAL COMPLETE — [BATCH:teardown-fixes] — 2026-06-26
+
+**6 tasks, 2 waves, autonomous `/goal`. Master green at `ade1a45e` (full verify ✅ + madge 0 cycles).**
+
+**Origin:** User challenged the deep-dive-w1 "all clean" narrative → 4-agent wiring audit found pre-existing teardown debt → `/intake` filed 6 tasks → `/goal` planned (closed 3 traces, drafted 6 plans, AST-waved) and executed all 6.
+
+**Shipped:**
+
+| Task | Wave | Commit | Outcome |
+| ---- | ---- | ------ | ------- |
+| `fix/dashboard-autoconnect-double-listener` | 1 | `f576c431` | ✅ duplicate AppState listener removed |
+| `fix/dashboard-flatlist-rerender` | 1 | `9a6cabb2` | ✅ renderItem deps granularized (net improvement) |
+| `fix/docked-duplicate-favorite-modal` | 1 | `edefc352` | ✅ BuilderPanel duplicate modal removed, DockedController sole owner |
+| `fix/docked-stale-imperative-handle` | 1 | `edefc352` | ⚠️ PARTIAL — applyCloudScene+applySpatialSegments fixed; loadFavorite deferred (hook-reorder guardrail) → follow-on `fix/docked-loadfavorite-stale-handle` |
+| `refactor/break-circular-deps` | 1 | `1ad6db84` | ✅ madge 9 → 0 cycles |
+| `chore/teardown-dead-code-sweep` | 2 | `ade1a45e` | ✅ 10/11 items; 2 `_appLogger:any` eliminated, dead createDashboardStyles shim + getGroupCount removed |
+
+**Net code impact:** Wave 2 alone −25 lines; 2 No-`any` Law violations cleared; 9 circular deps eliminated; 1 user-facing data-corruption bug (duplicate modal) fixed.
+
+**Process wins (don't re-derive):**
+- **FRICTION-029 candidate fix VALIDATED:** parallel-wave agents that do NOT write SESSION_LOG in-worktree produce zero cross-branch rebase conflicts. deep-dive-w1 needed manual normalization of 4 worktrees; teardown-fixes needed none. → Promote this to the /goal + sub-agent contract permanently.
+- **AST same-file blind spot:** the import-based collision matrix put two same-file (DockedController.tsx) tasks in one wave. Mitigated by co-locating them in a unified worktree (Rule 1 Override). The AST tool does not detect direct same-file edits — only import-tree overlap. Future wave planning must manually check for shared target files.
+- **Post-merge integration verify is mandatory:** the gatekeeper verifies each branch in isolation, NOT the merged state. Ran full `npm run verify` + madge on master after each wave to catch cross-task breaks. Both clean.
+
+**Honest carry-forward:** `fix/docked-loadfavorite-stale-handle` (TRIAGE) — the loadFavorite ref handle is still stale; low live risk but a real gap, tracked not buried.
+
+---
+
+### [MERGE] BATCH:teardown-fixes Wave 2 — chore/teardown-dead-code-sweep @ ade1a45e — 2026-06-26
+
+**File:** 10 files, net −25 lines. Dead imports stripped from 3 protocol handlers + DockedController; `_appLogger:any` → `AppLoggerLike` in stateHandler + legacyHandler; dead `useProtocolDispatch()` call removed from DashboardScreen (Q1-verified safe); `createDashboardStyles` deprecated shim removed (Q2-verified inert); dead `getGroupCount()` removed; `injectStreetSummary` guard comment added; DashboardHeader clarifying comment; dead DashboardCrewPanel re-export removed.
+**Blast-radius:** bypassed for GroupRepository (dead-method removal, zero callers grep-confirmed). **TSC/Jest/no-any/all gates:** ✅. Worktree torn down, branch deleted.
+
+---
+
 ### [MERGE] BATCH:teardown-fixes Wave 1 — 4 worktrees merged — 2026-06-26
 
 **Merged by:** Taylor (gatekeeper), sequential pass. Base `00e0b4cc` → Master HEAD `1ad6db84`.

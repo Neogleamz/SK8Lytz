@@ -4212,4 +4212,34 @@ pm run verify which includes QA tests.
     Rejected alternative: "Lump into C16 — rejected; different module clusters, different fix (barrel back-edge vs sibling component cycle)."
   - **Source of Truth:** 📖 [deviceRepository/index.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/deviceRepository/index.ts) + [docked/UniversalSlidersFooter.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/UniversalSlidersFooter.tsx)
   - **Details:** Two independent clusters — could split into a 2-task wave. Verify with `npx madge --circular src/` returning zero before merge. `docked/Universal*` cluster shares the docked directory neighborhood with the C4 fixes.
+
+
+- [x] **`chore/teardown-dead-code-sweep`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[REFACTOR]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LIGHT]` `[Friction: 1]` `[BATCH:teardown-fixes]` `[WAVE:2]`
+  - **Plan:** 📎 [PLAN-chore-teardown-dead-code-sweep.md](./plans/PLAN-chore-teardown-dead-code-sweep.md)
+  - **Goal:** Clear the dead-code / type / naming debt the C2/C3/C4/C14 teardowns left behind, in one surgical pass.
+  - **Decision Log:** LOW-severity wiring-audit residue across 4 clusters — no runtime impact, but No-`any` Law gaps + dead surface that misleads future readers (the C3 agent's "stripped 11 imports + typed logger" was incomplete).
+  - **Analysis:** 📊 Source: Reyes C2/C3/C4/C14 wiring audits (SESSION_LOG 2026-06-25).
+    Key finding: "8 distinct dead/stale items; 2 surviving `_appLogger: any` in stateHandler/legacyHandler."
+    Rejected alternative: "One task per item — rejected as board noise; all are same-domain mechanical cleanup."
+  - **Source of Truth:** 📖 SESSION_LOG `[ARTIFACT] Reyes — *Wiring Audit*` entries (2026-06-25), each with file:line.
+  - **Details / checklist:**
+    - C3: strip 5 dead imports each from `staticColorHandler.ts:1`, `stateHandler.ts:1`, `legacyHandler.ts:1`; replace `let _appLogger: any` at `stateHandler.ts:3` + `legacyHandler.ts:3` with the `AppLoggerLike` interface (No-`any` Law).
+    - C4: remove dead imports (`StyleSheet`, `Text`, `LinearGradient`, `Layout/Spacing/Typography`, `LOCAL_PRODUCT_CATALOG`) + dead `gaugeSize` var + dead destructures `activeQuickPresetIndex`/`saveQuickPreset` in `DockedController.tsx`.
+    - C2: rename/clarify `Dashboard/DashboardHeader.tsx` (exports `DashboardHeaderBanners`, not the header); drop dead `DashboardCrewPanel` re-export at `DashboardCrewHub.tsx:61`; delete stale TODO at `DashboardScreen.tsx:23`.
+    - C2: ⚠️ TRACE FIRST — `useProtocolDispatch()` dead call at `DashboardScreen.tsx:743`: confirm the hook has NO instantiation side-effects, then remove. If side-effectful → escalate to its own `[H-RISK]` bug, do NOT bundle.
+    - C2: `createDashboardStyles` (`DashboardStyles.ts:398`) is `@deprecated "Removed in Wave 2"` yet sole call site at `DashboardScreen.tsx:97` and ignores `_Colors` — trace the 4 sub-components (`DashboardCrewPanel`, `MySkatesSlab`, `RegisteredFleetSlab`, `SupportModal`) for theme staleness, then remove or fix.
+    - C14: remove dead `getGroupCount()` (`GroupRepository.ts:133`, no caller); add a guard comment on `useTelemetryLedger.injectStreetSummary` (dormant 2nd-table top-speed writer) naming the ownership boundary.
+    - File collisions: touches `DockedController.tsx` (shared with both docked bug fixes) + `DashboardScreen.tsx` (shared with the autoconnect-listener fix) → must run AFTER those bugs merge, or fold into the same worktree.
+
+### ⚡ [BATCH:branch-salvage] — Branch Audit Recovery Tasks (2026-06-23)
+> **Source Analysis**: Branch hygiene audit 2026-06-23 — 4 orphaned branches inspected; 2 tech-debt tasks identified as unmerged work, 1 new feature identified.
+> **Decision Log:** Branch audit discovered completed-but-unmerged work and salvageable code. These tasks close the gap before those branches are deleted.
+
+#### Batch Strategy Table (AST-Verified)
+
+| Wave | Task | Parallel-Safe? | Prerequisite | Collision Basis |
+|------|------|---------------|-------------|-----------------|
+| **1** | ~~`refactor/burn-down-audit-failures`~~ | — | — | SUPERSEDED — master already clean |
+| **2** | ~~`fix/ble-disconnect-service`~~ ✅ merged `b3bd6abc` | Solo | None (Wave 1 superseded) | standalone — no collision |
 

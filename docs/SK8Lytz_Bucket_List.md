@@ -24,7 +24,7 @@
 > ✅ Wave 2 (solo) — Completed: fix/music-mode-dep-array @ `428ff383` ✅. handleMusicChange dep array fix. Master is green.
 > 🏆 **[BATCH:sweep/deep-dive-w1] GOAL COMPLETE** — all 5 remaining Wave 1 clusters resolved 2026-06-25 via `/goal`. Master is green at `df995610`.
 > ✅ Completed: sweep/dashboard-extraction @ `49ddd601` · sweep/docked-controller @ `213b44a9` · sweep/protocol-monolith @ `1f4517af` · sweep/split-brain @ `82b60425` · sweep/circular-deps (verification-only, madge-confirmed) ✅
-> 🚧 **[BATCH:teardown-fixes] EXECUTING** — 2026-06-26 `/goal` autonomous, from base `0edbdcaa`. 6 tasks, 2 waves (AST-verified).
+> 🏆 **[BATCH:teardown-fixes] GOAL COMPLETE** — 2026-06-26 `/goal` autonomous. 6 tasks, 2 waves (AST-verified). Master green at `ade1a45e`.
 
 #### Batch Strategy Table — [BATCH:teardown-fixes] (AST-Verified — `node tools/ast-parser.js --collision-matrix artifacts/teardown_audit_clusters.json`)
 
@@ -38,8 +38,8 @@
 
 > AST output: `total_collisions: 4` (all vs `chore/teardown-dead-code-sweep`), `total_waves: 2`. Wave 1: 4 worktrees (DockedController pair unified). Wave 2: 1 solo.
 > ✅ **Wave 1 MERGED** 2026-06-26 — master `1ad6db84`, full verify ✅ + madge 0 cycles. autoconnect `f576c431` · flatlist `9a6cabb2` · docked-pair `edefc352` (modal ✅ / handle ⚠️ partial — loadFavorite deferred → new TRIAGE) · break-circular-deps `1ad6db84`.
-> 🚧 Wave 2 executing: chore/teardown-dead-code-sweep (solo)
-> Currently executing: chore/teardown-dead-code-sweep
+> ✅ **Wave 2 MERGED** 2026-06-26 — chore/teardown-dead-code-sweep @ `ade1a45e`. 10/11 items done (1 N/A — TODO already gone post-Wave-1). 2 `_appLogger:any` eliminated, dead createDashboardStyles shim removed, dead getGroupCount removed. Full verify ✅.
+> Currently executing: none
 
 ---
 
@@ -192,35 +192,6 @@
 ## 🧹 TECH DEBT
 
 > **Source Analysis (teardown-debt tasks below):** 🕵️ Reyes monolith-teardown wiring audit 2026-06-25 (SESSION_LOG `[ARTIFACT]` entries) + `npx madge --circular src/`. Pre-existing debt the deep-dive-w1 sweep did not address.
-
-- [ ] **`chore/teardown-dead-code-sweep`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[REFACTOR]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LIGHT]` `[Friction: 1]` `[BATCH:teardown-fixes]` `[WAVE:2]`
-  - **Plan:** 📎 [PLAN-chore-teardown-dead-code-sweep.md](./plans/PLAN-chore-teardown-dead-code-sweep.md)
-  - **Goal:** Clear the dead-code / type / naming debt the C2/C3/C4/C14 teardowns left behind, in one surgical pass.
-  - **Decision Log:** LOW-severity wiring-audit residue across 4 clusters — no runtime impact, but No-`any` Law gaps + dead surface that misleads future readers (the C3 agent's "stripped 11 imports + typed logger" was incomplete).
-  - **Analysis:** 📊 Source: Reyes C2/C3/C4/C14 wiring audits (SESSION_LOG 2026-06-25).
-    Key finding: "8 distinct dead/stale items; 2 surviving `_appLogger: any` in stateHandler/legacyHandler."
-    Rejected alternative: "One task per item — rejected as board noise; all are same-domain mechanical cleanup."
-  - **Source of Truth:** 📖 SESSION_LOG `[ARTIFACT] Reyes — *Wiring Audit*` entries (2026-06-25), each with file:line.
-  - **Details / checklist:**
-    - C3: strip 5 dead imports each from `staticColorHandler.ts:1`, `stateHandler.ts:1`, `legacyHandler.ts:1`; replace `let _appLogger: any` at `stateHandler.ts:3` + `legacyHandler.ts:3` with the `AppLoggerLike` interface (No-`any` Law).
-    - C4: remove dead imports (`StyleSheet`, `Text`, `LinearGradient`, `Layout/Spacing/Typography`, `LOCAL_PRODUCT_CATALOG`) + dead `gaugeSize` var + dead destructures `activeQuickPresetIndex`/`saveQuickPreset` in `DockedController.tsx`.
-    - C2: rename/clarify `Dashboard/DashboardHeader.tsx` (exports `DashboardHeaderBanners`, not the header); drop dead `DashboardCrewPanel` re-export at `DashboardCrewHub.tsx:61`; delete stale TODO at `DashboardScreen.tsx:23`.
-    - C2: ⚠️ TRACE FIRST — `useProtocolDispatch()` dead call at `DashboardScreen.tsx:743`: confirm the hook has NO instantiation side-effects, then remove. If side-effectful → escalate to its own `[H-RISK]` bug, do NOT bundle.
-    - C2: `createDashboardStyles` (`DashboardStyles.ts:398`) is `@deprecated "Removed in Wave 2"` yet sole call site at `DashboardScreen.tsx:97` and ignores `_Colors` — trace the 4 sub-components (`DashboardCrewPanel`, `MySkatesSlab`, `RegisteredFleetSlab`, `SupportModal`) for theme staleness, then remove or fix.
-    - C14: remove dead `getGroupCount()` (`GroupRepository.ts:133`, no caller); add a guard comment on `useTelemetryLedger.injectStreetSummary` (dormant 2nd-table top-speed writer) naming the ownership boundary.
-    - File collisions: touches `DockedController.tsx` (shared with both docked bug fixes) + `DashboardScreen.tsx` (shared with the autoconnect-listener fix) → must run AFTER those bugs merge, or fold into the same worktree.
-
-### ⚡ [BATCH:branch-salvage] — Branch Audit Recovery Tasks (2026-06-23)
-> **Source Analysis**: Branch hygiene audit 2026-06-23 — 4 orphaned branches inspected; 2 tech-debt tasks identified as unmerged work, 1 new feature identified.
-> **Decision Log:** Branch audit discovered completed-but-unmerged work and salvageable code. These tasks close the gap before those branches are deleted.
-
-#### Batch Strategy Table (AST-Verified)
-
-| Wave | Task | Parallel-Safe? | Prerequisite | Collision Basis |
-|------|------|---------------|-------------|-----------------|
-| **1** | ~~`refactor/burn-down-audit-failures`~~ | — | — | SUPERSEDED — master already clean |
-| **2** | ~~`fix/ble-disconnect-service`~~ ✅ merged `b3bd6abc` | Solo | None (Wave 1 superseded) | standalone — no collision |
 
 ---
 
