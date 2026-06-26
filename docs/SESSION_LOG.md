@@ -1,3 +1,96 @@
+### [ARTIFACT] /intake — Monolith-Teardown Wiring Audit → 6 tasks filed — 2026-06-26
+
+**Session:** 2026-06-26 — `/intake` of the 4-agent teardown wiring audit (C2/C3/C4/C14/C16 + madge). Persona chain: Jordan (board) → Casey (placement) → Quinn (deferred plans) → Reyes (evidence).
+
+**Trigger:** User challenged the deep-dive-w1 "all clean, just cleanup" narrative — "what did we break / forget to wire during the monolith teardowns?" Answer: the W1 merges broke nothing new; the audit surfaced PRE-EXISTING teardown debt the sweep never caught.
+
+**Tasks filed (all `[✅ VERIFIED]` `[📝 NEEDS PLAN]`, plans deferred to promotion per TRIAGE convention):**
+
+| Slug | Section | Sev | Core defect |
+| ---- | ------- | --- | ----------- |
+| `fix/docked-duplicate-favorite-modal` | TRIAGE | 🔴 CRIT | Two FavoritePromptModals (DockedController:1214 + BuilderPanel:219), racing onSave → wrong favorite saved |
+| `fix/dashboard-autoconnect-double-listener` | TRIAGE | 🟠 HIGH | retriggerAutoConnect registered twice (DashboardScreen:405 + useDashboardAutoConnect:480) |
+| `fix/docked-stale-imperative-handle` | TRIAGE | 🟡 MED | useImperativeHandle deps omit applyCloudScene/loadFavorite (DockedController:448) |
+| `fix/dashboard-flatlist-rerender` | TRIAGE | 🟡 MED | renderItem useCallback deps=[props] → all cells re-render per RSSI tick (DashboardDeviceList:76) |
+| `refactor/break-circular-deps` | TECH DEBT | 🟡 MED | 9 madge cycles (6 deviceRepository barrel + 3 docked Universal* siblings) |
+| `chore/teardown-dead-code-sweep` | TECH DEBT | ⚪ LOW | 8 dead/stale items + 2 surviving `_appLogger: any` (stateHandler:3, legacyHandler:3) |
+
+**Verified-clean (don't re-audit):** all opcode delegations intact (no dropped 0x59/73/74/51/40); SeqNum singleton + EEPROM min-12 guard intact; C16 DI is real injection + lazy-require resolves (madge: 0 cycles in appLogger/CrewService scope); SpeedTrackingService sole user_profiles stat writer; C2 hooks all invoked+consumed; C4 facade single-source, panels wired, HAL parity holds.
+
+**Open UNCERTAIN traces (not yet closed):** (1) ZenggeAdapter.buildCustomModeExtended → toResult(…,true) MTU-chunk path (ties to deferred MTU [DECISION]); (2) useProtocolDispatch instantiation side-effects (decides if the dead-call removal is HIGH or LOW); (3) createDashboardStyles theme-staleness depth (needs 4 sub-component reads).
+
+**File-collision note for future wave assignment:** `DockedController.tsx` is shared by the 2 docked bugs + cleanup sweep; `DashboardScreen.tsx` by the listener fix + cleanup. NOT a parallel wave — sequence or co-worktree. AST verification required at /start-task time.
+
+---
+
+### [ARTIFACT] Reyes — C4 DockedController Wiring Audit — 2026-06-25
+
+**Scope:** Read-only wiring audit of DockedController.tsx + all src/components/docked/ files + src/components/controller/DockedController.styles.ts after C4 sweep/docked-controller merge (213b44a9).
+
+**CONFIRMED ISSUES:**
+1. CRITICAL — Duplicate FavoritePromptModal: BuilderPanel.tsx L219 and DockedController.tsx L1214 both bind `visible={promptState === 'NAMING_FAVORITE'}` from the same FavoritesContext. When user is in BUILDER mode + BuilderPanel viewMode === 'BUILDER' and triggers the heart, both modals open simultaneously with different `onSave` handlers. Runtime: two overlapping full-screen modals, save result is whichever `onSave` fires last.
+2. MEDIUM — `useImperativeHandle` stale closure: dep array at L469 is `[speed, brightness, writeToDevice, optimisticWrite]` but factory closes over `applyCloudScene`, `loadFavorite`, `applySpatialSegments`. After mount, when `applyCloudScene` or `loadFavorite` update (they are `useCallback`s with their own deps), `ref.current.applyCloudScene` and `ref.current.loadFavorite` served to parent (crew/voice callers) are stale.
+3. LOW — Dead imports in DockedController.tsx L22 (`StyleSheet`, `Text`), L49 (`LinearGradient`), L50 (`Layout`, `Spacing`, `Typography`), L59 (`LOCAL_PRODUCT_CATALOG`). Dead variable `gaugeSize` at L184. No runtime impact.
+4. LOW — Dead destructures: `activeQuickPresetIndex` (L167) and `saveQuickPreset` (L179) from `useDockedState()` — neither consumed anywhere in file.
+
+**VERIFIED CLEAN:** DockedHeader imported+rendered, styles prop wired, all 5 style keys present. useDockedState is sole context consumer — no raw context reads in DockedController. BuilderPanel/ProEffectsPanel/MusicPanel all imported+rendered with required props. HAL parity clean — no ZenggeProtocol/raw-opcode import. DockedBus writeToDevice type assignment is contravariant-safe. TSC: ✅ finding correct.
+
+**UNCERTAIN:** Whether the BuilderPanel double FavoritesContext subscription (BuilderPanel + DockedController both call useSharedFavorites) causes any state desync beyond the modal collision already flagged.
+
+---
+
+### [ARTIFACT] Reyes — C14 + C16 Wiring Audit — 2026-06-25
+
+**Scope:** Read-only audit of C14 (split-brain) and C16 (circular-deps) claims post-merge. All files read at source + line level. No edits made.
+
+**C14 — VERIFIED CLEAN (with one issue flagged):**
+- `useDashboardGroups.ts:107-117` — groups read exclusively via `GroupRepository.getInstance().getGroups()` + `subscribeGroups()`. No direct AsyncStorage read for `STORAGE_CUSTOM_GROUPS` exists in live code outside GroupRepository itself.
+- `SpeedTrackingService.updateLifetimeStats` (L587) is the ONLY function that calls `supabase.from('user_profiles').update({lifetime_distance_miles, lifetime_top_speed_mph})`. Called at L237 (saveSession) and L347 (flushPendingSessionQueue).
+- `CrewSessionManager.endSession` (L325-421) updates `crew_sessions` columns (`top_speed_mph`, `total_distance_miles`) — a DIFFERENT table. NOT a second writer to `user_profiles`.
+- `useTelemetryLedger.injectStreetSummary` (L197-203) writes `lifetime_top_speed_mph` into an in-memory buffer flushed via `flush_telemetry` RPC — which writes to `user_lifetime_stats` table (migration `20260616053000`), NOT `user_profiles`. These are architecturally separate tables.
+- `useCrewSession.ts:73-76` — the guard comment is present and accurate: no lifetime stat writes occur there.
+- **CONFIRMED ISSUE: `getGroupCount()` (GroupRepository.ts:133) has ZERO callers in production code.** It was added as a "consolidation anchor" but no consumer exists in `src/`. It is dead exported code.
+
+**C16 — VERIFIED CLEAN with one architectural note:**
+- `AppSettingsService.ts:11` — `const getLogger = (): IAppLogger => require('./appLogger/index').AppLogger;` — lazy require correctly resolves the right relative path from `src/services/AppSettingsService.ts` to `src/services/appLogger/index.ts`. The symbol returned (`AppLogger`) is used only inside `getLogger()` calls at method invocation time (L50, L62, L79, L83), never at module load. Cycle broken.
+- `AppLoggerCloud.ts:2` — imports `AppSettingsService` eagerly. `AppSettingsService` does NOT eagerly import `AppLogger` (only lazily at call-time). Directed cycle is broken: `AppLoggerCloud → AppSettingsService --lazy--> AppLogger`.
+- `CrewService.ts:71` — `const { CrewSessionManager } = require('./CrewSessionManager');` — lazy require at constructor time. `CrewRealtime` and `CrewAutoRejoin` are imported as static classes (no circular dependency back to `CrewService`), only accessing it via the structural interface `ICrewRealtimeDependencies` / `ICrewAutoRejoinDependencies` injected via `constructor(private service: ...)`.
+- **Injection verified:** `CrewAutoRejoin` receives `this` (the live `CrewService` instance) at `new CrewAutoRejoin(this)` (CrewService.ts:73). `CrewRealtime` receives `this` at `new CrewRealtime(this)` (L73). The `ICrewAutoRejoinDependencies` / `ICrewRealtimeDependencies` interfaces match the actual `CrewService` public fields. No undefined deps at runtime.
+- `CrewSessionManager.ts:7` — `import type { CrewService } = './CrewService'` — type-only import (`@cycle-guard` comment present). Does NOT create a runtime circular dependency.
+- **Architectural note (INFERRED, not runtime risk):** `AppLoggerCloud.ts` eagerly imports `AppSettingsService`, and `AppSettingsService` lazily requires `appLogger`. If Metro module evaluator runs `AppLoggerCloud` before `AppLogger` is fully initialized, the `getLogger()` call would succeed because the require is deferred. However, if `AppLoggerService` constructor were to call `AppSettingsService` methods at construction time, a deadlock is possible. Current code shows no such call — `AppLoggerService` constructor does not invoke `AppSettingsService`. Safe as-is.
+
+**Don't re-derive:**
+- `flush_telemetry` RPC writes to `user_lifetime_stats`, not `user_profiles`. These are separate tables. No split-brain.
+- `getGroupCount()` is dead code — zero callers.
+- `DashboardGroupList.tsx` is a 1-line blast-radius stub, not a real component.
+- The C16 lazy-require and DI injection is correctly wired. The cycle is structurally broken, not just claimed.
+
+---
+
+### [ARTIFACT] Reyes — C3 Protocol Monolith Wiring Audit — 2026-06-25
+
+**Scope:** Read-only audit of ZenggeProtocol.ts (facade), all 6 handlers, SpatialEngine, effectProcessors, and processors/ after the C3 Boy Scout merge (1f4517af).
+
+**Key findings (don't re-derive):**
+
+1. FACADE DELEGATION — VERIFIED CLEAN. Every public method on ZenggeProtocol class and namespace delegates via `require('./handlers/...')` to the correct extracted handler. No method body was left behind in ZenggeProtocol.ts. All opcode builders verified: 0x59 → staticColorHandler.setMultiColor; 0x73 → musicModeHandler.setMusicConfig; 0x74 → dynamicEffectHandler.sendMusicMagnitude; 0x51 compact/extended → dynamicEffectHandler; 0x40 framing → legacyHandler.buildChunkedFrames.
+
+2. SINGLETON — VERIFIED CLEAN. `ZenggeProtocol._instance` is the sole instance. Namespace `const _shared = ZenggeProtocol.sharedInstance` reuses it (PROTOCOL_CORE-004 fix confirmed at ZenggeProtocol.ts:485). No handler spawns its own counter.
+
+3. DEAD IMPORTS (LOW — not runtime broken, but Boy Scout gap). Three handlers import symbols they never use in their body: staticColorHandler.ts:1 imports HardwareSettings, IC_TYPES, COLOR_SORTING_RGB, icTypeIndex, colorSortingIndex — none referenced past line 1. stateHandler.ts:1 same set. legacyHandler.ts:1 same set plus HW_CONSTRAINTS. TSC with noUnusedLocals would flag these; they do not cause runtime errors.
+
+4. `_appLogger: any` SURVIVES in legacyHandler.ts:3 and stateHandler.ts:3. The C3 agent's "typed _appLogger" work only landed in ZenggeProtocol.ts, staticColorHandler.ts, dynamicEffectHandler.ts, musicModeHandler.ts, and hardwareSettingsHandler.ts. The two remaining `any` uses are Boy Scout gaps, not regressions.
+
+5. Min-12-pixel 0x59 EEPROM guard — VERIFIED, TWO LOCATIONS (intentional). Primary guard in staticColorHandler.ts:49 (Math.max(12,...) on numPoints and safeLedPoints). Authoritative fallback padder in legacyHandler.ts:padStaticColorfulPayload (for pre-built payloads coming through BleWriteDispatcher). Both are correct per the protocol comment at legacyHandler.ts:11-26.
+
+6. `setCustomModeExtended` RETURNS RAW (NO wrapCommand) — VERIFIED INTENTIONAL. dynamicEffectHandler.ts:274 documents this. The 323-byte payload routes through writeChunked/buildChunkedFrames (0x40 framing) in BleWriteDispatcher. useProtocolDispatch.ts:131-141 routes `cmdByte===0x51 && length>200` through writeChunked, not executeProtocolResults.
+
+7. SpatialEngine → effectProcessors wiring — VERIFIED CLEAN. SpatialEngine.ts imports all builder functions named at lines 33-110 from ./spatial/effectProcessors. effectProcessors re-exports from processors/colorfulProcessor and processors/gradientProcessor. All builders present in the switch dispatch.
+
+8. Logger injection — VERIFIED. All handlers use a lazy `getAppLogger()` pattern with `require('../../services/AppLogger').AppLogger` and console fallback. No handler has a typed-but-never-assigned logger; the lazy init guarantees assignment on first call.
+
+---
+
 ### [EVENT] GOAL COMPLETE — [BATCH:sweep/deep-dive-w1] — 2026-06-25
 
 **All 5 remaining Wave 1 clusters resolved. Master is green at `df995610` (C1 + C12 merged in prior sessions).**
