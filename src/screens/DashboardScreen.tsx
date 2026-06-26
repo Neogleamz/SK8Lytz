@@ -412,13 +412,12 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
         // and enables AutoRecovery if they drop organically.
       } else if (nextState === 'active') {
         if (isBluetoothEnabled && isBluetoothSupported) startSweeper();
-        // Re-arm auto-connect on foreground return. If GATT dropped while backgrounded,
-        // the one-shot gate is closed and the MAC queue is drained — retrigger refills both.
-        retriggerAutoConnectRef.current();
+        // Note: retriggerAutoConnect on foreground is owned by useDashboardAutoConnect's
+        // own AppState listener (useDashboardAutoConnect.ts:479-487). Do not duplicate here.
       }
     });
     return () => sub.remove();
-  }, [isBluetoothEnabled, isBluetoothSupported, startSweeper, stopSweeper, forceDisconnect]);
+  }, [isBluetoothEnabled, isBluetoothSupported, startSweeper, stopSweeper]);
 
   // Cleanup on Dashboard unmount
   useEffect(() => {
