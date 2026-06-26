@@ -101,7 +101,19 @@ export function useDashboardDeviceList(props: {
         />
       </View>
     );
-  }, [props]);
+  }, [
+    props.deviceConfigs,
+    props.rssiMap,
+    props.ledgerLoadSync,
+    props.displayConnectedDevices,
+    props.isSelectionMode,
+    props.selectedIds,
+    props.powerStates,
+    props.connectionStates,
+    props.handleDeviceItemPress,
+    props.openSettings,
+    props.handleDeviceItemPowerToggle,
+  ]);
 
   return { renderItem };
 }
