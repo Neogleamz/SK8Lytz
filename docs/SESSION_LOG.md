@@ -1,3 +1,31 @@
+### [ARTIFACT] Reyes — Plan-Blocking Q1/Q2/Q3 Investigation — 2026-06-26
+
+**Scope:** Read-only resolution of three UNCERTAIN items flagged in the prior wiring-audit artifact.
+
+**Q1 — useProtocolDispatch side-effects — VERDICT: SAFE TO REMOVE**
+- `useProtocolDispatch` (`src/hooks/useProtocolDispatch.ts`) is a pure factory hook.
+- Only calls: `useContext(BLEContext)` (throws if outside provider, no mutation), `useCallback` x14 (creates stable fn refs, no side effects). No `useEffect`, no `addEventListener`, no timers, no subscriptions, no context writes anywhere in the file.
+- The call at `DashboardScreen.tsx:743` (`const dispatch = useProtocolDispatch()`) discards the return value. Removing it removes only 14 `useCallback` allocations per render. Zero behavioral difference.
+- Source: `src/hooks/useProtocolDispatch.ts` L1-186 (read in full).
+
+**Q2 — createDashboardStyles theme staleness — VERDICT: INERT (no visual bug from ignored _Colors)**
+- `createDashboardStyles` (`src/styles/DashboardStyles.ts:398-413`) ignores `_Colors` entirely. It spreads `DashboardStyles` (a `StyleSheet.create(...)` baked at module load) plus `getDimensionStyles` (layout-only keys).
+- All color values in `DashboardStyles` are already baked from the default `Colors` import at module load time (`src/styles/DashboardStyles.ts:22`). Passing a different `_Colors` at runtime has never had any effect — the shim's behavior is identical to calling it with no Colors arg.
+- Components receiving `styles`: DashboardCrewPanel (passes through to CrewHubSlab — no `useTheme` in either, uses `Colors` prop directly for color overrides, not style keys), MySkatesSlab (uses `styles.slabContainer/glassSlab/slabEmptyText/scanButton/scanButtonText` — all layout + baked-color keys), RegisteredFleetSlab (same keys), SupportModal (uses `styles.groupButton/groupButtonText` — baked-color keys). None call `useTheme` or `useThemedStyles` internally.
+- Real theme colors are applied via inline-style overrides (`[styles.X, { color: Colors.primary }]`) with the live `Colors` prop passed separately. The `styles` prop carries layout/structure only.
+- INERT: removing `_Colors` from the shim signature or replacing `createDashboardStyles` with the direct spread changes nothing visually.
+
+**Q3 — FavoritePromptModal duplicate — FACTS ESTABLISHED**
+- `promptState`, `promptName`, `setPromptName`, `openFavoritePrompt`, `saveFavorite`, `closePrompt` are ALL single-instance state living in `useFavorites.ts` and shared via `FavoritesContext` (`src/context/FavoritesContext.tsx`).
+- DockedController reads this state via `useDockedState()` → `useSharedFavorites()`. BuilderPanel calls `useSharedFavorites()` directly.
+- Both modals render `visible={promptState === 'NAMING_FAVORITE'}` — they share the same bit. When it's true, both mount simultaneously.
+- DockedController heart button (`src/components/DockedController.tsx:958`) is always rendered regardless of `activeMode` (it sits in `styles.visualizerWrapper`, outside mode conditionals). BuilderPanel (`src/components/DockedController.tsx:1031`) renders only when `activeMode === 'BUILDER'`. BuilderPanel has its own heart inside its Builder header (`src/components/docked/BuilderPanel.tsx:154`). When `activeMode === 'BUILDER'` both heart buttons are on screen.
+- Save handler differences: DockedController `handleConfirmSaveFavorite` (L513) captures full controller state: `{mode, color, patternId, speed, brightness, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue, multiColors, multiTransition, multiLength, musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle, builderNodes, builderFillMode, builderTransitionType, builderDirection}`. BuilderPanel `handleConfirmFavorite` (L124) captures only: `{mode: 'BUILDER', speed, brightness, builderNodes, builderFillMode, builderTransitionType, builderDirection}`. The DockedController handler includes the same builder fields PLUS all other mode state — it is a superset.
+- `promptName` is shared: whichever `openFavoritePrompt` call fired last wins (last write to the single `promptName` state). User types one name; both `onSave` handlers read the same `promptName`. The race is: whichever React event fires last on the two modals' Save buttons writes the favorite. DockedController's `saveFavorite` is called inside `handleConfirmSaveFavorite` which also calls `closePrompt()` implicitly (via `saveFavorite` in `useFavorites.ts:122`), then BuilderPanel's `handleConfirmFavorite` calls `saveFavorite` again + `closePrompt()` separately.
+- Trigger asymmetry: DockedController heart (`handleSaveFavoriteClick` L479) calls `openFavoritePrompt` directly. BuilderPanel heart (`handleHeartClick` L119) also calls `openFavoritePrompt`. No mode-gate prevents DockedController heart from firing while in BUILDER mode.
+
+---
+
 ### [ARTIFACT] /intake — Monolith-Teardown Wiring Audit → 6 tasks filed — 2026-06-26
 
 **Session:** 2026-06-26 — `/intake` of the 4-agent teardown wiring audit (C2/C3/C4/C14/C16 + madge). Persona chain: Jordan (board) → Casey (placement) → Quinn (deferred plans) → Reyes (evidence).
