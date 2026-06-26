@@ -27,3 +27,5 @@ Reyes C4 wiring audit (docs/SESSION_LOG.md, 2026-06-25).
 
 ## Coordination note
 This task shares `DockedController.tsx` with `fix/docked-duplicate-favorite-modal` and runs in the SAME worktree. Apply both fixes; they touch different regions (modal ~L1214, handle ~L448). Run `git diff` after each edit.
+
+// SKIPPED (2026-06-26, merged @ edefc352): `loadFavorite` could NOT be added to the useImperativeHandle dep array — it is declared at DockedController.tsx:561, AFTER the useImperativeHandle, so including it would require reordering hooks, which violates the monolith hook-ordering guardrail (L205-500). `applyCloudScene` + `applySpatialSegments` WERE added. The loadFavorite remainder is tracked as follow-on TRIAGE task `fix/docked-loadfavorite-stale-handle`. Low risk: loadFavorite is a stable useCallback; crew/voice callers invoke post-mount.

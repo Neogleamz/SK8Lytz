@@ -37,7 +37,9 @@
 | **2** | `chore/teardown-dead-code-sweep` | Solo | Wave 1 merged | Collides w/ all (touches `DockedController.tsx` + `DashboardScreen.tsx`) — runs last on final state |
 
 > AST output: `total_collisions: 4` (all vs `chore/teardown-dead-code-sweep`), `total_waves: 2`. Wave 1: 4 worktrees (DockedController pair unified). Wave 2: 1 solo.
-> Currently executing: Wave 1 — docked-pair · autoconnect-listener · flatlist-rerender · break-circular-deps
+> ✅ **Wave 1 MERGED** 2026-06-26 — master `1ad6db84`, full verify ✅ + madge 0 cycles. autoconnect `f576c431` · flatlist `9a6cabb2` · docked-pair `edefc352` (modal ✅ / handle ⚠️ partial — loadFavorite deferred → new TRIAGE) · break-circular-deps `1ad6db84`.
+> 🚧 Wave 2 executing: chore/teardown-dead-code-sweep (solo)
+> Currently executing: chore/teardown-dead-code-sweep
 
 ---
 
@@ -53,49 +55,15 @@
 
 > **Source Analysis (tasks below):** 🕵️ Reyes monolith-teardown wiring audit 2026-06-25 — 4-agent read-only audit of C2/C3/C4/C14/C16 + `madge` cycle scan. Evidence in `docs/SESSION_LOG.md` `[ARTIFACT] Reyes — *Wiring Audit*` entries. All findings carry file:line proof. These are PRE-EXISTING teardown debts (not introduced by the deep-dive-w1 merges).
 
-- [ ] **`fix/docked-duplicate-favorite-modal`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:teardown-fixes]` `[WAVE:1]`
-  - **Plan:** 📎 [PLAN-fix-docked-duplicate-favorite-modal.md](./plans/PLAN-fix-docked-duplicate-favorite-modal.md)
-  - **Goal:** Eliminate the two simultaneously-rendered `FavoritePromptModal` instances so a favorite saves with the correct mode/state.
-  - **Decision Log:** CRITICAL wiring audit finding — both `DockedController.tsx:1214` and `BuilderPanel.tsx:219` bind `visible` to the same `promptState==='NAMING_FAVORITE'` from shared `FavoritesContext`, with DIFFERENT `onSave` handlers; whichever wins corrupts the saved favorite.
-  - **Analysis:** 📊 Source: Reyes C4 wiring audit (SESSION_LOG 2026-06-25).
-    Key finding: "Two `<Modal visible={true}>` stack; `handleConfirmFavorite` (BUILDER nodes) vs `handleConfirmSaveFavorite` (activeMode color/pattern) race."
-    Rejected alternative: "Leave it — rejected; user-facing data corruption on a core save path."
-  - **Source of Truth:** 📖 [DockedController.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx#L1214) + [BuilderPanel.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/BuilderPanel.tsx#L219)
-  - **Details:** Decide single ownership of the naming modal (likely keep DockedController's, drop BuilderPanel's, route BUILDER save through one `onSave`). File collision: shares `DockedController.tsx` with `fix/docked-stale-imperative-handle` + `chore/teardown-dead-code-sweep` — cannot share a parallel wave.
-
-- [ ] **`fix/dashboard-autoconnect-double-listener`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[⚠️ H-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:teardown-fixes]` `[WAVE:1]`
-  - **Plan:** 📎 [PLAN-fix-dashboard-autoconnect-double-listener.md](./plans/PLAN-fix-dashboard-autoconnect-double-listener.md)
-  - **Goal:** Remove the duplicate AppState `change` listener so `retriggerAutoConnect` fires once per foreground resume, not twice.
-  - **Decision Log:** HIGH wiring audit finding — `retriggerAutoConnect` is registered both inline (`DashboardScreen.tsx:405-421`) AND in `useDashboardAutoConnect.ts:480-486`; only the 5s throttle masks the double-fire. Throttle removal → double scan + double connect-queue.
-  - **Analysis:** 📊 Source: Reyes C2 wiring audit (SESSION_LOG 2026-06-25).
-    Key finding: "Extraction moved the listener into the hook but left the original in the screen — classic forgot-to-delete teardown artifact."
-    Rejected alternative: "Rely on the throttle — rejected; correctness must not depend on a debounce side-effect."
-  - **Source of Truth:** 📖 [DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx#L405) + [useDashboardAutoConnect.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardAutoConnect.ts#L480)
-  - **Details:** Keep the hook's listener (correct owner); remove the screen's inline duplicate + its ref bridge if now redundant. Shares `DashboardScreen.tsx` with the cleanup sweep.
-
-- [ ] **`fix/docked-stale-imperative-handle`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:teardown-fixes]` `[WAVE:1]`
-  - **Plan:** 📎 [PLAN-fix-docked-stale-imperative-handle.md](./plans/PLAN-fix-docked-stale-imperative-handle.md)
-  - **Goal:** Fix the `useImperativeHandle` dep array so externally-exposed `applyCloudScene`/`loadFavorite` don't run stale closures.
-  - **Decision Log:** MED wiring audit finding — `DockedController.tsx:448-469` deps `[speed, brightness, writeToDevice, optimisticWrite]` omit `applyCloudScene` + `loadFavorite`; crew scene-apply, crew loadout sync, and voice commands invoke stale closures.
-  - **Analysis:** 📊 Source: Reyes C4 wiring audit (SESSION_LOG 2026-06-25).
-    Key finding: "BLE reconcile path is safe (separate `onReconcileRef`); only the exposed ref handle is stale."
-    Rejected alternative: "Widen deps blindly — must add exactly the two missing callbacks + confirm they're stable-wrapped."
-  - **Source of Truth:** 📖 [DockedController.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx#L448)
-  - **Details:** Shares `DockedController.tsx` with the duplicate-modal fix + cleanup sweep — sequence these.
-
-- [ ] **`fix/dashboard-flatlist-rerender`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]` `[BATCH:teardown-fixes]` `[WAVE:1]`
-  - **Plan:** 📎 [PLAN-fix-dashboard-flatlist-rerender.md](./plans/PLAN-fix-dashboard-flatlist-rerender.md)
-  - **Goal:** Stabilize the device-list `renderItem` so FlatList stops re-rendering every cell on every RSSI update.
-  - **Decision Log:** MED perf wiring finding — `DashboardDeviceList.tsx:76-104` wraps `renderItem` in `useCallback` with `[props]` (whole object, new ref each render), defeating memoization.
-  - **Analysis:** 📊 Source: Reyes C2 wiring audit (SESSION_LOG 2026-06-25).
-    Key finding: "Every BLE RSSI tick re-renders all device cells; regression vs pre-teardown."
-    Rejected alternative: "Memoize the whole props object upstream — rejected; granular deps on the values renderItem actually reads is the correct fix."
-  - **Source of Truth:** 📖 [DashboardDeviceList.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Dashboard/DashboardDeviceList.tsx#L76)
-  - **Details:** Isolated to `DashboardDeviceList.tsx` — parallel-safe with the docked fixes.
+- [ ] **`fix/docked-loadfavorite-stale-handle`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]`
+  - **Goal:** Add `loadFavorite` to the `DockedController` `useImperativeHandle` dep array so crew/voice callers don't invoke a stale closure — requires safely relocating the `useLoadFavorite()` call above `useImperativeHandle`.
+  - **Decision Log:** Follow-on from `fix/docked-stale-imperative-handle` (merged `edefc352`, 2026-06-26). `applyCloudScene` + `applySpatialSegments` were fixed; `loadFavorite` was DEFERRED because it's declared at `DockedController.tsx:561` (after the hook) and adding it to deps needs a hook reorder, which the monolith guardrail (L205-500) forbids without a focused, careful pass.
+  - **Analysis:** 📊 Source: Reyes C4 audit + docked-pair Sage report (SESSION_LOG 2026-06-26).
+    Key finding: "loadFavorite is a stable useCallback; crew/voice callers invoke post-mount → low live risk, but the ref handle is genuinely stale."
+    Rejected alternative: "Reorder hooks inline during the Wave 1 fix — rejected; guardrail violation, needs its own scoped task."
+  - **Source of Truth:** 📖 [DockedController.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx#L561) (useLoadFavorite call) + L448 (useImperativeHandle)
+  - **Details:** Verify the `useLoadFavorite` relocation introduces no use-before-declaration of its own inputs. M-RISK because it moves a hook in a monolith — surgical, isolated, test the imperative-handle consumers (crew scene apply, voice).
 
 ---
 
@@ -224,17 +192,6 @@
 ## 🧹 TECH DEBT
 
 > **Source Analysis (teardown-debt tasks below):** 🕵️ Reyes monolith-teardown wiring audit 2026-06-25 (SESSION_LOG `[ARTIFACT]` entries) + `npx madge --circular src/`. Pre-existing debt the deep-dive-w1 sweep did not address.
-
-- [ ] **`refactor/break-circular-deps`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[ARCH]` `[M-RISK]` `[🍱 Meal]` `[🧠 FOCUSED]` `[BATCH:teardown-fixes]` `[WAVE:1]`
-  - **Plan:** 📎 [PLAN-refactor-break-circular-deps.md](./plans/PLAN-refactor-break-circular-deps.md)
-  - **Goal:** Break the 9 circular dependencies remaining in master (6 in the `deviceRepository` barrel chain, 3 in `components/docked/Universal*` siblings).
-  - **Decision Log:** `madge --circular` (2026-06-26) reports 9 cycles NOT covered by C16 (which only scoped appLogger/CrewService). `useRegistration → deviceRepository/index → DeviceRepositoryService → {GroupRepository, DeviceCloudSync, DeviceStateManagement, DeviceStorage, types}` (6) + `UniversalSlidersFooter ↔ {UniversalColorGrid, UniversalHueStripSlider, UniversalTacticalSliders}` (3).
-  - **Analysis:** 📊 Source: Reyes C14/C16 audit + madge run (SESSION_LOG 2026-06-25/26).
-    Key finding: "C16 left these out of scope (correctly); they remain real load-order fragility — undefined-at-import risk."
-    Rejected alternative: "Lump into C16 — rejected; different module clusters, different fix (barrel back-edge vs sibling component cycle)."
-  - **Source of Truth:** 📖 [deviceRepository/index.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/deviceRepository/index.ts) + [docked/UniversalSlidersFooter.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/UniversalSlidersFooter.tsx)
-  - **Details:** Two independent clusters — could split into a 2-task wave. Verify with `npx madge --circular src/` returning zero before merge. `docked/Universal*` cluster shares the docked directory neighborhood with the C4 fixes.
 
 - [ ] **`chore/teardown-dead-code-sweep`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[REFACTOR]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LIGHT]` `[Friction: 1]` `[BATCH:teardown-fixes]` `[WAVE:2]`

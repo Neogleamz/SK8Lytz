@@ -1,3 +1,21 @@
+### [MERGE] BATCH:teardown-fixes Wave 1 — 4 worktrees merged — 2026-06-26
+
+**Merged by:** Taylor (gatekeeper), sequential pass. Base `00e0b4cc` → Master HEAD `1ad6db84`.
+**Post-merge integration check:** full `npm run verify` on merged master ✅ ALL gates; `npx madge --circular src/` → **0 cycles** (was 9). No cross-task break.
+
+| Branch / Task(s) | Commit | Result |
+| ---------------- | ------ | ------ |
+| `fix/dashboard-autoconnect-double-listener` | `f576c431` | Removed duplicate AppState listener; retriggerAutoConnect fires once. Kept ref (5 other consumers). |
+| `fix/dashboard-flatlist-rerender` | `9a6cabb2` | `renderItem` deps `[props]` → 11 granular fields. Net improvement (upstream fields still unstable — follow-on noted). |
+| `fix/docked-pair` (duplicate-modal + stale-handle) | `edefc352` | FIX A ✅ BuilderPanel duplicate modal removed, DockedController sole owner. FIX B ⚠️ PARTIAL — applyCloudScene + applySpatialSegments added to useImperativeHandle deps; **loadFavorite deferred** (declared L561 after the hook; adding it needs a forbidden hook reorder per monolith guardrail). |
+| `refactor/break-circular-deps` | `1ad6db84` | madge 9 → 0. RegisteredDevice → deviceRepository/types.ts; new universalSliders.types.ts leaf; back-compat re-exports preserved. |
+
+**FRICTION-029 fix applied & validated:** agents did NOT write SESSION_LOG in-worktree → zero cross-branch conflicts, no normalization step needed (vs deep-dive-w1 which required it). The candidate fix works.
+
+**Honest partial — follow-on filed:** `fix/docked-stale-imperative-handle` is NOT fully resolved. `loadFavorite` remains stale in the exposed ref handle. Tracked as new TRIAGE task `fix/docked-loadfavorite-stale-handle`. Risk is low (loadFavorite is a stable useCallback; crew/voice callers invoke post-mount), but it is a real remaining gap — not marked silently done.
+
+---
+
 ### [ARTIFACT] Reyes — Plan-Blocking Q1/Q2/Q3 Investigation — 2026-06-26
 
 **Scope:** Read-only resolution of three UNCERTAIN items flagged in the prior wiring-audit artifact.
