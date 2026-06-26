@@ -1,3 +1,15 @@
+### [MERGE] fix/docked-loadfavorite-stale-handle @ 77f61ce7 — 2026-06-26
+
+**Completes the deferred remainder of `fix/docked-stale-imperative-handle` — that finding is now FULLY resolved.**
+
+`loadFavorite` was referenced in `DockedController`'s `useImperativeHandle` factory (L449) but absent from the dep array; the const is declared *after* the hook (L558), so adding it to the array literal raised TS2448. The Wave-1 agent deferred it rather than reorder hooks. Fix: the **ref-bridge already used by `onReconcileRef`** — `loadFavoriteRef = useRef(...)` declared with the other TDZ-forward refs (next to `captureEntireStateRef`), refreshed every render after `useLoadFavorite` (`loadFavoriteRef.current = loadFavorite`), and the handle calls `loadFavoriteRef.current(fav)`. No hook reorder, no TS2448, idiomatic to the file.
+
+**Impact:** crew scene-apply / crew loadout sync / voice callers of the exposed handle now invoke the latest `loadFavorite` closure, not a stale one. `applyCloudScene` + `applySpatialSegments` (Wave 1) + `loadFavorite` (now) = all three exposed callbacks fresh.
+**Files:** `src/components/DockedController.tsx` (+15/−5). **Verify:** TSC ✅ (no TS2448) · Jest ✅ · all gates ✅. Gatekeeper merged (no blast bypass needed). Worktree torn down.
+**Investigation correction (don't re-derive):** the "monolith hook guardrail (L205-500)" cited by the Wave-1 agent is NOT a literal in-file guard — it was the agent's own caution comment. Adding an unconditional `useRef` beside the existing TDZ refs is rules-of-hooks-safe and was the right move.
+
+---
+
 ### [EVENT] GOAL COMPLETE — [BATCH:teardown-fixes] — 2026-06-26
 
 **6 tasks, 2 waves, autonomous `/goal`. Master green at `ade1a45e` (full verify ✅ + madge 0 cycles).**

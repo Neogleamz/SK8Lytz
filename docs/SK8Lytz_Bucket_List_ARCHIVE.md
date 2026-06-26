@@ -4242,4 +4242,15 @@ pm run verify which includes QA tests.
 |------|------|---------------|-------------|-----------------|
 | **1** | ~~`refactor/burn-down-audit-failures`~~ | — | — | SUPERSEDED — master already clean |
 | **2** | ~~`fix/ble-disconnect-service`~~ ✅ merged `b3bd6abc` | Solo | None (Wave 1 superseded) | standalone — no collision |
+
+
+- [x] **`fix/docked-loadfavorite-stale-handle`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍪 Snack]` `[🧠 FOCUSED]`
+  - **Goal:** Add `loadFavorite` to the `DockedController` `useImperativeHandle` dep array so crew/voice callers don't invoke a stale closure — requires safely relocating the `useLoadFavorite()` call above `useImperativeHandle`.
+  - **Decision Log:** Follow-on from `fix/docked-stale-imperative-handle` (merged `edefc352`, 2026-06-26). `applyCloudScene` + `applySpatialSegments` were fixed; `loadFavorite` was DEFERRED because it's declared at `DockedController.tsx:561` (after the hook) and adding it to deps needs a hook reorder, which the monolith guardrail (L205-500) forbids without a focused, careful pass.
+  - **Analysis:** 📊 Source: Reyes C4 audit + docked-pair Sage report (SESSION_LOG 2026-06-26).
+    Key finding: "loadFavorite is a stable useCallback; crew/voice callers invoke post-mount → low live risk, but the ref handle is genuinely stale."
+    Rejected alternative: "Reorder hooks inline during the Wave 1 fix — rejected; guardrail violation, needs its own scoped task."
+  - **Source of Truth:** 📖 [DockedController.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx#L561) (useLoadFavorite call) + L448 (useImperativeHandle)
+  - **Details:** Verify the `useLoadFavorite` relocation introduces no use-before-declaration of its own inputs. M-RISK because it moves a hook in a monolith — surgical, isolated, test the imperative-handle consumers (crew scene apply, voice).
 
