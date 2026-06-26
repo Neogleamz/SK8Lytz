@@ -194,6 +194,11 @@ export function useTelemetryLedger() {
     mergeIntoBuffer({ engagement_counters: { [counterKey]: count } });
   }, []);
 
+  // BOUNDARY GUARD: injectStreetSummary writes to the `user_lifetime_stats` table —
+  // a DIFFERENT table from `user_profiles`, owned by SpeedTrackingService.
+  // This method is currently dormant (0 callers). If you wire a caller, do it
+  // alongside SpeedTrackingService.updateLifetimeStats — wiring them independently
+  // would create cross-table semantic drift (two writers for the same user lifetime data).
   const injectStreetSummary = useCallback((distanceMeters: number, topSpeedMph: number) => {
     mergeIntoBuffer({
       total_distance_meters: distanceMeters,

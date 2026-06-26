@@ -129,11 +129,6 @@ class GroupRepository {
     return this.groups.filter(g => g.deviceIds?.map(m => m.toUpperCase()).includes(normalizedMac));
   }
 
-  /** Returns the total number of in-memory groups. */
-  getGroupCount(): number {
-    return this.groups.length;
-  }
-
   async setGroups(groups: CustomGroup[]): Promise<void> {
     this.groups = groups;
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>

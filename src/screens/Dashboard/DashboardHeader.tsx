@@ -1,3 +1,8 @@
+// NOTE: This file exports DashboardHeaderBanners (bluetooth/battery status banners for the
+// dashboard top chrome). It is NOT the main page header component. The main DashboardHeader
+// lives at src/components/dashboard/DashboardHeader.tsx. The similar name is intentional
+// (scoped to the Dashboard/ sub-folder) but can cause confusion — do not rename this file
+// as it would create import churn; see plan chore/teardown-dead-code-sweep step 8.
 import React, { useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform, Linking } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';

@@ -17,7 +17,6 @@
  */
 
 import { StyleSheet } from 'react-native';
-import type { ThemePalette } from '../theme/theme';
 import { Colors, Layout, Spacing, Shadows } from '../theme/theme';
 
 // Re-export for backward compatibility — consumers should import from utils/patternColors
@@ -385,29 +384,3 @@ export const getDimensionStyles = (windowHeight: number, windowWidth: number): D
   };
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Backward-compatibility shim (Wave 1 bridge → Wave 2 will remove this)
-//
-// DashboardScreen.tsx calls createDashboardStyles(Colors, w, h) and is listed
-// as Out of Scope for Wave 1 (DashboardScreen.tsx update is Wave 2).
-// This shim keeps the public API intact so TSC passes without touching the
-// monolith. Wave 2 will remove this shim and update DashboardScreen.tsx to
-// use `DashboardStyles` + `getDimensionStyles` directly.
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** @deprecated Use DashboardStyles + getDimensionStyles directly. Removed in Wave 2. */
-export const createDashboardStyles = (
-  _Colors: ThemePalette,
-  windowHeight: number = 800,
-  windowWidth: number = 400,
-) => {
-  const dim = getDimensionStyles(windowHeight, windowWidth);
-  return {
-    ...DashboardStyles,
-    slabContainer: dim.slabContainer,
-    glassSlab: { ...DashboardStyles.glassSlab, ...dim.glassSlab },
-    skateCardGroupName: dim.skateCardGroupName,
-    deviceListFixed: dim.deviceListFixed,
-    flexibleSpacer: dim.flexibleSpacer,
-  };
-};

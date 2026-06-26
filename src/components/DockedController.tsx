@@ -19,7 +19,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
@@ -46,8 +46,6 @@ import FavoritePromptModal from './docked/FavoritePromptModal';
 import UniversalSlidersFooter from './docked/UniversalSlidersFooter';
 import ProEffectsPanel from './docked/ProEffectsPanel';
 
-import { LinearGradient } from 'expo-linear-gradient';
-import { Layout, Spacing, Typography } from '../theme/theme';
 import { SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import DockedHeader from './docked/DockedHeader';
 import { BuilderPanel } from './docked/BuilderPanel';
@@ -56,7 +54,6 @@ import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
 import { createDockedControllerStyles } from './controller/DockedController.styles';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/appLogger';
 import { scrubPII } from '../utils/piiScrubber';
 import { openGlobalPermissionsModal, PERMISSION_STATUS_CHANGED_EVENT } from '../services/PermissionService';
@@ -155,17 +152,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     // TODO: [R-27] extract contexts to parent container (Context Overload limit exceeded)
     // NOTE: Extracted below into DockedController wrapper
-    const { 
-      Colors, 
-      isDark, 
+    const {
+      Colors,
+      isDark,
       isVisibilityAllowed,
       favorites,
       activeFavoriteId,
       setActiveFavoriteId,
       quickPresets,
       setQuickPresets,
-      activeQuickPresetIndex,
-      setActiveQuickPresetIndex,
       promptState,
       promptName,
       setPromptName,
@@ -176,12 +171,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       closePrompt,
       saveFavorite,
       deleteFavorite,
-      saveQuickPreset,
       getAdapterForDevice
     } = useDockedState();
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
-    const gaugeSize = isShort ? 100 : 120;
     const styles = createDockedControllerStyles(Colors);
 
     /**

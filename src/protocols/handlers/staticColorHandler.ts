@@ -1,4 +1,4 @@
-import { ZenggeProtocol, HardwareSettings, HW_CONSTRAINTS, IC_TYPES, COLOR_SORTING_RGB, icTypeIndex, colorSortingIndex } from '../ZenggeProtocol';
+import { ZenggeProtocol, HW_CONSTRAINTS } from '../ZenggeProtocol';
 
 type AppLoggerLike = {
   log: (...args: unknown[]) => void;

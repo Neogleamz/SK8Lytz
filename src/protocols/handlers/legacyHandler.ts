@@ -1,6 +1,9 @@
-import { ZenggeProtocol, HardwareSettings, HW_CONSTRAINTS, IC_TYPES, COLOR_SORTING_RGB, icTypeIndex, colorSortingIndex } from '../ZenggeProtocol';
-
-let _appLogger: any;
+type AppLoggerLike = {
+  log: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
+let _appLogger: AppLoggerLike | null = null;
 function getAppLogger() {
   if (!_appLogger) {
     try { _appLogger = require('../../services/AppLogger').AppLogger; } catch (_e) { _appLogger = console; }

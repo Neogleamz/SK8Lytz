@@ -70,7 +70,6 @@ import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, IF
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
 
-import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
 import DashboardCrewPanel from '../components/dashboard/DashboardCrewPanel';
 import { useDashboardController } from '../hooks/useDashboardController';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
@@ -84,7 +83,7 @@ import { DashboardHeaderBanners } from './Dashboard/DashboardHeader';
 import { useDashboardDeviceList } from './Dashboard/DashboardDeviceList';
 import { useDashboardCrewHub, useCrewDeepLink } from './Dashboard/DashboardCrewHub';
 import { useDashboardPowerControls } from './Dashboard/DashboardPowerControls';
-import { createDashboardStyles } from '../styles/DashboardStyles';
+import { DashboardStyles, getDimensionStyles } from '../styles/DashboardStyles';
 import { scrubPII } from '../utils/piiScrubber';
 import { useScreenPerformance } from '../hooks/useScreenPerformance';
 
@@ -94,7 +93,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   const { Colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
-  const styles = createDashboardStyles(Colors, windowHeight, windowWidth);
+  const styles = { ...DashboardStyles, ...getDimensionStyles(windowHeight, windowWidth) };
   // ── Device State Ledger — unified per-device pattern state ────────────────────
   // Destructure to STABLE function refs (each is a useCallback with [] deps inside the hook).
   // Do NOT pass `ledger` as an object — it's a new object reference on every render,
@@ -739,7 +738,6 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     })
   ).current;
 
-  const dispatch = useProtocolDispatch();
 
 
 

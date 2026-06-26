@@ -4,7 +4,6 @@ import * as ExpoLinking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from '../../services/appLogger';
 import { STORAGE_CREW_HUB_COLLAPSED } from '../../constants/storageKeys';
-import DashboardCrewPanel from '../../components/dashboard/DashboardCrewPanel';
 
 export function useDashboardCrewHub() {
   const [crewInitialStep, setCrewInitialStep] = useState<'landing' | 'join' | 'create' | 'map'>('landing');
@@ -58,4 +57,3 @@ export function useCrewDeepLink(setInitialDeepLinkCode: (code: string) => void, 
   }, [setIsCrewModalVisible, setInitialDeepLinkCode, setCrewInitialStep]);
 }
 
-export { DashboardCrewPanel };
