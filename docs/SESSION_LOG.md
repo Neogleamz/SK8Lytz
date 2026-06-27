@@ -1,3 +1,17 @@
+### [EVENT] RELEASE — SK8Lytz v3.10.3 pushed to origin/master — 2026-06-26
+
+**Released `f0eb91e1`, tag `v3.10.3`. `46de5430..f0eb91e1 master -> master` + new tag pushed. Pre-push gate: attestation ✅ + npm audit 0 vulns ✅.**
+
+**Scope (31 commits since v3.10.2):** two autonomous batches — `sweep/deep-dive-w1` (5 clusters) + `teardown-fixes` (6 tasks incl. the loadFavorite follow-on). All bug fixes + refactors; no features, no breaking changes. versionCode 42→43, buildNumber 20→21.
+**Physical QA:** APK (app-release.apk, 81.9 MB, JS bundle 16:29:02) installed on device 27131JEGR40625, user-approved.
+**Gate override (see [DECISION] below):** shipped with Supabase security advisors unaddressed (3 ERROR + 112 WARN) — server-side, tracked as `fix/supabase-db-security-advisors`.
+
+**Build post-mortem (don't re-derive):** ~2.5 hrs were lost to a phantom "build hang." Root cause: I misread a **persistent idle Gradle daemon** (heartbeats the daemon-addresses registry every 10s, low CPU) as a stalled build, and killed/retried 3×. The very first build actually COMPLETED at ~16:29 and produced a valid current APK. Lessons: (1) Gradle daemon stays resident after a build — idle ≠ hung; (2) the background build log is BUFFERED and only flushes on process exit, so it reads empty mid-build — read it AFTER completion, or use `--console=plain` to a file; (3) verify a "hang" by checking the build log + APK/bundle timestamps BEFORE killing. The `build-apk.ps1` harness (ninja RERUN_CMAKE patcher) was never the problem.
+
+**Discord notification FAILED:** `notify_discord.ps1` threw WebException on both attempts despite the `cctower` container being Up — the bridge endpoint/webhook is unhealthy. Release is unaffected; bridge needs a look (candidate TRIAGE/health-sweep item).
+
+---
+
 ### [DECISION] 2026-06-26 — /ship-it: OVERRIDE the Supabase security-advisor release gate
 
 **Decision:** Proceed with the app release despite Phase 1 health-sweep finding 3 ERROR + 112 WARN Supabase security advisors. User explicitly chose "Ship app anyway (override)."
