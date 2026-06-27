@@ -1,3 +1,22 @@
+## [3.10.3] - 2026-06-26
+
+> Stability & maintenance release — two autonomous batches (`sweep/deep-dive-w1` + `teardown-fixes`) from the monolith-teardown wiring audit. No new features, no breaking changes.
+
+### 🐛 Bug Fixes
+- fix(docked): remove duplicate FavoritePromptModal from BuilderPanel — DockedController is now the sole owner; eliminates the racing-onSave that could save a favorite with the wrong mode/state
+- fix(docked): bridge `loadFavorite` + `applyCloudScene` + `applySpatialSegments` through refs in `useImperativeHandle` — crew scene-apply / crew loadout sync / voice commands no longer hit stale closures
+- fix(dashboard): remove duplicate AppState autoconnect listener — `retriggerAutoConnect` now fires once per foreground resume, not twice
+- fix(dashboard): granular `renderItem` deps in the device list — FlatList no longer re-renders every cell on each RSSI tick
+
+### ♻️ Refactors / Tech Debt
+- refactor(deps): break 9 circular import cycles (deviceRepository barrel back-edges + docked Universal* siblings) — `madge --circular` now reports zero; zero behavior change
+- refactor(sweep): C2/C3/C4/C14 dead-code & type cleanup — removed dead imports across protocol handlers + DockedController, eliminated 2 surviving `_appLogger: any` casts, removed the dead `createDashboardStyles` shim + dead `getGroupCount`
+- refactor(protocols): C3 monolith decomposition Boy Scout cleanup on extracted handlers
+- refactor(dashboard/docked): C2 dashboard extraction wiring + C4 `styles:any` elimination
+
+### 🛡️ Known Issues (deferred — tracked)
+- Supabase security advisors (3 ERROR + 112 WARN: RLS-always-true policies, SECURITY DEFINER views/functions) are NOT addressed in this release — server-side DB config, tracked as `fix/supabase-db-security-advisors`. App release explicitly overrode this gate.
+
 ## [3.10.1] - 2026-06-18
 
 ### 🐛 Bug Fixes

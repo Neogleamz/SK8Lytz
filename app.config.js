@@ -3,7 +3,7 @@ module.exports = {
     name: "SK8Lytz",
     slug: "sk8lytz",
     scheme: "sk8lytz",
-    version: "3.10.2",
+    version: "3.10.3",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -24,13 +24,13 @@ module.exports = {
         NSLocationAlwaysAndWhenInUseUsageDescription: "SK8Lytz tracks your location in the background to map your route even when your phone is in your pocket.",
         NSLocationAlwaysUsageDescription: "SK8Lytz tracks your location in the background to map your route even when your phone is in your pocket."
       },
-      buildNumber: "20",
+      buildNumber: "21",
       config: {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
       }
     },
     android: {
-      versionCode: 42,
+      versionCode: 43,
       predictiveBackGestureEnabled: false,
       allowBackup: false,
       permissions: [
