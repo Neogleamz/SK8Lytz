@@ -1,3 +1,25 @@
+### [EVENT] 2026-06-26 — Session close: audit → intake → goal ×2 → ship v3.10.3 → wind-down
+
+**What shipped:**
+- `[BATCH:sweep/deep-dive-w1]` — 5 clusters (C2/C3/C4/C14/C16) @ `1f4517af`/`213b44a9`/`82b60425` + verification-only C16. Master green `df995610`.
+- `[BATCH:teardown-fixes]` — 6 tasks across 2 waves: autoconnect-listener `f576c431`, flatlist-rerender `9a6cabb2`, docked duplicate-modal + stale-handle `edefc352`, break-circular-deps (9→0) `1ad6db84`, dead-code sweep `ade1a45e`.
+- `fix/docked-loadfavorite-stale-handle` `77f61ce7` — completed the deferred loadFavorite remainder via ref-bridge (no hook reorder).
+- **RELEASE v3.10.3** `f0eb91e1` (tag `v3.10.3`, versionCode 43) — device-QA approved, pushed to origin.
+
+**AI failure pattern (specific):** Misread a completed build + idle resident Gradle daemon as a "hung build" and killed/retried 3× over ~2.5 hrs (FRICTION-030). Root: reacted to ambiguous signals (flat CPU, empty buffered log) instead of checking ground truth (APK/bundle timestamps + flushed log). Also earlier: over-eagerly killed stale node procs which was correct for memory but the "hang" itself was never real.
+
+**User pattern:** Drove the session hard and well — challenged the "all clean" deep-dive narrative (which surfaced real teardown debt), pre-empted the version bump, and prodded ("?", "uh its been an hour") exactly when I was spinning on the phantom build hang. The prods were correct each time.
+
+**Active sprint state:** Currently executing: none. ON DECK clean. TRIAGE top: `fix/db-backup-pipeline-failing` (NEW, H-RISK), `fix/discord-bridge-unhealthy` (NEW), `fix/supabase-db-security-advisors` (release-blocking, deferred via override).
+
+**Master HEAD:** `f0eb91e1` (code) — local is a few docs-commits ahead of origin (session logs); release code + tag fully synced to origin.
+**Friction Audit:** 2 new (FRICTION-029, FRICTION-030) | 0 incremented | 0 resolved | Proposals due: none (FRICTION-029 fix validated, ready to promote).
+**System evolution:** FRICTION-029 candidate fix (parallel-wave agents don't write SESSION_LOG) was applied + validated this session — zero merge conflicts vs deep-dive-w1's manual normalization. Recommend rule-promotion next session.
+
+**Ops findings (don't re-derive):** (1) DB backups silently empty since ≥2026-06-13 — NO working backup exists; (2) Discord bridge container Up but endpoint dead — all notifications lost. Both filed to TRIAGE.
+
+---
+
 ### [EVENT] RELEASE — SK8Lytz v3.10.3 pushed to origin/master — 2026-06-26
 
 **Released `f0eb91e1`, tag `v3.10.3`. `46de5430..f0eb91e1 master -> master` + new tag pushed. Pre-push gate: attestation ✅ + npm audit 0 vulns ✅.**

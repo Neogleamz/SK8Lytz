@@ -47,6 +47,18 @@
 
 ### 🚑 TRIAGE QUEUE
 
+- [ ] **`fix/db-backup-pipeline-failing`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[✅ VERIFIED]` `[OPS]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🤖 PRO-HIGH]`
+  - **Goal:** Repair `tools/backup_database.ps1` — it produces EMPTY dumps (no usable backup).
+  - **Decision Log:** /wind-down 2026-06-26 ran the backup: `schema_2026-06-26_19-41.sql` = **0 bytes**, `roles_*.sql` = 0.3 KB, and **NO `data_*.sql` produced**. The prior "backup" (`data_2026-06-13_02-21.sql`) was also 0 bytes — so backups have been silently failing since ≥ 2026-06-13. There is effectively NO working DB backup.
+  - **Details:** Likely cause: pg_dump version mismatch vs Supabase Postgres, or stale/invalid connection string / credentials in the script (it exits without error but writes empty files). Fix must (1) make the script FAIL LOUDLY on empty output, (2) restore a real data dump, (3) verify file sizes > 0. Highest-priority ops gap — a DB incident right now is unrecoverable.
+
+- [ ] **`fix/discord-bridge-unhealthy`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[✅ VERIFIED]` `[OPS]` `[M-RISK]` `[🍪 Snack]` `[🤖 FLASH]`
+  - **Goal:** Restore the Discord bridge — `notify_discord.ps1` throws WebException despite the `cctower` container being Up.
+  - **Decision Log:** /ship-it + /wind-down 2026-06-26: both Discord notifications failed (WebException) though `docker compose ps` shows `sk8lytz-scraper-stack` (cctower) Up 3 days. Container alive but the bridge endpoint/webhook is unreachable (expired webhook URL, dead listener inside cctower, or network).
+  - **Details:** Check the bridge listener inside the cctower container + the Discord webhook URL validity. Non-blocking (notifications only) but every merge/release/session-end notification is currently silently lost.
+
 - [ ] **`fix/supabase-db-security-advisors`**
   - **Tags:** `[📝 NEEDS PLAN]` `[DB]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]`
   - **Goal:** Fix Supabase security advisors: SECURITY DEFINER views, mutable search_path, RLS disabled on public.spatial_ref_sys, and always-true RLS policies.

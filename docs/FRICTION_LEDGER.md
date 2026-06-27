@@ -31,6 +31,17 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 
 ## ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¯Â¿Â½Ãƒâ€šÃ‚Â´ Active Friction Events (Open ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã¯Â¿Â½ Under Monitoring)
 
+### [FRICTION-030] Idle Gradle Daemon Misread as a Hung Build
+- **First Observed:** 2026-06-26
+- **Observed By:** Taylor (self-reported after user prodding "uh its been an hour" / "?")
+- **Occurrences:** 1 / 3
+- **Trigger:** During /ship-it Phase 3, the release APK build appeared "hung." Agent killed + retried the build 3× over ~2.5 hours.
+- **Pattern:** The build had ACTUALLY COMPLETED (~16:29, valid APK produced). What looked like a hang was the persistent Gradle daemon sitting idle afterward (heartbeats the daemon-addresses registry every ~10s at low CPU). Agent (a) didn't read the build log because it was empty mid-run, (b) interpreted flat java CPU + the registry heartbeat as a stall, (c) killed/cleared/retried repeatedly — including deleting .cxx caches — chasing a non-existent failure.
+- **Root Cause Theory:** Two compounding gaps: (1) the background build log is BUFFERED and only flushes on process exit, so it reads empty/near-empty mid-build — giving no signal; (2) no mental model that a Gradle daemon stays resident and idle after a build (idle ≠ hung). The agent reacted to ambiguous signals (CPU, log emptiness) instead of checking ground truth (APK/bundle timestamps + the flushed log).
+- **Impact:** ~2.5 hours wasted, user frustration, repeated destructive kills/cache-clears on a healthy build.
+- **Status:** MONITORING
+- **Candidate Fix (at 3 strikes):** Before declaring any build "hung," REQUIRE a ground-truth check: (a) read the build log AFTER the process exits or run gradle with `--console=plain` redirected to a file for live output; (b) check the output-artifact timestamp (APK/bundle) vs the last source commit; (c) treat a resident-but-idle Gradle daemon (registry heartbeat, flat CPU) as NORMAL post-build state, not a hang. Only kill after artifact + log confirm no completion.
+
 ### [FRICTION-029] Parallel-Wave Subagents Writing Shared SESSION_LOG
 - **First Observed:** 2026-06-25
 - **Observed By:** Casey (during /goal BATCH:sweep/deep-dive-w1)
