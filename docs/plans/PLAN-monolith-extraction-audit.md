@@ -260,3 +260,20 @@ The following extractions are **PREREQUISITES** for safe Wave 2-6 surgery on the
    - Effort: Snack
 
 These are OPTIONAL but RECOMMENDED before Waves 2-6 if tasks touch the above files. They are not blocking unless a wave task explicitly modifies the zones identified as UNSAFE above.
+
+---
+
+## Wave 5 Verification — 2026-06-30
+
+*Verifier: ⚒️ Sage | Method: git log inspection + live file read of DockedController.tsx and DashboardScreen.tsx*
+
+### Status: PRE-EXISTING ✅
+
+Both extraction tasks were completed in prior sessions before Wave 5 executed:
+
+| Extraction | Status | Evidence |
+|---|---|---|
+| `FixedPatternPreviewRow` → `src/components/docked/FixedPatternPreviewRow.tsx` | ✅ PRE-EXISTING | Landed in commit `68ab1708`. DockedController.tsx:83 has comment: `// FixedPatternPreviewRow extracted to src/components/docked/FixedPatternPreviewRow.tsx (Phase 1)`. Inline component gone. |
+| `useDeepLinkHandler` → `src/hooks/useDeepLinkHandler.ts` | ✅ PRE-EXISTING | Deep-link logic extracted as `useCrewDeepLink()` in `src/screens/Dashboard/DashboardCrewHub.tsx` (commit `49ddd601`). DashboardScreen.tsx has zero remaining `Linking.*` calls. |
+
+All 7 verify gates passed: TSC ✅ Jest ✅ Browser ✅ OP_0x59 ✅ BLE Invariants ✅ Organic Disconnect ✅ Type Safety ✅ Workflow Refs ✅
