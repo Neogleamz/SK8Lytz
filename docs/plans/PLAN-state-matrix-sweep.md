@@ -51,3 +51,23 @@ Three related quality issues bundled together:
 ### Verify
 - `npm run verify`
 - Manual: trigger load error in `useCuratedPicks` — confirm error renders in UI
+
+---
+
+## Wave 8 Verification — 2026-06-30
+
+*Verifier: ⚒️ Sage | Method: Read exact target lines for all 13 audit items*
+
+### Status: ALL PRE-EXISTING ✅
+
+**Group A — R-14 Error States (6 targets):** All 6 hooks/components already implement full 4-state FSM (`viewState`, `errorMsg`, `error`, `isLoading`). No edits required.
+- SkaterStatsPanel.tsx, useScenes.ts, useGradients.ts, useCuratedPicks.ts, useRecentSpots.ts, useFavorites.ts — all ✅
+
+**Group B — R-16 Hardcoded Delays (3 targets):** All 3 already fixed.
+- useStreetMode.ts:158 — no setTimeout, relies on BleWriteQueue internally ✅
+- App.tsx:112 — uses InteractionManager.runAfterInteractions → SplashScreen.hideAsync() ✅
+- DashboardScreen.tsx:197 — S4 monolith (>30KB) + line is a useState init, not a setTimeout ✅
+
+**Group C — R-24 Key Audit (4 targets):** All 4 files use centralized storageKeys.ts constants ✅
+
+All 7 verify gates passed: TSC ✅ Jest ✅ Browser ✅ OP_0x59 ✅ BLE Invariants ✅ Organic Disconnect ✅ Type Safety ✅ Workflow Refs ✅
