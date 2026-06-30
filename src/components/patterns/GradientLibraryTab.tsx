@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -32,10 +32,11 @@ interface GradientCardProps {
 const GradientCard = React.memo(({ preset, onApplyGradient, onOpenBuilder, onDelete }: GradientCardProps) => {
   const isBuiltin = preset.id.startsWith('builtin_');
 
-  const previewColors = PositionalMathBuffer.generateArray(
-    preset.nodes,
-    12,
-    preset.fill_mode === 'GRADIENT'
+  // ANIM-009 fix: memoize the expensive generateArray call so it only recomputes
+  // when preset.nodes or preset.fill_mode changes, not on every parent re-render.
+  const previewColors = useMemo(
+    () => PositionalMathBuffer.generateArray(preset.nodes, 12, preset.fill_mode === 'GRADIENT'),
+    [preset.nodes, preset.fill_mode]
   );
 
   const handlePress = useCallback(() => onApplyGradient(preset), [preset, onApplyGradient]);

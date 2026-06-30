@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Animated, Platform } from 'react-native';
+import React, { useEffect, useRef, useState, memo } from 'react';
+import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { Layout, Spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
@@ -14,6 +14,38 @@ const CircleWrapper = React.forwardRef<React.ElementRef<typeof Circle>, React.Co
   return <Circle ref={ref} {...rest} />;
 });
 const AnimatedCircle = Animated.createAnimatedComponent(CircleWrapper);
+
+// ─── GaugeNeedle sub-component ────────────────────────────────────────────────
+// ANIM-003 fix: isolates the addListener→setState 60fps update to a tiny 4-element
+// subtree, eliminating full DashboardTelemetryHero + TelemetryPill re-renders.
+interface GaugeNeedleProps {
+  animRatio: Animated.Value;
+  needleR: number;
+  cx: number;
+  cy: number;
+}
+const GaugeNeedle = memo(({ animRatio, needleR, cx, cy }: GaugeNeedleProps) => {
+  const [needleAngle, setNeedleAngle] = useState(angleForRatio(0));
+  useEffect(() => {
+    const id = animRatio.addListener(({ value }) => setNeedleAngle(angleForRatio(value)));
+    return () => animRatio.removeListener(id);
+  }, [animRatio]);
+  const tipX = cx + needleR * Math.cos(needleAngle);
+  const tipY = cy - needleR * Math.sin(needleAngle);
+  return (
+    <>
+      {/* needle glow */}
+      <Line x1={cx} y1={cy} x2={tipX} y2={tipY} stroke="#FFFFFF" strokeWidth={6} strokeOpacity={0.15} strokeLinecap="round" />
+      {/* needle core */}
+      <Line x1={cx} y1={cy} x2={tipX} y2={tipY} stroke="#FFFFFF" strokeWidth={2} strokeOpacity={0.9} strokeLinecap="round" />
+      {/* needle tip dot */}
+      <Circle cx={tipX} cy={tipY} r={4} fill="#FFFFFF" opacity={0.9} />
+      {/* pivot dot */}
+      <Circle cx={cx} cy={cy} r={6} fill="#1A1A2E" stroke="#FF00FF" strokeWidth={2} />
+    </>
+  );
+});
+
 interface DashboardTelemetryHeroProps {
   gpsSpeed: number;
   peakGForce: number;
@@ -66,29 +98,19 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = Rea
   const speedRatio = Math.min(Math.max(gpsSpeed / MAX_SPEED, 0), 1);
   const animRatio  = useRef(new Animated.Value(0)).current;
 
-  // Needle state — updated via addListener so it follows the spring smoothly
-  const [needleAngle, setNeedleAngle] = useState(angleForRatio(0));
-
+  // ANIM-003 fix: needle addListener→setState moved into GaugeNeedle sub-component.
+  // Parent no longer re-renders at 60fps; only the 4-element needle subtree does.
   useEffect(() => {
     Animated.spring(animRatio, {
       toValue: speedRatio, friction: 6, tension: 45, useNativeDriver: false,
     }).start();
   }, [speedRatio]);
 
-  useEffect(() => {
-    const id = animRatio.addListener(({ value }) => setNeedleAngle(angleForRatio(value)));
-    return () => animRatio.removeListener(id);
-  }, [animRatio]);
-
   const offsetFor = (r: number) =>
     animRatio.interpolate({ inputRange: [0, 1], outputRange: [Math.PI * r, 0] });
 
   const outerOff = offsetFor(outerR);
   const midOff   = offsetFor(midR);
-
-  // ─── Needle tip coordinates ────────────────────────────────────────────────
-  const tipX = cx + needleR * Math.cos(needleAngle);
-  const tipY = cy - needleR * Math.sin(needleAngle);
 
   // ─── Tick mark coordinates ─────────────────────────────────────────────────
   const MAJOR_TICKS = [0, 10, 20, 25];
@@ -212,25 +234,8 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = Rea
             strokeDasharray={halfDash(thin3R)} strokeDashoffset={0}
             strokeLinecap="butt" transform={rot} />
 
-          {/* ── NEEDLE ── */}
-          {/* needle glow */}
-          <Line
-            x1={cx} y1={cy} x2={tipX} y2={tipY}
-            stroke="#FFFFFF" strokeWidth={6} strokeOpacity={0.15}
-            strokeLinecap="round"
-          />
-          {/* needle core */}
-          <Line
-            x1={cx} y1={cy} x2={tipX} y2={tipY}
-            stroke="#FFFFFF" strokeWidth={2} strokeOpacity={0.9}
-            strokeLinecap="round"
-          />
-          {/* needle tip dot */}
-          <Circle cx={tipX} cy={tipY} r={4}
-            fill="#FFFFFF" opacity={0.9} />
-          {/* pivot dot */}
-          <Circle cx={cx} cy={cy} r={6}
-            fill="#1A1A2E" stroke="#FF00FF" strokeWidth={2} />
+          {/* ── NEEDLE (isolated sub-component — ANIM-003 fix) ── */}
+          <GaugeNeedle animRatio={animRatio} needleR={needleR} cx={cx} cy={cy} />
 
         </Svg>
 

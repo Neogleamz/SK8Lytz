@@ -78,12 +78,9 @@ export default function SpectrumAnalyzer({
         ]).start();
       };
       
-      animatedValues.forEach((val, i) => runAnimation(val, i * 40));
-      // We don't store the loop in ambientAnimationRef because it's a bunch of independent loops.
-      // We can just rely on the effect cleanup or power off to stop them.
-      // Wait, we need to stop them if switching to APP mic!
-      // Actually, calling stopAnimation or just letting the next effect override them works.
-      // But to be clean, let's just use parallel.
+      // ANIM-002 fix: removed orphaned runAnimation forEach block — loops started there
+      // were never tracked in ambientAnimationRef and leaked until unmount.
+      // The parallel block below covers the same animation and IS tracked for cleanup.
       const loops = animatedValues.map((val, i) => {
         return Animated.sequence([
           Animated.delay(i * 30),
@@ -116,25 +113,27 @@ export default function SpectrumAnalyzer({
       // audioMagnitude is already normalized 0–1 by useAppMicrophone
       const normalizedMag = Math.max(0, Math.min(1.0, audioMagnitude));
       
-      animatedValues.forEach((anim, index) => {
-        // Lift the floor: even at magnitude=0 we show a little activity
-        const floor = 0.15;
-        // Randomize the response per bar so it looks like an EQ
-        const randomness = Math.random() * 0.4 + 0.6; // 0.6–1.0
-        // Middle bars should generally peak higher
-        const centerDist = Math.abs(index - (BARS_COUNT / 2));
-        const curveFactor = 1 - (centerDist / (BARS_COUNT / 2)) * 0.3; // 1.0 at center, 0.7 at edges
-        
-        let toValue = floor + ((1 - floor) * normalizedMag * randomness * curveFactor);
-        toValue = Math.max(0.1, Math.min(1.0, toValue));
-        
-        Animated.spring(anim, {
-          toValue,
-          useNativeDriver: false,
-          speed: 28,
-          bounciness: 6,
-        }).start();
-      });
+      // ANIM-001 fix: batch all 16 spring starts into a single Animated.parallel call
+      // so the JS thread sees one animation batch per audio tick instead of 16.
+      Animated.parallel(
+        animatedValues.map((anim, index) => {
+          // Lift the floor: even at magnitude=0 we show a little activity
+          const floor = 0.15;
+          // Randomize the response per bar so it looks like an EQ
+          const randomness = Math.random() * 0.4 + 0.6; // 0.6–1.0
+          // Middle bars should generally peak higher
+          const centerDist = Math.abs(index - (BARS_COUNT / 2));
+          const curveFactor = 1 - (centerDist / (BARS_COUNT / 2)) * 0.3; // 1.0 at center, 0.7 at edges
+          let toValue = floor + ((1 - floor) * normalizedMag * randomness * curveFactor);
+          toValue = Math.max(0.1, Math.min(1.0, toValue));
+          return Animated.spring(anim, {
+            toValue,
+            useNativeDriver: false,
+            speed: 28,
+            bounciness: 6,
+          });
+        })
+      ).start();
     }
 
     return () => {

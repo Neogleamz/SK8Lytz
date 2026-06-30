@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { View, Text, PanResponder, useWindowDimensions, Animated } from 'react-native';
+import { View, Text, PanResponder, Animated, StyleSheet } from 'react-native';
 
 interface StreetModeDistributionSliderProps {
   distribution: [number, number, number]; // [tail, cruise, head]
@@ -79,18 +79,18 @@ const StreetModeDistributionSlider: React.FC<StreetModeDistributionSliderProps> 
     >
       <View style={{ height, borderRadius: height / 2, overflow: 'hidden', flexDirection: 'row', backgroundColor: '#000', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
         
-        {/* Tail Zone */}
-        <View style={{ width: `${t1Pos * 100}%`, backgroundColor: tailColor, justifyContent: 'center', alignItems: 'center' }}>
+        {/* Tail Zone — ANIM-010: only width is inline; static layout from zoneStyles */}
+        <View style={[zoneStyles.zone, { width: `${t1Pos * 100}%`, backgroundColor: tailColor }]}>
           {t1Pos > 0.15 && <Text allowFontScaling={false} style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL ({Math.round(t1Pos * 100)}%)</Text>}
         </View>
 
-        {/* Cruise Zone */}
-        <View style={{ width: `${(t2Pos - t1Pos) * 100}%`, backgroundColor: cruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
+        {/* Cruise Zone — ANIM-010: only width is inline; static layout + opacity from zoneStyles */}
+        <View style={[zoneStyles.cruiseZone, { width: `${(t2Pos - t1Pos) * 100}%`, backgroundColor: cruiseColor }]}>
           {(t2Pos - t1Pos) > 0.2 && <Text allowFontScaling={false} style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE ({Math.round((t2Pos - t1Pos) * 100)}%)</Text>}
         </View>
 
-        {/* Head Zone */}
-        <View style={{ width: `${(1 - t2Pos) * 100}%`, backgroundColor: headColor, justifyContent: 'center', alignItems: 'center' }}>
+        {/* Head Zone — ANIM-010: only width is inline; static layout from zoneStyles */}
+        <View style={[zoneStyles.zone, { width: `${(1 - t2Pos) * 100}%`, backgroundColor: headColor }]}>
           {(1 - t2Pos) > 0.15 && <Text allowFontScaling={false} style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD ({Math.round((1 - t2Pos) * 100)}%)</Text>}
         </View>
 
@@ -150,5 +150,18 @@ const StreetModeDistributionSlider: React.FC<StreetModeDistributionSliderProps> 
     </View>
   );
 };
+
+// ANIM-010: static style portions extracted so only the dynamic width remains inline per pan event.
+const zoneStyles = StyleSheet.create({
+  zone: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cruiseZone: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.9,
+  },
+});
 
 export default StreetModeDistributionSlider;

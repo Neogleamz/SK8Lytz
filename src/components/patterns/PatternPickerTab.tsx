@@ -48,7 +48,9 @@ const AnimatedCategoryPill = ({ cat, isActive, onPress }: { cat: string, isActiv
   const opacity = useRef(new Animated.Value(isActive ? 1 : 0.4)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    // ANIM-008 fix: capture animation handle and stop it on cleanup to prevent
+    // orphaned animations on rapid isActive changes.
+    const anim = Animated.parallel([
       Animated.spring(scale, {
         toValue: isActive ? 1.1 : 1,
         useNativeDriver: Platform.OS !== 'web',
@@ -60,7 +62,9 @@ const AnimatedCategoryPill = ({ cat, isActive, onPress }: { cat: string, isActiv
         duration: 200,
         useNativeDriver: Platform.OS !== 'web',
       })
-    ]).start();
+    ]);
+    anim.start();
+    return () => anim.stop();
   }, [isActive, scale, opacity]);
 
   const styleData = CATEGORY_STYLES[cat] || CATEGORY_STYLES['Solid'];

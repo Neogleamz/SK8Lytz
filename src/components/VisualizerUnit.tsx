@@ -109,6 +109,30 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
     deviceSegments, productProfile, animValue, fixedDirection, streetDistribution
   });
 
+  // ANIM-004: hoist diam and memoize static LED wrapper style — eliminates a new
+  // object per LED per render (~20k/sec at 86 LEDs × 60fps).
+  const diam = productProfile.vizBlobDiameterMm;
+  const ledWrapStyle = useMemo(
+    () => StyleSheet.flatten({
+      width: diam, height: diam,
+      alignItems: 'center' as const, justifyContent: 'center' as const,
+      overflow: 'visible' as const, zIndex: 10,
+    }),
+    [diam]
+  );
+
+  // ANIM-005: pre-cache the 4 Animated.View layer styles for non-FAVORITES modes
+  // where activeColor is a static hex string. FAVORITES keeps inline (interpolation required).
+  const layerStylesCache = useMemo(() => ({
+    outerWrapper: StyleSheet.flatten({ position: 'absolute' as const, width: '100%' as const, height: '100%' as const, alignItems: 'center' as const, justifyContent: 'center' as const }),
+    layer3: StyleSheet.flatten({ position: 'absolute' as const, width: diam * 5.5, height: diam * 5.5, borderRadius: (diam * 5.5) / 2, opacity: 0.03 }),
+    layer2: StyleSheet.flatten({ position: 'absolute' as const, width: diam * 3.2, height: diam * 3.2, borderRadius: (diam * 3.2) / 2, opacity: 0.10 }),
+    layer1: StyleSheet.flatten({ position: 'absolute' as const, width: diam * 1.7, height: diam * 1.7, borderRadius: (diam * 1.7) / 2, opacity: 0.38 }),
+    chipBody: StyleSheet.flatten({ position: 'absolute' as const, width: '100%' as const, height: '100%' as const, borderRadius: diam / 2 }),
+    hotspot: StyleSheet.flatten({ position: 'absolute' as const, width: diam * 0.32, height: diam * 0.32, borderRadius: (diam * 0.32) / 2, backgroundColor: 'rgba(255,255,255,0.55)' }),
+    glaze: StyleSheet.flatten({ position: 'absolute' as const, width: '100%' as const, height: '100%' as const, borderRadius: diam / 2, backgroundColor: 'rgba(255,255,255,0.09)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)' }),
+  }), [diam]);
+
   return (
     <TouchableOpacity
       activeOpacity={onLongPress ? 0.8 : 1}
@@ -143,71 +167,51 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           </>
         )}
 
-        {leds.map(led => {
-          const diam = productProfile.vizBlobDiameterMm;
+        {leds.map(led => (
+          // ANIM-004: ledWrapStyle is memoized per diam — no new object per LED per render.
+          // Outer wrapper applies chipSoften (plain number) — compatible with Animated inner nodes.
+          // Two-layer opacity in RN multiplies: chipSoften × activeOpacity per LED.
+          <View key={led.key} style={[led.position, ledWrapStyle, { opacity: led.chipSoften }]}>
+            <Animated.View style={[layerStylesCache.outerWrapper, { opacity: led.activeOpacity }]}>
 
-          return (
-            // Outer wrapper applies chipSoften (plain number) — compatible with Animated inner nodes.
-            // Two-layer opacity in RN multiplies: chipSoften × activeOpacity per LED.
-            <View key={led.key} style={[led.position, { width: diam, height: diam, alignItems: 'center', justifyContent: 'center', overflow: 'visible', zIndex: 10, opacity: led.chipSoften }]}>
-              <Animated.View style={[{ position: 'absolute', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', opacity: led.activeOpacity }]}>
+              {mode !== 'FAVORITES' ? (
+                // ANIM-005: non-FAVORITES path uses pre-cached layer styles (backgroundColor is a
+                // static string here). Eliminates ~20k inline style objects/sec in the common case.
+                <>
+                  {/* ── Layer 3: Outer atmospheric scatter ─────────────────────────────── */}
+                  <Animated.View style={[layerStylesCache.layer3, { backgroundColor: led.activeColor as string }]} />
+                  {/* ── Layer 2: Mid silicone bloom ─────────────────────────────────── */}
+                  <Animated.View style={[layerStylesCache.layer2, { backgroundColor: led.activeColor as string }]} />
+                  {/* ── Layer 1: Inner diffuse scatter ──────────────────────────────── */}
+                  <Animated.View style={[layerStylesCache.layer1, { backgroundColor: led.activeColor as string }]} />
+                  {/* ── Main LED chip body ──────────────────────────────────────────── */}
+                  <Animated.View style={[layerStylesCache.chipBody, { backgroundColor: led.activeColor as string }]} />
+                  {/* ── Hot-spot chip centre ─────────────────────────────────────────── */}
+                  <View style={layerStylesCache.hotspot} />
+                  {/* ── Frosty silicone exterior glaze ──────────────────────────────── */}
+                  <View style={layerStylesCache.glaze} />
+                </>
+              ) : (
+                // FAVORITES mode: activeColor is an Animated.AnimatedInterpolation — must keep inline.
+                <>
+                  {/* ── Layer 3: Outer atmospheric scatter ─────────────────────────────── */}
+                  <Animated.View style={{ position: 'absolute', width: diam * 5.5, height: diam * 5.5, borderRadius: (diam * 5.5) / 2, backgroundColor: led.activeColor, opacity: 0.03 }} />
+                  {/* ── Layer 2: Mid silicone bloom ─────────────────────────────────── */}
+                  <Animated.View style={{ position: 'absolute', width: diam * 3.2, height: diam * 3.2, borderRadius: (diam * 3.2) / 2, backgroundColor: led.activeColor, opacity: 0.10 }} />
+                  {/* ── Layer 1: Inner diffuse scatter ──────────────────────────────── */}
+                  <Animated.View style={{ position: 'absolute', width: diam * 1.7, height: diam * 1.7, borderRadius: (diam * 1.7) / 2, backgroundColor: led.activeColor, opacity: 0.38 }} />
+                  {/* ── Main LED chip body ──────────────────────────────────────────── */}
+                  <Animated.View style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: diam / 2, backgroundColor: led.activeColor }} />
+                  {/* ── Hot-spot chip centre ─────────────────────────────────────────── */}
+                  <View style={{ position: 'absolute', width: diam * 0.32, height: diam * 0.32, borderRadius: (diam * 0.32) / 2, backgroundColor: 'rgba(255,255,255,0.55)' }} />
+                  {/* ── Frosty silicone exterior glaze ──────────────────────────────── */}
+                  <View style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: diam / 2, backgroundColor: 'rgba(255,255,255,0.09)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)' }} />
+                </>
+              )}
 
-                {/* ── Layer 3: Outer atmospheric scatter ─────────────────────────────── */}
-                {/* Simulates light diffusing into surrounding air/surface (~5mm radius) */}
-                <Animated.View style={{
-                  position: 'absolute',
-                  width: diam * 5.5, height: diam * 5.5,
-                  borderRadius: (diam * 5.5) / 2,
-                  backgroundColor: led.activeColor,
-                  opacity: 0.03,
-                }} />
-
-                {/* ── Layer 2: Mid silicone bloom ─────────────────────────────────── */}
-                {/* The silicone tube edge scatters light laterally — soft wide glow */}
-                <Animated.View style={{
-                  position: 'absolute',
-                  width: diam * 3.2, height: diam * 3.2,
-                  borderRadius: (diam * 3.2) / 2,
-                  backgroundColor: led.activeColor,
-                  opacity: 0.10,
-                }} />
-
-                {/* ── Layer 1: Inner diffuse scatter ──────────────────────────────── */}
-                {/* Closest to the chip: concentrated inner halo through the silicone walls */}
-                <Animated.View style={{
-                  position: 'absolute',
-                  width: diam * 1.7, height: diam * 1.7,
-                  borderRadius: (diam * 1.7) / 2,
-                  backgroundColor: led.activeColor,
-                  opacity: 0.38,
-                }} />
-
-                {/* ── Main LED chip body ──────────────────────────────────────────── */}
-                <Animated.View style={{
-                  position: 'absolute', width: '100%', height: '100%', borderRadius: diam / 2,
-                  backgroundColor: led.activeColor,
-                }} />
-
-                {/* ── Hot-spot chip centre ─────────────────────────────────────────── */}
-                {/* Real LED phosphor package has a bright emitter core visible through silicone */}
-                <View style={{
-                  position: 'absolute',
-                  width: diam * 0.32, height: diam * 0.32,
-                  borderRadius: (diam * 0.32) / 2,
-                  backgroundColor: 'rgba(255,255,255,0.55)',
-                }} />
-
-                {/* ── Frosty silicone exterior glaze ──────────────────────────────── */}
-                <View style={{
-                  position: 'absolute', width: '100%', height: '100%', borderRadius: diam / 2,
-                  backgroundColor: 'rgba(255,255,255,0.09)',
-                  borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)',
-                }} />
-
-              </Animated.View>
-            </View>
-          );
-        })}
+            </Animated.View>
+          </View>
+        ))}
       </View>
       <View style={{ marginTop: Spacing.lg, alignItems: 'center', zIndex: 10, width: 100 }}>
         <Text
