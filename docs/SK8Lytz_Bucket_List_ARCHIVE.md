@@ -4341,4 +4341,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "AbortController pattern — REJECTED for BLE context, ref-based cleanup is idiomatic per project pattern."
   - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-MEMORY_LEAKS
   - **Details:** Wave 4, solo. Waits for Wave 3 (animation + pii-telemetry + ble-stability) to merge first.
+
+
+- [x] **`sweep/monolith-extraction`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:5]`
+  - **Goal:** Extract DashboardScreen (51KB) and HardwareSetupWizardScreen (41KB) into sub-components — both exceed the 30KB Monolith Scan hard stop.
+  - **Decision Log:** 2026-06-30 audit flagged 2 files exceeding the 30KB monolith threshold (R-23). Both are collision zones — every concurrent edit risks destroying unrelated features. Extraction reduces blast radius for all future Wave 4+ tasks.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-MONOLITH · Plan: [PLAN-monolith-extraction-audit.md](./plans/PLAN-monolith-extraction-audit.md)
+    Key finding: "`DashboardScreen.tsx` = 51KB (hard stop — S4), `HardwareSetupWizardScreen.tsx` = 41KB (hard stop). Both require extraction before future edits."
+    Rejected alternative: "Inline refactor without extraction — REJECTED, violates S4 (30KB hard stop)."
+  - **Source of Truth:** 📖 [src/screens/DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx) + [src/screens/Onboarding/HardwareSetupWizardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
+  - **Details:** Wave 5, solo. Runs AFTER memory-lifecycle to avoid mid-extraction conflicts with leak fixes that also touch DashboardScreen.
 

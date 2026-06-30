@@ -1,4 +1,12 @@
-### [VERIFIED] sweep/monolith-extraction — c25f513d — 2026-06-30
+### [MERGE READY] sweep/error-handling — 51530225
+
+Files touched: src/hooks/useAccountOverview.ts
+TSC: ✅  Jest: ✅
+Catch blocks fixed: 3
+
+---
+
+### [VERIFIED] sweep/monolith-extraction @ 4c0aa302 — 2026-06-30
 
 Both Wave 5 extraction prerequisites confirmed pre-existing on master. No code written.
 

@@ -44,7 +44,8 @@
 > ✅ **Wave 3 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 3/3 resolved (pii-telemetry pre-existing ✅ · ble-stability @ `cbac245c` ✅ · animation-render-perf @ `831e35b6` ✅)
 > Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅ · sweep/type-safety @ `662e099b` ✅ · sweep/split-brain-dedup @ `7932f168` ✅
 > ✅ **Wave 4 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `cd6a9c85` (pre-existing)
-> Currently executing: sweep/monolith-extraction (Wave 5 — [BATCH:deepdive-audit-2026-06-30])
+> ✅ **Wave 5 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `4c0aa302` (pre-existing)
+> Currently executing: sweep/error-handling (Wave 6 — [BATCH:deepdive-audit-2026-06-30])
 
 ---
 
@@ -222,16 +223,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/monolith-extraction`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:5]`
-  - **Goal:** Extract DashboardScreen (51KB) and HardwareSetupWizardScreen (41KB) into sub-components — both exceed the 30KB Monolith Scan hard stop.
-  - **Decision Log:** 2026-06-30 audit flagged 2 files exceeding the 30KB monolith threshold (R-23). Both are collision zones — every concurrent edit risks destroying unrelated features. Extraction reduces blast radius for all future Wave 4+ tasks.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-MONOLITH · Plan: [PLAN-monolith-extraction-audit.md](./plans/PLAN-monolith-extraction-audit.md)
-    Key finding: "`DashboardScreen.tsx` = 51KB (hard stop — S4), `HardwareSetupWizardScreen.tsx` = 41KB (hard stop). Both require extraction before future edits."
-    Rejected alternative: "Inline refactor without extraction — REJECTED, violates S4 (30KB hard stop)."
-  - **Source of Truth:** 📖 [src/screens/DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx) + [src/screens/Onboarding/HardwareSetupWizardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
-  - **Details:** Wave 5, solo. Runs AFTER memory-lifecycle to avoid mid-extraction conflicts with leak fixes that also touch DashboardScreen.
 
 - [ ] **`sweep/error-handling`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:6]`
