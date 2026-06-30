@@ -1,3 +1,17 @@
+### [MERGE READY] sweep/type-safety @ 35103fa4 — 2026-06-30
+
+Files touched: `src/components/admin/tools/AdminAuditLogViewer.tsx`, `src/services/GradientsService.ts`, `src/services/LocationService.ts`, `src/services/ScenesService.ts`, `src/services/ble/BackgroundBLEService.ts`, `src/services/deviceRepository/DeviceCloudSync.ts`, `src/types/sk8lytz-watch-bridge.d.ts`
+TSC: ✅  Jest: ✅  Verify: ✅ (all 7 gates)
+
+Fixed: `AdminAuditLogViewer` row map `(row: any)` → inferred; `GradientsService` + `ScenesService` `as unknown as Database[...nodes]` → `JSON.parse(JSON.stringify()) as Json`; `LocationService` `publicData: any[]` → `DB_CrewSession[]` (+ `location_coords: Json | null`); `BackgroundBLEService` `taskDataArguments: any` → `_taskData?: { delay: number }` + removed dead `sleep` import; `DeviceCloudSync` `cloudRows: any[]` → `CloudDeviceRow[]` (Tables<'registered_devices'>); `sk8lytz-watch-bridge.d.ts` 4× `any` → re-exported from native module source.
+
+Deferred (blocked by S4 monolith or separate plan):
+- `CrewRealtime.subscribeAsMember` `(data: any)` — full fix requires `DashboardCrewPanel` → `useDashboardCrew` → `DashboardScreen.tsx` (49KB, S4). Deferred to Wave 5 monolith extraction.
+- `AppLoggerCloud.ts` `Record<string, any>` — owned by PLAN-fix-logger-telemetry-hardening.
+- `DashboardScreen.tsx:519,520,552,589,789,883,1011–1013,1061` — S4 monolith, deferred to Wave 5.
+
+---
+
 ### [MERGE] sweep/devops-secrets @ 60f2f33c — 2026-06-30
 
 Wave 1 security hardening. Removed hardcoded live Supabase JWT and plaintext password from `tools/createTestUser.js` (replaced with `process.env` reads). Fixed double `run()` execution in `tools/apply_migration.js:31`. Replaced 3 hardcoded `C:\Neogleamz\...` absolute paths in `ast_r11_scanner.js:5`, `ast_r14_scanner.js:5`, `find-r26.js:100` with `path.resolve(__dirname, '../src')`. Created `.env.local` placeholder.
