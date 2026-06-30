@@ -103,11 +103,20 @@ const DashboardHeader = React.memo(({
               const firstDevice = displayConnectedDevices[0];
               let groupIds: string[] = [];
 
-              if (firstDevice?.grouped && firstDevice?.groupId) {
-                const group = customGroups.find(g => g.id === firstDevice.groupId);
+              // R-24: grouped session is ground-truthed by connected count, NOT DisplayDevice fields.
+              if (connectedCount > 1) {
+                // Resolve group metadata only for rendering the inline skate icons.
+                const group = firstDevice?.groupId
+                  ? customGroups.find(g => g.id === firstDevice.groupId)
+                  : undefined;
                 if (group) {
                   expectedCount = group.deviceIds.length;
                   groupIds = group.deviceIds;
+                } else {
+                  // Connected to >1 device with no resolvable custom group:
+                  // fall back to the live connected set so the group view still renders.
+                  expectedCount = connectedCount;
+                  groupIds = displayConnectedDevices.map(d => d.id);
                 }
               }
 

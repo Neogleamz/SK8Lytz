@@ -52,5 +52,10 @@ export const STORAGE_LEGACY_PROGRAMMER_PROFILES = 'ng_programmer_profiles';
 export const STORAGE_LEGACY_PRODUCT_CATALOG = 'ng_product_catalog';
 // R-24 FIX: crewHubCollapsed was hardcoded inline in DashboardCrewHub.tsx + DashboardScreen.tsx
 export const STORAGE_CREW_HUB_COLLAPSED = '@Sk8lytz_crewHubCollapsed';
+// Canonical HW-cache key builder. MAC is normalized to UPPERCASE so all
+// writers (InterrogatorService, HardwareSetupWizardScreen) hit one key. (Wave 7 split-brain fix)
 export const getHardwareConfigKey = (mac: string) => `@sk8_hw_${mac.toUpperCase()}`;
+// Canonical GATT adapter-cache key builder (used by BleCharacteristicCache).
+// MAC normalized to UPPERCASE to match existing on-device entries. (Wave 7 centralization)
+export const getGattCacheKey = (mac: string) => `@sk8_gatt_${mac.toUpperCase()}`;
 export const TELEMETRY_MMKV_ID = 'sk8lytz_telemetry';

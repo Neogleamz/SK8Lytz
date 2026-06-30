@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './appLogger';
 import { scrubPII } from '../utils/piiScrubber';
+import { getGattCacheKey } from '../constants/storageKeys';
 
 export interface BleCacheEntry {
   mac: string;
@@ -9,10 +10,8 @@ export interface BleCacheEntry {
 }
 
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-// R-24: AsyncStorage key prefix for GATT adapter cache entries.
-// Format: '@sk8_gatt_<MAC_UPPERCASE>' (e.g. '@sk8_gatt_AA:BB:CC:DD:EE:FF').
-// Registered in storageKeys.ts registry. Do NOT use this prefix for any other purpose.
-const CACHE_PREFIX = '@sk8_gatt_';
+// R-24: GATT adapter cache key. Built via getGattCacheKey() from the central
+// storageKeys.ts registry. Format: '@sk8_gatt_<MAC_UPPERCASE>'.
 
 /**
  * Persists discovered GATT adapter types to skip discovery on reconnect.
@@ -20,13 +19,13 @@ const CACHE_PREFIX = '@sk8_gatt_';
 export class BleCharacteristicCache {
   static async get(mac: string): Promise<BleCacheEntry | null> {
     try {
-      const val = await AsyncStorage.getItem(`${CACHE_PREFIX}${mac.toUpperCase()}`);
+      const val = await AsyncStorage.getItem(getGattCacheKey(mac));
       if (!val) return null;
       
       const entry: BleCacheEntry = JSON.parse(val);
       if (Date.now() - entry.timestamp > TTL_MS) {
         // Stale cache — force a fresh discovery
-        await AsyncStorage.removeItem(`${CACHE_PREFIX}${mac.toUpperCase()}`);
+        await AsyncStorage.removeItem(getGattCacheKey(mac));
         return null;
       }
       return entry;
@@ -43,7 +42,7 @@ export class BleCharacteristicCache {
         protocolId,
         timestamp: Date.now(),
       };
-      await AsyncStorage.setItem(`${CACHE_PREFIX}${mac.toUpperCase()}`, JSON.stringify(entry));
+      await AsyncStorage.setItem(getGattCacheKey(mac), JSON.stringify(entry));
     } catch (e: unknown) {
       AppLogger.warn('[BleCache] Failed to write GATT cache', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
