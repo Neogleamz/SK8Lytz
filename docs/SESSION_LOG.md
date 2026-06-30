@@ -1,3 +1,14 @@
+### [MERGE READY] sweep/state-matrix — ef458f73
+
+Files touched: none (all findings were NO-OPs — prior waves already resolved all targets)
+TSC: ✅  Jest: ✅
+R-14 fixes: 0 applied — all 6 targets already have full 4-state FSM (SkaterStatsPanel, useScenes, useGradients, useCuratedPicks, useRecentSpots, useFavorites all confirmed compliant)
+R-16 fixes: 0 applied (SKIPPED) — useStreetMode.ts:158 already uses BleWriteQueue direct call, App.tsx already uses InteractionManager → SplashScreen.hideAsync(), DashboardScreen.tsx:197 is a useState init (not a setTimeout); DashboardScreen.tsx S4 monolith guard noted (49,797 bytes)
+R-24 audit: CLEAN — ThemeContext, migrateAuthTokens, AppSettingsService, DevSandboxDrawer all use imported constants from storageKeys.ts; no raw string keys found
+Skipped: FavoritesPanel.tsx picksLoading prop (marked out of scope — requires UI design decisions); ComplianceGate.tsx error boundary (not in execution scope per contract); DashboardScreen.tsx edits (S4 monolith >30KB, finding was NO-OP anyway)
+
+---
+
 ### [MERGE READY] sweep/async-storage-keys — 34539c48
 
 Files touched: src/components/dashboard/DashboardHeader.tsx, src/constants/storageKeys.ts, src/services/BleCharacteristicCache.ts

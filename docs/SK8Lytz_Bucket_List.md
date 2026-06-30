@@ -46,7 +46,8 @@
 > ✅ **Wave 4 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `cd6a9c85` (pre-existing)
 > ✅ **Wave 5 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `4c0aa302` (pre-existing)
 > ✅ **Wave 6 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `ae192040` (3 catch blocks fixed in useAccountOverview.ts)
-> Currently executing: sweep/async-storage-keys + sweep/platform-guards (Wave 7 — [BATCH:deepdive-audit-2026-06-30] — 2 parallel)
+> ✅ **Wave 7 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 2/2 merged (platform-guards @ `76cb2aa6` · async-storage-keys @ `ef458f73`)
+> Currently executing: sweep/state-matrix (Wave 8 — [BATCH:deepdive-audit-2026-06-30])
 
 ---
 
@@ -224,26 +225,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/async-storage-keys`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[🍪 Snack]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:7]`
-  - **Goal:** Fix AsyncStorage key consistency — 3 real findings (3 of 6 audit findings were false positives per Quinn P1 check): R-24 group-count violation in DashboardHeader, InterrogatorService MAC case normalization, BleCharacteristicCache key registry.
-  - **Decision Log:** 2026-06-30 audit flagged 6 AsyncStorage key issues; Quinn P1-verified against live source — 3 were already fixed (useBLE.ts, DeviceStorage.ts, SpeedTrackingService). 3 real: DashboardHeader R-24 violation + InterrogatorService lowercase MAC + BleCharacteristicCache prefix gap.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-ASYNC_STORAGE · Plan: [PLAN-async-storage-key-registry-audit.md](./plans/PLAN-async-storage-key-registry-audit.md)
-    Key finding: "`DashboardHeader.tsx:106` uses `firstDevice?.grouped` (R-24 violation) instead of `displayConnectedDevices.length > 1` ground truth. `InterrogatorService.ts:25` builds HW_CACHE_KEY with lowercase MAC (canonical is UPPERCASE)."
-    Rejected alternative: "Rebuild entire key registry — REJECTED (P4), 3 targeted fixes are sufficient."
-  - **Source of Truth:** 📖 [src/components/dashboard/DashboardHeader.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/DashboardHeader.tsx#L106)
-  - **Details:** Wave 7, parallel-safe with `sweep/platform-guards`.
-
-- [ ] **`sweep/platform-guards`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[NATIVE]` `[✅ L-RISK]` `[🍪 Snack]` `[LOW]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:7]`
-  - **Goal:** Add missing Android manifest permission flags and fix inline Platform.OS imports in LocationService.
-  - **Decision Log:** 2026-06-30 audit found BLUETOOTH_SCAN missing `neverForLocation` flag (allows OS to infer location from BLE — privacy regression) + 2 inline `require('react-native')` instead of top-level import in LocationService.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-PLATFORM · Plan: [PLAN-platform-guards.md](./plans/PLAN-platform-guards.md)
-    Key finding: "`AndroidManifest.xml:8` — BLUETOOTH_SCAN missing `android:usesPermissionFlags=\"neverForLocation\"`. `LocationService.ts:30,88` — inline `require('react-native').Platform.OS`."
-    Rejected alternative: "Target SDK downgrade to avoid the flag — REJECTED, security regression."
-  - **Source of Truth:** 📖 [android/app/src/main/AndroidManifest.xml](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/app/src/main/AndroidManifest.xml#L8)
-  - **Details:** Wave 7, parallel-safe with `sweep/async-storage-keys`. Config-only changes — no Master Reference docs gate required.
 
 - [ ] **`sweep/state-matrix`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:8]`
