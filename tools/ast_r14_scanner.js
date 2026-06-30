@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
 
-const srcPath = 'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src';
+const srcPath = path.resolve(__dirname, '../src');
 const findings = [];
 let findingIdCounter = 1;
 let filesScanned = 0;

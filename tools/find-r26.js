@@ -97,5 +97,5 @@ function analyzeFile(filePath) {
   visit(sourceFile);
 }
 
-walk('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src', analyzeFile);
+walk(path.resolve(__dirname, '../src'), analyzeFile);
 console.log(JSON.stringify(results, null, 2));
