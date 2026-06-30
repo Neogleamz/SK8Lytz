@@ -4286,4 +4286,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Suppress with `@ts-ignore` — REJECTED per No-any Law (S3, hard stop)."
   - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-TYPE_SAFETY
   - **Details:** 3 unified plans — sweep (protocol/BLE hooks), ui-layer (dashboard + crew screens), data-layer (supabase types + services). Parallel-safe with `sweep/pii-offline-first` (no shared files).
+
+
+- [x] **`sweep/split-brain-dedup`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:2]`
+  - **Goal:** Eliminate duplicate business logic and split-brain state patterns — 41 findings (10H/15M/16L) where the same function, hook, or data-write exists in multiple places.
+  - **Decision Log:** 2026-06-30 audit structural sniper found duplicate hooks, services, and redundant API calls causing write-consistency bugs and UX divergence.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-DUPLICATION · Plan: [PLAN-split-brain-dedup.md](./plans/PLAN-split-brain-dedup.md)
+    Key finding: "41 split-brain findings — duplicate functions/hooks/state-vars and redundant API calls. Wave 1 type-safety work may touch shared files — Wave 2 sequencing required."
+    Rejected alternative: "Parallel with Wave 1 — REJECTED, import-tree overlaps confirmed by AST collision tool."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-DUPLICATION
+  - **Details:** Wave 2 — solo. Waits for Wave 1 type-safety + devops merges before executing.
 
