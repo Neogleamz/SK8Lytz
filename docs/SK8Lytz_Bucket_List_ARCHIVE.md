@@ -4308,4 +4308,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Disable telemetry entirely — REJECTED, needed for diagnostics."
   - **Source of Truth:** 📖 [src/services/AppLogger.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts)
   - **Details:** Wave 3, parallel-safe with `sweep/animation-render-perf` and `sweep/ble-stability`.
+
+
+- [x] **`sweep/ble-stability`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:3]`
+  - **Goal:** Harden BLE retry/reconnect paths — replace raw `setTimeout` delays with `enqueueDelay`, add missing constants for magic timeout literals.
+  - **Decision Log:** 2026-06-30 audit flagged raw retry waits outside the BleWriteQueue — GATT-133 recovery and MTU-glitch waits use raw setTimeout, violating R-16. Quinn P1-corrected audit: `BackgroundBLEService.ts` citations were wrong (file is 49 lines); real targets are `ConnectService.ts` and `RecoveryService.ts`.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-BLE_STABILITY · Plan: [PLAN-ble-stability-hardening.md](./plans/PLAN-ble-stability-hardening.md)
+    Key finding: "`ConnectService.ts:210,246,257` — GATT-133 retry and MTU-glitch waits use raw setTimeout; `RecoveryService.ts:78` — Phase 1/2 reconnect backoff lacks enqueueDelay."
+    Rejected alternative: "Increase retry timeout caps globally — REJECTED, `RECOVERY_MAX_MS = 30_000` already exists and is the correct cap."
+  - **Source of Truth:** 📖 [src/services/ble/ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L210)
+  - **Details:** Wave 3, parallel-safe with `sweep/animation-render-perf` and `sweep/pii-telemetry`. Highest regression risk: `RecoveryService.test.ts:328` cancel-during-backoff test.
 

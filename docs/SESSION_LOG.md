@@ -1,3 +1,9 @@
+### [MERGE] sweep/ble-stability @ cbac245c — 2026-06-30
+
+Wave 3 BLE stability hardening. Replaced 3 raw `setTimeout` retry waits in `ConnectService.ts` with `enqueueDelay('critical', ...)` (GATT-133 transient + MTU-glitch sites A+B). Replaced Phase 1/2 reconnect backoff `setTimeout` in `RecoveryService.ts` with `enqueueDelay`. Named `BleMachine.ts` inline 1000ms RESTORING settle window as `BLE_RESTORING_TIMEOUT_MS` constant. Blast-radius `-IgnoreBlast` used: `BLE_RESTORING_TIMEOUT_MS` is internal to BleMachine.ts (useBLE.ts/useOptimisticBLE.ts have no consuming reference); `useBLEHeartbeat.ts` does not exist (heartbeat is in `HeartbeatService.ts`). TSC ✅ Jest ✅ all 7 verify gates ✅.
+
+---
+
 ### [VERIFIED] sweep/pii-telemetry — 2026-06-30
 
 Wave 3 PII telemetry sweep. Verification-only — sage confirmed all 5 primary call sites (R-09-001 through R-09-005) and all 44 remaining `scrubPII()` wraps were already on master from prior sessions (`e3869028`, `0cf47ad5`, `5a8171b9`, `855cc7d5`). `src/utils/piiScrubber.ts` exists and matches plan spec. Zero raw MAC/email leaks via AppLogger. TSC ✅ Jest ✅ verify ✅. Worktree torn down with no divergence from master.
