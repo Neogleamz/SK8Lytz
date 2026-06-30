@@ -270,3 +270,5 @@ This plan modifies BLE-adjacent AsyncStorage key construction. Before the gateke
 - **`src/domain_files_dump.txt`** — generated artifact. Never touch.
 - **Any other `storageKeys.ts` entry** — only L55 + 2 new lines. All other keys are frozen.
 - **Refactoring the DashboardHeader render tree** beyond the L100–112 logic block. The JSX at L114–159 stays byte-identical except as a downstream consequence of the corrected `groupIds`/`expectedCount` values.
+
+// SKIPPED: useBLE.ts > 30KB monolith, S4 guard (Plan Step 5 optional cleanup)

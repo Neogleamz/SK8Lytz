@@ -4875,7 +4875,7 @@ No config file in this domain is itself stale/duplicate — all 9 are live and p
 | 1 | `BLUETOOTH` | ✅ L37 | ✅ L5 | Legacy BLE (≤ API 30) |
 | 2 | `BLUETOOTH_ADMIN` | ✅ L38 | ✅ L6 | Legacy BLE admin (scan/connect ≤ API 30) |
 | 3 | `BLUETOOTH_CONNECT` | ✅ L39 | ✅ L7 | BLE connect (API 31+) |
-| 4 | `BLUETOOTH_SCAN` | ✅ L40 | ✅ L8 | BLE scan (API 31+) |
+| 4 | `BLUETOOTH_SCAN` | ✅ L40 | ✅ L8 | BLE scan (API 31+). **`android:usesPermissionFlags="neverForLocation"`** added to manifest L8 — tells Android 12+ the scan results are never used for location derivation (Zengge UUID-targeted scan). |
 | 5 | `ACCESS_FINE_LOCATION` | ✅ L41 | ✅ L3 | Precise location + **required for unfiltered BLE scan** |
 | 6 | `ACCESS_COARSE_LOCATION` | ✅ L42 | ✅ L2 | Approximate location |
 | 7 | `RECORD_AUDIO` | ✅ L43 | ✅ L16 | Music Mode mic capture |
@@ -4899,6 +4899,7 @@ No config file in this domain is itself stale/duplicate — all 9 are live and p
 | 25 | `FOREGROUND_SERVICE_DATA_SYNC` | ✅ L61 | ❌ **MISSING** | FG data sync service |
 | 26 | `ACCESS_BACKGROUND_LOCATION` | ✅ L62 | ❌ **MISSING** | Background route mapping (phone in pocket) |
 | F1 | `uses-feature bluetooth_le` (required=true) | (implied) | ✅ L22 | Hard BLE hardware requirement |
+| F2 | `uses-feature android.hardware.sensor.heartrate` (required=false) | — | ✅ L22 (after calories perm) | Optional heart-rate sensor. `required="false"` prevents Play Store from filtering app off devices without health hardware. |
 
 > **Drift summary:** 6 declared permissions (#21–26) are missing from the committed source manifest. The **merged release manifest** (file #4) confirms the *shipped* APK additionally pulls in library-injected permissions NOT in `app.config.js`: `WAKE_LOCK`, `ACCESS_NETWORK_STATE`, `RECEIVE_BOOT_COMPLETED`, `MODIFY_AUDIO_SETTINGS`, `c2dm.permission.RECEIVE`, `USE_BIOMETRIC`, `USE_FINGERPRINT`, `SCHEDULE_EXACT_ALARM`, `BIND_GET_INSTALL_REFERRER_SERVICE`, a `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, `uses-permission-sdk-23` location duplicates, plus a long set of OEM badge permissions (Samsung/HTC/Sony/Huawei/OPPO/Apex/Solid/EvMe/Huawei) from the notification-badge library.
 
