@@ -1,3 +1,9 @@
+### [VERIFIED] sweep/pii-telemetry — 2026-06-30
+
+Wave 3 PII telemetry sweep. Verification-only — sage confirmed all 5 primary call sites (R-09-001 through R-09-005) and all 44 remaining `scrubPII()` wraps were already on master from prior sessions (`e3869028`, `0cf47ad5`, `5a8171b9`, `855cc7d5`). `src/utils/piiScrubber.ts` exists and matches plan spec. Zero raw MAC/email leaks via AppLogger. TSC ✅ Jest ✅ verify ✅. Worktree torn down with no divergence from master.
+
+---
+
 ### [MERGE] sweep/split-brain-dedup @ 7932f168 — 2026-06-30
 
 Wave 2 deduplication sweep. Eliminated 4 split-brain patterns: (1) `getHardwareConfigKey` now normalises to `.toUpperCase()` internally — `InterrogatorService` private `HW_CACHE_KEY` deleted; (2) `lerpRGBMusic` deleted from `SymphonyEngine`, replaced with `lerpRGB` from `shared/spatialMath`; (3) duplicate `hexToRgb` removed from `SymphonyEngine` and `PositionalMathBuffer`, all callers import from `shared/engineUtils`; (4) dual-writer `AsyncStorage.setItem` race in `QuickPresetModal` consolidated into single `persistPresets` helper. TSC ✅ Jest ✅ verify all 7 gates ✅.
