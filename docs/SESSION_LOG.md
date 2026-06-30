@@ -1,3 +1,9 @@
+### [VERIFIED] sweep/memory-lifecycle @ cd6a9c85 — 2026-06-30
+
+Wave 4 memory/lifecycle sweep. Verification-only — both HIGH-severity memory leak fixes were already on master from prior session (`c795df69` fix/memory-leak-sweep 2026-06-10): `useHardwareNotifications.ts` cleanup returns on `setOnDataReceived` / `setOnHardwareProbed` useEffects (correct `() => {}` form); `useBLEScanner.ts` dedicated teardown useEffect clearing `debounceTimerRef` + `telemetryTimerRef` via `clearTimeout`. Plan files updated with line-cited evidence. TSC ✅ Jest ✅ all 7 verify gates ✅.
+
+---
+
 ### [MERGE] sweep/animation-render-perf @ 831e35b6 — 2026-06-30
 
 Wave 3 animation/render perf sweep. Batched 16 independent `Animated.spring().start()` calls into `Animated.parallel().start()` in SpectrumAnalyzer (ANIM-001). Removed orphaned runAnimation forEach block (ANIM-002 memory leak). Extracted `GaugeNeedle` sub-component to scope 60fps `addListener`→`setState` to a 4-element subtree (ANIM-003). Memoized `ledWrapStyle` and pre-cached 4 layer style objects for non-FAVORITES mode in VisualizerUnit (ANIM-004/005). Added cleanup handle to `AnimatedCategoryPill` (ANIM-008). Wrapped `PositionalMathBuffer.generateArray` in `useMemo` in GradientLibraryTab (ANIM-009). Extracted static zone styles to `StyleSheet.create` in StreetModeDistributionSlider (ANIM-010). Added backward-compatible `tick` prop to LEDStripPreview (ANIM-006 — wiring through PatternCard deferred). Step 10 (LUT pre-computation) deferred per plan. TSC ✅ Jest ✅ all 7 verify gates ✅.

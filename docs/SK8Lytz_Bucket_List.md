@@ -43,7 +43,8 @@
 > ✅ **Wave 2 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 task merged @ `7932f168`
 > ✅ **Wave 3 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 3/3 resolved (pii-telemetry pre-existing ✅ · ble-stability @ `cbac245c` ✅ · animation-render-perf @ `831e35b6` ✅)
 > Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅ · sweep/type-safety @ `662e099b` ✅ · sweep/split-brain-dedup @ `7932f168` ✅
-> Currently executing: sweep/memory-lifecycle (Wave 4 — [BATCH:deepdive-audit-2026-06-30])
+> ✅ **Wave 4 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `cd6a9c85` (pre-existing)
+> Currently executing: sweep/monolith-extraction (Wave 5 — [BATCH:deepdive-audit-2026-06-30])
 
 ---
 
@@ -221,16 +222,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/memory-lifecycle`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:4]`
-  - **Goal:** Plug memory leaks — 59 findings (14H/24M/21L): setInterval without clearInterval, missing useEffect cleanup for event listeners, hardware notification subscriptions not torn down.
-  - **Decision Log:** 2026-06-30 audit found 14 HIGH-severity memory leak patterns — hardware notification subscriptions and scanner timers left running after component unmount or BLE disconnect.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-MEMORY_LEAKS · Plans: [PLAN-memory-leak-hardware-notifications.md](./plans/PLAN-memory-leak-hardware-notifications.md) · [PLAN-memory-leak-scanner-timers.md](./plans/PLAN-memory-leak-scanner-timers.md)
-    Key finding: "14 HIGH findings — hardware notification subscriptions (`useHardwareNotifications.ts`) and scanner interval refs leak on unmount."
-    Rejected alternative: "AbortController pattern — REJECTED for BLE context, ref-based cleanup is idiomatic per project pattern."
-  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-MEMORY_LEAKS
-  - **Details:** Wave 4, solo. Waits for Wave 3 (animation + pii-telemetry + ble-stability) to merge first.
 
 - [ ] **`sweep/monolith-extraction`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:5]`
