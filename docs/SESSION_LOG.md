@@ -1,4 +1,4 @@
-### [MERGE READY] sweep/type-safety @ 35103fa4 — 2026-06-30
+### [MERGE] sweep/type-safety @ 662e099b — 2026-06-30
 
 Files touched: `src/components/admin/tools/AdminAuditLogViewer.tsx`, `src/services/GradientsService.ts`, `src/services/LocationService.ts`, `src/services/ScenesService.ts`, `src/services/ble/BackgroundBLEService.ts`, `src/services/deviceRepository/DeviceCloudSync.ts`, `src/types/sk8lytz-watch-bridge.d.ts`
 TSC: ✅  Jest: ✅  Verify: ✅ (all 7 gates)

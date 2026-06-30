@@ -39,8 +39,9 @@
 > AST output: `total_collisions: 4` (all vs `chore/teardown-dead-code-sweep`), `total_waves: 2`. Wave 1: 4 worktrees (DockedController pair unified). Wave 2: 1 solo.
 > ✅ **Wave 1 MERGED** 2026-06-26 — master `1ad6db84`, full verify ✅ + madge 0 cycles. autoconnect `f576c431` · flatlist `9a6cabb2` · docked-pair `edefc352` (modal ✅ / handle ⚠️ partial — loadFavorite deferred → new TRIAGE) · break-circular-deps `1ad6db84`.
 > ✅ **Wave 2 MERGED** 2026-06-26 — chore/teardown-dead-code-sweep @ `ade1a45e`. 10/11 items done (1 N/A — TODO already gone post-Wave-1). 2 `_appLogger:any` eliminated, dead createDashboardStyles shim removed, dead getGroupCount removed. Full verify ✅.
-> Currently executing: sweep/type-safety (Wave 1 — [BATCH:deepdive-audit-2026-06-30])
-> Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅
+> ✅ **Wave 1 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 3/3 tasks merged @ `662e099b`
+> Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅ · sweep/type-safety @ `662e099b` ✅
+> Currently executing: sweep/split-brain-dedup (Wave 2 — [BATCH:deepdive-audit-2026-06-30])
 
 ---
 
@@ -218,16 +219,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/type-safety`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:1]`
-  - **Goal:** Eliminate all `any` casts and `as unknown as` type laundering across hooks, dashboard components, and crew screens (118 findings across 3 plan files).
-  - **Decision Log:** 2026-06-30 audit surfaced 48 `any` casts and `as unknown as` patterns across 36 files — compiler cannot catch data contract violations where these exist.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-TYPE_SAFETY · Plans: [PLAN-type-safety-sweep.md](./plans/PLAN-type-safety-sweep.md) · [PLAN-type-safety-ui-layer.md](./plans/PLAN-type-safety-ui-layer.md) · [PLAN-type-safety-data-layer.md](./plans/PLAN-type-safety-data-layer.md)
-    Key finding: "27H/63M/28L findings — concentrated in hooks + dashboard + crew. Protocol hooks carry highest crash risk."
-    Rejected alternative: "Suppress with `@ts-ignore` — REJECTED per No-any Law (S3, hard stop)."
-  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-TYPE_SAFETY
-  - **Details:** 3 unified plans — sweep (protocol/BLE hooks), ui-layer (dashboard + crew screens), data-layer (supabase types + services). Parallel-safe with `sweep/pii-offline-first` (no shared files).
 
 - [ ] **`sweep/split-brain-dedup`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:2]`
