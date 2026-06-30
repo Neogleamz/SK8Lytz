@@ -8,8 +8,7 @@ import type { Device as BleDevice } from 'react-native-ble-plx';
 export class AppLoggerCloud {
   static async pushFastLaneError(
     event: EventType,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
     sessionId: string
   ) {
     if (!supabase) return;
@@ -21,17 +20,23 @@ export class AppLoggerCloud {
       safeErrorString = '[Circular or Unparseable Error Object]';
     }
 
+    const stackTrace =
+      (typeof payload.stack === 'string' ? payload.stack : null) ||
+      (typeof payload.stackTrace === 'string' ? payload.stackTrace : null);
+    const payloadSize = typeof payload.payload_size === 'number' ? payload.payload_size : null;
+    const operationType = typeof payload.operation_type === 'string' ? payload.operation_type : null;
+
     supabase.from('telemetry_errors').insert({
       session_id: sessionId,
       event_type: event,
       error_message: safeErrorString.substring(0, 500),
-      stack_trace: payload.stack || payload.stackTrace || null,
+      stack_trace: stackTrace,
       raw_context: {
         ...payload,
         host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown'
       },
-      payload_size: payload.payload_size || null,
-      operation_type: payload.operation_type || null
+      payload_size: payloadSize,
+      operation_type: operationType
     }).then(
       ({ error }) => {
         if (error && __DEV__) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
@@ -61,7 +66,7 @@ export class AppLoggerCloud {
 
       supabase.from('crash_telemetry').insert({
       error_signature: safeErrorString.substring(0, 500),
-      stack_trace: payload.stack || payload.stackTrace || null,
+      stack_trace: stackTrace,
       breadcrumbs: breadcrumbsJson,
       environment_state: environmentStateJson,
       severity: normalizedSeverity,

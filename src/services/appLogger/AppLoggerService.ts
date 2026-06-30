@@ -18,7 +18,7 @@ class AppLoggerService {
   private sessionId = `telemetry_${Date.now()}`;
   
   private txPayloadQueue: { hex: string, timestamp: number } | null = null;
-  private pendingLogQueue: { event: EventType, payload: Record<string, any>, resolve: () => void } | null = null;
+  private pendingLogQueue: { event: EventType, payload: Record<string, unknown>, resolve: () => void } | null = null;
   private readonly throttleMap = new Map<string, number>();
 
   setCurrentUser(userId: string | undefined) {
@@ -29,7 +29,7 @@ class AppLoggerService {
     this.activeDevices = devices as KnownDevice[];
   }
 
-  private async getHostDeviceInfo(): Promise<Record<string, any>> {
+  private async getHostDeviceInfo(): Promise<Record<string, unknown>> {
     let batteryLevel = -1;
     let batteryState = 'UNKNOWN';
     let isLowPowerMode = false;
@@ -100,8 +100,8 @@ class AppLoggerService {
     }
   }
 
-  private formatPayload(payload: Record<string, any>, event?: EventType): Record<string, any> {
-    let clean: Record<string, any>;
+  private formatPayload(payload: Record<string, unknown>, event?: EventType): Record<string, unknown> {
+    let clean: Record<string, unknown>;
     try {
       clean = { ...(payload || {}) };
     } catch (_e: unknown) {
@@ -235,13 +235,17 @@ class AppLoggerService {
   async exportJSON(): Promise<string> {
     await this.storage.ensureLoaded();
     const stats = await this.getStats();
+    // Scrub active device objects before export — BLE Device.id contains raw MAC addresses.
+    const scrubbedDevices = this.activeDevices.map(d =>
+      this.formatPayload(d as unknown as Record<string, unknown>)
+    );
     return JSON.stringify({
       app: 'SK8Lytz',
       hostDeviceId: Device.osInternalBuildId || Device.modelId || 'unknown-device',
       exported: new Date().toISOString(),
       count: this.storage.getBuffer().length,
       stats: stats,
-      devices: this.activeDevices,
+      devices: scrubbedDevices,
       logs: this.storage.getBuffer(),
     }, null, 2);
   }
