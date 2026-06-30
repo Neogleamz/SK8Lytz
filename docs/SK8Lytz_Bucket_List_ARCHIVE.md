@@ -4319,4 +4319,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Increase retry timeout caps globally — REJECTED, `RECOVERY_MAX_MS = 30_000` already exists and is the correct cap."
   - **Source of Truth:** 📖 [src/services/ble/ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L210)
   - **Details:** Wave 3, parallel-safe with `sweep/animation-render-perf` and `sweep/pii-telemetry`. Highest regression risk: `RecoveryService.test.ts:328` cancel-during-backoff test.
+
+
+- [x] **`sweep/animation-render-perf`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:3]`
+  - **Goal:** Fix animation performance violations — 55 findings (9H/25M/21L) covering inline renderItem functions, missing useCallback/useMemo, and Reanimated shared-value misuse.
+  - **Decision Log:** 2026-06-30 audit flagged FlatList renderItem inline closures and missing memoization causing unnecessary re-renders and jank on the dashboard device list.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-ANIMATION · Plan: [PLAN-animation-render-perf.md](./plans/PLAN-animation-render-perf.md)
+    Key finding: "55 animation/render findings — inline renderItem functions in FlatList components, unstable refs to animated shared values, missing useCallback on expensive handlers."
+    Rejected alternative: "Virtualization overhaul — REJECTED (P4), surgical renderItem extraction is sufficient."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-ANIMATION
+  - **Details:** Wave 3, parallel-safe with `sweep/pii-telemetry` and `sweep/ble-stability`.
 
