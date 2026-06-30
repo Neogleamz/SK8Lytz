@@ -1,3 +1,15 @@
+### [VERIFIED] sweep/monolith-extraction — c25f513d — 2026-06-30
+
+Both Wave 5 extraction prerequisites confirmed pre-existing on master. No code written.
+
+- `FixedPatternPreviewRow` extracted to `src/components/docked/FixedPatternPreviewRow.tsx` — landed in `68ab1708` (Phase 1 S4 extraction, 2026-06-18). Inline definition removed from `src/components/DockedController.tsx` (line 83 comment confirms).
+- Deep-link handler extracted to `useCrewDeepLink` in `src/screens/Dashboard/DashboardCrewHub.tsx` — landed in `49ddd601` (C2 dashboard extraction). Zero inline `Linking.*` calls remain in `DashboardScreen.tsx`.
+- `src/hooks/useDeepLinkHandler.ts` not created — plan target already satisfied by `useCrewDeepLink` which is the canonical extraction.
+
+Files touched: none (verification-only). TSC ✅ Jest ✅ all 7 verify gates ✅.
+
+---
+
 ### [VERIFIED] sweep/memory-lifecycle @ cd6a9c85 — 2026-06-30
 
 Wave 4 memory/lifecycle sweep. Verification-only — both HIGH-severity memory leak fixes were already on master from prior session (`c795df69` fix/memory-leak-sweep 2026-06-10): `useHardwareNotifications.ts` cleanup returns on `setOnDataReceived` / `setOnHardwareProbed` useEffects (correct `() => {}` form); `useBLEScanner.ts` dedicated teardown useEffect clearing `debounceTimerRef` + `telemetryTimerRef` via `clearTimeout`. Plan files updated with line-cited evidence. TSC ✅ Jest ✅ all 7 verify gates ✅.

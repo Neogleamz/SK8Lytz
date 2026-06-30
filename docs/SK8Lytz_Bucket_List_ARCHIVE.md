@@ -4330,4 +4330,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Virtualization overhaul — REJECTED (P4), surgical renderItem extraction is sufficient."
   - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-ANIMATION
   - **Details:** Wave 3, parallel-safe with `sweep/pii-telemetry` and `sweep/ble-stability`.
+
+
+- [x] **`sweep/memory-lifecycle`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:4]`
+  - **Goal:** Plug memory leaks — 59 findings (14H/24M/21L): setInterval without clearInterval, missing useEffect cleanup for event listeners, hardware notification subscriptions not torn down.
+  - **Decision Log:** 2026-06-30 audit found 14 HIGH-severity memory leak patterns — hardware notification subscriptions and scanner timers left running after component unmount or BLE disconnect.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-MEMORY_LEAKS · Plans: [PLAN-memory-leak-hardware-notifications.md](./plans/PLAN-memory-leak-hardware-notifications.md) · [PLAN-memory-leak-scanner-timers.md](./plans/PLAN-memory-leak-scanner-timers.md)
+    Key finding: "14 HIGH findings — hardware notification subscriptions (`useHardwareNotifications.ts`) and scanner interval refs leak on unmount."
+    Rejected alternative: "AbortController pattern — REJECTED for BLE context, ref-based cleanup is idiomatic per project pattern."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-MEMORY_LEAKS
+  - **Details:** Wave 4, solo. Waits for Wave 3 (animation + pii-telemetry + ble-stability) to merge first.
 
