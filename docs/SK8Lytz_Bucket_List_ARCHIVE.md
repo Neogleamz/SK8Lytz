@@ -4352,4 +4352,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Inline refactor without extraction — REJECTED, violates S4 (30KB hard stop)."
   - **Source of Truth:** 📖 [src/screens/DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx) + [src/screens/Onboarding/HardwareSetupWizardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
   - **Details:** Wave 5, solo. Runs AFTER memory-lifecycle to avoid mid-extraction conflicts with leak fixes that also touch DashboardScreen.
+
+
+- [x] **`sweep/error-handling`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:6]`
+  - **Goal:** Standardize error handling — 56 findings (3H/28M/25L): missing `e instanceof Error` unwrapping, catch blocks without AppLogger, silent async failures.
+  - **Decision Log:** 2026-06-30 audit found 56 error handling violations — raw `catch(e)` without type narrowing causes "e.message is undefined" crashes; catch blocks without AppLogger create silent failures that are invisible in production.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-ERROR_HANDLING · Plan: [PLAN-error-handling-standardization.md](./plans/PLAN-error-handling-standardization.md)
+    Key finding: "3H — async operations in services throwing unguarded. 28M — catch blocks log nothing (silent fail). Standard pattern: `if (e instanceof Error) AppLogger.error('ctx', e.message)`."
+    Rejected alternative: "Global error boundary only — REJECTED, doesn't cover service-layer silent fails."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-ERROR_HANDLING
+  - **Details:** Wave 6, solo. Runs after monolith extraction to avoid touching extracted components mid-refactor.
 

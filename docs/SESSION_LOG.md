@@ -1,3 +1,23 @@
+### [MERGE READY] sweep/async-storage-keys — 34539c48
+
+Files touched: src/components/dashboard/DashboardHeader.tsx, src/constants/storageKeys.ts, src/services/BleCharacteristicCache.ts
+TSC: ✅  Jest: ✅
+Spike 2 result: single-writer confirmed — InterrogatorService has zero AsyncStorage writes to registered_devices; all .from('registered_devices') hits are Supabase table references, not storage keys
+Spike 4 result: single centralized format confirmed — CrewAutoRejoin does NOT reference recent_sessions or STORAGE_RECENT_SESSIONS_PREFIX; only SpeedTrackingService.ts reads/writes via the central prefix import
+Docs gate needed: getGattCacheKey must be added to Master Reference §2 + §4
+Step 5 (useBLE cleanup): SKIPPED — useBLE.ts is 31.3 KB, S4 guard triggered
+Note: InterrogatorService (Step 3) and getHardwareConfigKey uppercase normalization (Step 2A) were already applied in a prior session — no edits needed; confirmed by reading exact lines
+
+---
+
+### [MERGE READY] sweep/platform-guards — 1eee1cc9e656b491954d42645a61063c614b96cd
+
+Files touched: android/app/src/main/AndroidManifest.xml, src/services/LocationService.ts
+TSC: ✅  Jest: ✅
+Docs gate: Master Reference §5a updated — BLUETOOTH_SCAN row annotated with neverForLocation flag; F2 row added for android.hardware.sensor.heartrate (required=false).
+
+---
+
 ### [MERGE READY] sweep/error-handling — 51530225
 
 Files touched: src/hooks/useAccountOverview.ts
