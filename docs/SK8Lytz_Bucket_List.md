@@ -41,8 +41,9 @@
 > ✅ **Wave 2 MERGED** 2026-06-26 — chore/teardown-dead-code-sweep @ `ade1a45e`. 10/11 items done (1 N/A — TODO already gone post-Wave-1). 2 `_appLogger:any` eliminated, dead createDashboardStyles shim removed, dead getGroupCount removed. Full verify ✅.
 > ✅ **Wave 1 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 3/3 tasks merged @ `662e099b`
 > ✅ **Wave 2 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 task merged @ `7932f168`
+> ✅ **Wave 3 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 3/3 resolved (pii-telemetry pre-existing ✅ · ble-stability @ `cbac245c` ✅ · animation-render-perf @ `831e35b6` ✅)
 > Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅ · sweep/type-safety @ `662e099b` ✅ · sweep/split-brain-dedup @ `7932f168` ✅
-> Currently executing: Wave 3 (3-parallel) — sweep/animation-render-perf · sweep/ble-stability · sweep/pii-telemetry
+> Currently executing: sweep/memory-lifecycle (Wave 4 — [BATCH:deepdive-audit-2026-06-30])
 
 ---
 
@@ -220,16 +221,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/animation-render-perf`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:3]`
-  - **Goal:** Fix animation performance violations — 55 findings (9H/25M/21L) covering inline renderItem functions, missing useCallback/useMemo, and Reanimated shared-value misuse.
-  - **Decision Log:** 2026-06-30 audit flagged FlatList renderItem inline closures and missing memoization causing unnecessary re-renders and jank on the dashboard device list.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-ANIMATION · Plan: [PLAN-animation-render-perf.md](./plans/PLAN-animation-render-perf.md)
-    Key finding: "55 animation/render findings — inline renderItem functions in FlatList components, unstable refs to animated shared values, missing useCallback on expensive handlers."
-    Rejected alternative: "Virtualization overhaul — REJECTED (P4), surgical renderItem extraction is sufficient."
-  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-ANIMATION
-  - **Details:** Wave 3, parallel-safe with `sweep/pii-telemetry` and `sweep/ble-stability`.
 
 - [ ] **`sweep/memory-lifecycle`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:4]`

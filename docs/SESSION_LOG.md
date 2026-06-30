@@ -1,3 +1,9 @@
+### [MERGE] sweep/animation-render-perf @ 831e35b6 — 2026-06-30
+
+Wave 3 animation/render perf sweep. Batched 16 independent `Animated.spring().start()` calls into `Animated.parallel().start()` in SpectrumAnalyzer (ANIM-001). Removed orphaned runAnimation forEach block (ANIM-002 memory leak). Extracted `GaugeNeedle` sub-component to scope 60fps `addListener`→`setState` to a 4-element subtree (ANIM-003). Memoized `ledWrapStyle` and pre-cached 4 layer style objects for non-FAVORITES mode in VisualizerUnit (ANIM-004/005). Added cleanup handle to `AnimatedCategoryPill` (ANIM-008). Wrapped `PositionalMathBuffer.generateArray` in `useMemo` in GradientLibraryTab (ANIM-009). Extracted static zone styles to `StyleSheet.create` in StreetModeDistributionSlider (ANIM-010). Added backward-compatible `tick` prop to LEDStripPreview (ANIM-006 — wiring through PatternCard deferred). Step 10 (LUT pre-computation) deferred per plan. TSC ✅ Jest ✅ all 7 verify gates ✅.
+
+---
+
 ### [MERGE] sweep/ble-stability @ cbac245c — 2026-06-30
 
 Wave 3 BLE stability hardening. Replaced 3 raw `setTimeout` retry waits in `ConnectService.ts` with `enqueueDelay('critical', ...)` (GATT-133 transient + MTU-glitch sites A+B). Replaced Phase 1/2 reconnect backoff `setTimeout` in `RecoveryService.ts` with `enqueueDelay`. Named `BleMachine.ts` inline 1000ms RESTORING settle window as `BLE_RESTORING_TIMEOUT_MS` constant. Blast-radius `-IgnoreBlast` used: `BLE_RESTORING_TIMEOUT_MS` is internal to BleMachine.ts (useBLE.ts/useOptimisticBLE.ts have no consuming reference); `useBLEHeartbeat.ts` does not exist (heartbeat is in `HeartbeatService.ts`). TSC ✅ Jest ✅ all 7 verify gates ✅.
