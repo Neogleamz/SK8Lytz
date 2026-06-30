@@ -15,6 +15,7 @@
     "supabase/functions",
     "tools",
     "scratch",
+    "artifacts",
     ".expo",
     ".local-builder",
     "web-build"

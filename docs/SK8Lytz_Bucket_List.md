@@ -191,6 +191,175 @@
 
 ---
 
+### ⚡ [BATCH:deepdive-audit-2026-06-30] — Full-Spectrum Code Audit Remediation (477 Findings, 9 Waves)
+
+> **Source Analysis:** 🔬 Deep-dive sweep 2026-06-30 — 55-agent fleet, 477 unique verified findings, 9 AST-verified waves. Report: `artifacts/system_audit_report.md`
+> **Decision Log:** User directive 2026-06-30 — "intake all tasks with fully detailed kanban plans ready to run in waves then execute all fixes until completed." All 14 PLAN files P1-verified by Quinn agents against live source.
+> **⚠️ Wave gate (S9):** Wave N MUST NOT start until all Wave N-1 tasks confirmed merged via `git log`. `sweep/devops-secrets` MUST run first — live Supabase JWT and plaintext password committed in source.
+
+#### Batch Strategy Table (AST-Verified — `node tools/ast-parser.js --collision-matrix artifacts/domain_clusters.json`)
+
+| Wave | Cluster | Slug | Parallel-Safe? | Prerequisite | Risk |
+|------|---------|------|---------------|-------------|------|
+| **1** | DEVOPS_SECRETS | `sweep/devops-secrets` | Solo FIRST | None — must precede any `git push` | 🚨 H-RISK |
+| **1** | TYPE_SAFETY | `sweep/type-safety` | ✅ parallel w/ pii | None | H-RISK |
+| **1** | PII + OFFLINE_FIRST | `sweep/pii-offline-first` | ✅ parallel w/ type | None | 🚨 H-RISK |
+| **2** | DUPLICATION | `sweep/split-brain-dedup` | Solo | Wave 1 merged | H-RISK |
+| **3** | ANIMATION | `sweep/animation-render-perf` | ✅ 3-parallel | Wave 2 merged | M-RISK |
+| **3** | PII_TELEMETRY | `sweep/pii-telemetry` | ✅ 3-parallel | Wave 2 merged | 🚨 H-RISK |
+| **3** | BLE_STABILITY | `sweep/ble-stability` | ✅ 3-parallel | Wave 2 merged | M-RISK |
+| **4** | MEMORY_LEAKS | `sweep/memory-lifecycle` | Solo | Wave 3 merged | H-RISK |
+| **5** | MONOLITH | `sweep/monolith-extraction` | Solo | Wave 4 merged | H-RISK |
+| **6** | ERROR_HANDLING | `sweep/error-handling` | Solo | Wave 5 merged | M-RISK |
+| **7** | ASYNC_STORAGE | `sweep/async-storage-keys` | ✅ 2-parallel | Wave 6 merged | M-RISK |
+| **7** | PLATFORM | `sweep/platform-guards` | ✅ 2-parallel | Wave 6 merged | L-RISK |
+| **8** | STATE_MATRIX | `sweep/state-matrix` | Solo | Wave 7 merged | M-RISK |
+| **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
+
+---
+
+- [ ] **`sweep/devops-secrets`** ⚠️ EXECUTE FIRST — CREDENTIALS LIVE IN SOURCE
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DEVOPS]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:1]`
+  - **Goal:** Remove hardcoded live Supabase JWT + plaintext password from `tools/createTestUser.js`, fix double-execution in `apply_migration.js`, replace 3 absolute machine paths.
+  - **Decision Log:** 2026-06-30 audit found live credentials committed — `tools/createTestUser.js:4` (Supabase anon JWT `eyJ…`) + `:12` (plaintext `Password!2026`). Assume live until confirmed otherwise. MUST execute before any `git push`.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-DEVOPS_SECRETS · Plan: [PLAN-devops-secrets.md](./plans/PLAN-devops-secrets.md)
+    Key finding: "Hardcoded live JWT at `tools/createTestUser.js:4` + double-run() at `tools/apply_migration.js:31` + 3 absolute paths."
+    Rejected alternative: "Defer until next push — REJECTED. Credential sits in git history every day it is live."
+  - **Source of Truth:** 📖 [tools/createTestUser.js](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/createTestUser.js#L4)
+  - **Details:** Requires credential rotation in Supabase dashboard BEFORE the code change. `.env.local` placeholder must be created. Git history grep must confirm no prior JWT commits (out-of-scope BFG if found).
+
+- [ ] **`sweep/type-safety`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:1]`
+  - **Goal:** Eliminate all `any` casts and `as unknown as` type laundering across hooks, dashboard components, and crew screens (118 findings across 3 plan files).
+  - **Decision Log:** 2026-06-30 audit surfaced 48 `any` casts and `as unknown as` patterns across 36 files — compiler cannot catch data contract violations where these exist.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-TYPE_SAFETY · Plans: [PLAN-type-safety-sweep.md](./plans/PLAN-type-safety-sweep.md) · [PLAN-type-safety-ui-layer.md](./plans/PLAN-type-safety-ui-layer.md) · [PLAN-type-safety-data-layer.md](./plans/PLAN-type-safety-data-layer.md)
+    Key finding: "27H/63M/28L findings — concentrated in hooks + dashboard + crew. Protocol hooks carry highest crash risk."
+    Rejected alternative: "Suppress with `@ts-ignore` — REJECTED per No-any Law (S3, hard stop)."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-TYPE_SAFETY
+  - **Details:** 3 unified plans — sweep (protocol/BLE hooks), ui-layer (dashboard + crew screens), data-layer (supabase types + services). Parallel-safe with `sweep/pii-offline-first` (no shared files).
+
+- [ ] **`sweep/pii-offline-first`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:1]`
+  - **Goal:** Harden the AppLogger PII scrubber (exportJSON bypasses its own scrubber) and patch the offline-first cache gaps where Supabase calls skip AsyncStorage.
+  - **Decision Log:** 2026-06-30 audit flagged `AppLogger.exportJSON()` bypassing its own PII scrubber — raw emails/MACs exported to disk in diagnostic bundles. Critical GDPR/user-trust gap.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-PII · Plans: [PLAN-pii-scrubber-hardening.md](./plans/PLAN-pii-scrubber-hardening.md) · [PLAN-pii-logger-scrubber.md](./plans/PLAN-pii-logger-scrubber.md)
+    Key finding: "`AppLogger.exportJSON()` at `src/services/AppLogger.ts` bypasses `scrubPII()` — raw telemetry fields reach the export bundle unmasked."
+    Rejected alternative: "Remove exportJSON entirely — REJECTED, debug utility needed. Fix: pipe through scrubber."
+  - **Source of Truth:** 📖 [src/services/AppLogger.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts)
+  - **Details:** Two plans unified — scrubber hardening (AppLogger internals) + logger scrubber (call-site audit). Parallel-safe with `sweep/type-safety` (no shared files).
+
+- [ ] **`sweep/split-brain-dedup`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:2]`
+  - **Goal:** Eliminate duplicate business logic and split-brain state patterns — 41 findings (10H/15M/16L) where the same function, hook, or data-write exists in multiple places.
+  - **Decision Log:** 2026-06-30 audit structural sniper found duplicate hooks, services, and redundant API calls causing write-consistency bugs and UX divergence.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-DUPLICATION · Plan: [PLAN-split-brain-dedup.md](./plans/PLAN-split-brain-dedup.md)
+    Key finding: "41 split-brain findings — duplicate functions/hooks/state-vars and redundant API calls. Wave 1 type-safety work may touch shared files — Wave 2 sequencing required."
+    Rejected alternative: "Parallel with Wave 1 — REJECTED, import-tree overlaps confirmed by AST collision tool."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-DUPLICATION
+  - **Details:** Wave 2 — solo. Waits for Wave 1 type-safety + devops merges before executing.
+
+- [ ] **`sweep/animation-render-perf`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:3]`
+  - **Goal:** Fix animation performance violations — 55 findings (9H/25M/21L) covering inline renderItem functions, missing useCallback/useMemo, and Reanimated shared-value misuse.
+  - **Decision Log:** 2026-06-30 audit flagged FlatList renderItem inline closures and missing memoization causing unnecessary re-renders and jank on the dashboard device list.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-ANIMATION · Plan: [PLAN-animation-render-perf.md](./plans/PLAN-animation-render-perf.md)
+    Key finding: "55 animation/render findings — inline renderItem functions in FlatList components, unstable refs to animated shared values, missing useCallback on expensive handlers."
+    Rejected alternative: "Virtualization overhaul — REJECTED (P4), surgical renderItem extraction is sufficient."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-ANIMATION
+  - **Details:** Wave 3, parallel-safe with `sweep/pii-telemetry` and `sweep/ble-stability`.
+
+- [ ] **`sweep/pii-telemetry`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:3]`
+  - **Goal:** Hunt and remove PII leakage in telemetry payloads — 31 findings (7H/8M/16L) where emails/MACs/names reach AppLogger without scrubbing.
+  - **Decision Log:** 2026-06-30 audit found PII telemetry leaks distinct from the AppLogger exportJSON gap (Wave 1 fix) — call-site audit of all `AppLogger.*` invocations passing device IDs, user emails, or display names.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-PII_TELEMETRY · Plan: [PLAN-pii-scrub-sweep.md](./plans/PLAN-pii-scrub-sweep.md)
+    Key finding: "7 HIGH findings where MAC addresses or user emails logged directly without `scrubPII()` wrapper at call sites."
+    Rejected alternative: "Disable telemetry entirely — REJECTED, needed for diagnostics."
+  - **Source of Truth:** 📖 [src/services/AppLogger.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts)
+  - **Details:** Wave 3, parallel-safe with `sweep/animation-render-perf` and `sweep/ble-stability`.
+
+- [ ] **`sweep/ble-stability`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:3]`
+  - **Goal:** Harden BLE retry/reconnect paths — replace raw `setTimeout` delays with `enqueueDelay`, add missing constants for magic timeout literals.
+  - **Decision Log:** 2026-06-30 audit flagged raw retry waits outside the BleWriteQueue — GATT-133 recovery and MTU-glitch waits use raw setTimeout, violating R-16. Quinn P1-corrected audit: `BackgroundBLEService.ts` citations were wrong (file is 49 lines); real targets are `ConnectService.ts` and `RecoveryService.ts`.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-BLE_STABILITY · Plan: [PLAN-ble-stability-hardening.md](./plans/PLAN-ble-stability-hardening.md)
+    Key finding: "`ConnectService.ts:210,246,257` — GATT-133 retry and MTU-glitch waits use raw setTimeout; `RecoveryService.ts:78` — Phase 1/2 reconnect backoff lacks enqueueDelay."
+    Rejected alternative: "Increase retry timeout caps globally — REJECTED, `RECOVERY_MAX_MS = 30_000` already exists and is the correct cap."
+  - **Source of Truth:** 📖 [src/services/ble/ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L210)
+  - **Details:** Wave 3, parallel-safe with `sweep/animation-render-perf` and `sweep/pii-telemetry`. Highest regression risk: `RecoveryService.test.ts:328` cancel-during-backoff test.
+
+- [ ] **`sweep/memory-lifecycle`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:4]`
+  - **Goal:** Plug memory leaks — 59 findings (14H/24M/21L): setInterval without clearInterval, missing useEffect cleanup for event listeners, hardware notification subscriptions not torn down.
+  - **Decision Log:** 2026-06-30 audit found 14 HIGH-severity memory leak patterns — hardware notification subscriptions and scanner timers left running after component unmount or BLE disconnect.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-MEMORY_LEAKS · Plans: [PLAN-memory-leak-hardware-notifications.md](./plans/PLAN-memory-leak-hardware-notifications.md) · [PLAN-memory-leak-scanner-timers.md](./plans/PLAN-memory-leak-scanner-timers.md)
+    Key finding: "14 HIGH findings — hardware notification subscriptions (`useHardwareNotifications.ts`) and scanner interval refs leak on unmount."
+    Rejected alternative: "AbortController pattern — REJECTED for BLE context, ref-based cleanup is idiomatic per project pattern."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-MEMORY_LEAKS
+  - **Details:** Wave 4, solo. Waits for Wave 3 (animation + pii-telemetry + ble-stability) to merge first.
+
+- [ ] **`sweep/monolith-extraction`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:5]`
+  - **Goal:** Extract DashboardScreen (51KB) and HardwareSetupWizardScreen (41KB) into sub-components — both exceed the 30KB Monolith Scan hard stop.
+  - **Decision Log:** 2026-06-30 audit flagged 2 files exceeding the 30KB monolith threshold (R-23). Both are collision zones — every concurrent edit risks destroying unrelated features. Extraction reduces blast radius for all future Wave 4+ tasks.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-MONOLITH · Plan: [PLAN-monolith-extraction-audit.md](./plans/PLAN-monolith-extraction-audit.md)
+    Key finding: "`DashboardScreen.tsx` = 51KB (hard stop — S4), `HardwareSetupWizardScreen.tsx` = 41KB (hard stop). Both require extraction before future edits."
+    Rejected alternative: "Inline refactor without extraction — REJECTED, violates S4 (30KB hard stop)."
+  - **Source of Truth:** 📖 [src/screens/DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx) + [src/screens/Onboarding/HardwareSetupWizardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
+  - **Details:** Wave 5, solo. Runs AFTER memory-lifecycle to avoid mid-extraction conflicts with leak fixes that also touch DashboardScreen.
+
+- [ ] **`sweep/error-handling`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:6]`
+  - **Goal:** Standardize error handling — 56 findings (3H/28M/25L): missing `e instanceof Error` unwrapping, catch blocks without AppLogger, silent async failures.
+  - **Decision Log:** 2026-06-30 audit found 56 error handling violations — raw `catch(e)` without type narrowing causes "e.message is undefined" crashes; catch blocks without AppLogger create silent failures that are invisible in production.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-ERROR_HANDLING · Plan: [PLAN-error-handling-standardization.md](./plans/PLAN-error-handling-standardization.md)
+    Key finding: "3H — async operations in services throwing unguarded. 28M — catch blocks log nothing (silent fail). Standard pattern: `if (e instanceof Error) AppLogger.error('ctx', e.message)`."
+    Rejected alternative: "Global error boundary only — REJECTED, doesn't cover service-layer silent fails."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-ERROR_HANDLING
+  - **Details:** Wave 6, solo. Runs after monolith extraction to avoid touching extracted components mid-refactor.
+
+- [ ] **`sweep/async-storage-keys`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[🍪 Snack]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:7]`
+  - **Goal:** Fix AsyncStorage key consistency — 3 real findings (3 of 6 audit findings were false positives per Quinn P1 check): R-24 group-count violation in DashboardHeader, InterrogatorService MAC case normalization, BleCharacteristicCache key registry.
+  - **Decision Log:** 2026-06-30 audit flagged 6 AsyncStorage key issues; Quinn P1-verified against live source — 3 were already fixed (useBLE.ts, DeviceStorage.ts, SpeedTrackingService). 3 real: DashboardHeader R-24 violation + InterrogatorService lowercase MAC + BleCharacteristicCache prefix gap.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-ASYNC_STORAGE · Plan: [PLAN-async-storage-key-registry-audit.md](./plans/PLAN-async-storage-key-registry-audit.md)
+    Key finding: "`DashboardHeader.tsx:106` uses `firstDevice?.grouped` (R-24 violation) instead of `displayConnectedDevices.length > 1` ground truth. `InterrogatorService.ts:25` builds HW_CACHE_KEY with lowercase MAC (canonical is UPPERCASE)."
+    Rejected alternative: "Rebuild entire key registry — REJECTED (P4), 3 targeted fixes are sufficient."
+  - **Source of Truth:** 📖 [src/components/dashboard/DashboardHeader.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/DashboardHeader.tsx#L106)
+  - **Details:** Wave 7, parallel-safe with `sweep/platform-guards`.
+
+- [ ] **`sweep/platform-guards`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[NATIVE]` `[✅ L-RISK]` `[🍪 Snack]` `[LOW]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:7]`
+  - **Goal:** Add missing Android manifest permission flags and fix inline Platform.OS imports in LocationService.
+  - **Decision Log:** 2026-06-30 audit found BLUETOOTH_SCAN missing `neverForLocation` flag (allows OS to infer location from BLE — privacy regression) + 2 inline `require('react-native')` instead of top-level import in LocationService.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-PLATFORM · Plan: [PLAN-platform-guards.md](./plans/PLAN-platform-guards.md)
+    Key finding: "`AndroidManifest.xml:8` — BLUETOOTH_SCAN missing `android:usesPermissionFlags=\"neverForLocation\"`. `LocationService.ts:30,88` — inline `require('react-native').Platform.OS`."
+    Rejected alternative: "Target SDK downgrade to avoid the flag — REJECTED, security regression."
+  - **Source of Truth:** 📖 [android/app/src/main/AndroidManifest.xml](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/app/src/main/AndroidManifest.xml#L8)
+  - **Details:** Wave 7, parallel-safe with `sweep/async-storage-keys`. Config-only changes — no Master Reference docs gate required.
+
+- [ ] **`sweep/state-matrix`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:8]`
+  - **Goal:** Implement missing Loading/Error/Empty UI states in data-driven components — 20 findings (2H/9M/9L) across dashboard and crew screens.
+  - **Decision Log:** 2026-06-30 audit found 20 state-matrix violations — components rendering Success state only, with no Loading/Error/Empty branches. Users see blank screens or stale data on network failures.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-STATE_MATRIX · Plans: [PLAN-state-matrix-error-ui.md](./plans/PLAN-state-matrix-error-ui.md) · [PLAN-state-matrix-sweep.md](./plans/PLAN-state-matrix-sweep.md)
+    Key finding: "2 HIGH — crew and device list show blank on error with no feedback. 9 MEDIUM — loading skeletons missing across data views."
+    Rejected alternative: "Global skeleton provider — REJECTED (P4), per-component state machines are idiomatic."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-STATE_MATRIX
+  - **Details:** Wave 8, solo. Runs after async-storage + platform-guards to avoid conflict with DashboardHeader changes from Wave 7.
+
+- [ ] **`sweep/reentrancy-guards`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[✅ L-RISK]` `[🍪 Snack]` `[LOW]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:9]`
+  - **Goal:** Add re-entrancy guards to 2 verified async effects — `DashboardScreen.tsx` checkNewDevice effect and `VisualizerHooks.ts` sample loop.
+  - **Decision Log:** 2026-06-30 audit listed 12 re-entrancy findings; Quinn P1-verified — 10 were phantom/stale citations (HeartbeatService already guarded, MusicModeService doesn't exist, SymphonyEngine has no setInterval). 2 real: DashboardScreen checkNewDevice async effect lacks re-entrancy flag; VisualizerHooks sample loop is O(n+m) but needs clarity refactor.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-REENTRANCY · Plan: [PLAN-reentrancy-guards.md](./plans/PLAN-reentrancy-guards.md)
+    Key finding: "`DashboardScreen.tsx:452-478` — `checkNewDevice` async effect in useEffect has `isMounted` guard but LACKS re-entrancy flag — can trigger parallel executions on rapid device connect events."
+    Rejected alternative: "useMemo Map in VisualizerHooks — REJECTED (P4), `lastSampleIdx` monotonic resume already makes it O(n+m); fix is a clarity comment."
+  - **Source of Truth:** 📖 [src/screens/DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx#L452) + [src/components/visualizer/VisualizerHooks.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/visualizer/VisualizerHooks.ts#L198)
+  - **Details:** Wave 9, solo. Final wave — lowest risk, all prior fixes merged. 10/12 audit citations were stale per P1 check.
+
+---
+
 ## 🧹 TECH DEBT
 
 > **Source Analysis (teardown-debt tasks below):** 🕵️ Reyes monolith-teardown wiring audit 2026-06-25 (SESSION_LOG `[ARTIFACT]` entries) + `npx madge --circular src/`. Pre-existing debt the deep-dive-w1 sweep did not address.
