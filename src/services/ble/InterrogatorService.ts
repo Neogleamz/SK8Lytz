@@ -21,8 +21,7 @@ import { enqueueWrite, enqueueDelay } from '../BleWriteQueue';
 import { type PingResult, isPingResult } from '../../types/dashboard.types';
 import { scrubPII } from '../../utils/piiScrubber';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
-
-const HW_CACHE_KEY = (mac: string) => `@sk8_hw_${mac.toUpperCase()}`;
+import { getHardwareConfigKey } from '../../constants/storageKeys';
 export const PROBE_QUEUE_DELAY_MS = BLE_TIMING.PROBE_QUEUE_DELAY_MS;
 export const PROBE_QUEUE_DELAY_MS_FTUE = BLE_TIMING.PROBE_QUEUE_DELAY_MS_FTUE;
 export const BLE_INTERROGATION_STAGGER_MS = BLE_TIMING.INTERROGATION_STAGGER_MS;
@@ -138,7 +137,7 @@ export async function interrogateDevice(
     });
 
     if (hwConfig) {
-      await AsyncStorage.setItem(HW_CACHE_KEY(mac), JSON.stringify(hwConfig))
+      await AsyncStorage.setItem(getHardwareConfigKey(mac), JSON.stringify(hwConfig))
         .catch(e => AppLogger.warn('[InterrogatorService] Failed to persist HW cache', { error: String(e) }));
       hwCacheRef.current[mac] = hwConfig;
       AppLogger.log('DEVICE_DISCOVERED', { event: 'interrogator_complete', mac: scrubPII(mac), ledPoints: hwConfig.ledPoints });

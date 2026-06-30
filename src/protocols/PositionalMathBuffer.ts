@@ -1,3 +1,5 @@
+import { hexToRgb } from './shared/engineUtils';
+
 export interface BuilderNode {
   id: string;
   position: number; // 0 to 100 percentage layout
@@ -14,15 +16,6 @@ export interface CustomBuilderPreset {
 }
 
 export class PositionalMathBuffer {
-  static hexToRgb(hex: string) {
-    const h = (hex || '#000000').replace('#', '');
-    return {
-      r: parseInt(h.substring(0, 2), 16) || 0,
-      g: parseInt(h.substring(2, 4), 16) || 0,
-      b: parseInt(h.substring(4, 6), 16) || 0,
-    };
-  }
-
   /**
    * Generates a fully mathematically interpolated string of LED colors 
    * specifically built to bypass the positional math limits of the `0x59` hardware chunker.
@@ -38,7 +31,7 @@ export class PositionalMathBuffer {
 
     // If only one node exists, fill entire strip with it exactly
     if (sorted.length === 1) {
-       const fillRgb = this.hexToRgb(sorted[0].colorHex);
+       const fillRgb = hexToRgb(sorted[0].colorHex);
        return Array.from({ length: totalLeds }).map(() => fillRgb);
     }
 
@@ -52,7 +45,7 @@ export class PositionalMathBuffer {
        const perc = Math.max(0, Math.min(100, n.position)) / 100.0;
        return {
           index: Math.max(0, Math.min(totalLeds - 1, Math.round(perc * (totalLeds - 1)))),
-          rgb: this.hexToRgb(n.colorHex)
+          rgb: hexToRgb(n.colorHex)
        };
     });
 

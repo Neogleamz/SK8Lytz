@@ -45,6 +45,8 @@ interface QuickPresetModalProps {
   multiTransition: number;
   closePrompt: () => void;
   Colors: ThemePalette;
+  /** Optional persist callback. When provided, storage writes are delegated here instead. */
+  onPresetsChanged?: (presets: QuickPreset[]) => void;
 }
 
 const QuickPresetModal = React.memo(function QuickPresetModal({
@@ -64,16 +66,32 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
   multiTransition,
   closePrompt,
   Colors,
+  onPresetsChanged,
 }: QuickPresetModalProps) {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { user } = useAuth();
   const isProcessingRef = useRef(false);
 
+  /** Single storage write path — eliminates dual-writer race (R-21-004). */
+  const persistPresets = React.useCallback((presets: QuickPreset[]) => {
+    setQuickPresets(presets);
+    if (onPresetsChanged) {
+      onPresetsChanged(presets);
+    } else {
+      AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(presets)).catch((err: unknown) =>
+        AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', {
+          error: err instanceof Error ? err.message : String(err),
+          payload_size: 0,
+          ssi: 0,
+        }),
+      );
+    }
+  }, [setQuickPresets, onPresetsChanged]);
+
   const handleDelete = () => {
     const newArr = [...quickPresets];
     newArr.splice(quickPromptTargetIndex, 1);
-    setQuickPresets(newArr);
-    AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr)).catch((err: unknown) => AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
+    persistPresets(newArr);
     AppLogger.log('BUILDER_PRESET_DELETED', { index: quickPromptTargetIndex });
     closePrompt();
   };
@@ -86,8 +104,7 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
     } else {
       newArr[quickPromptTargetIndex].name = safeName;
     }
-    setQuickPresets(newArr);
-    AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr)).catch((err: unknown) => AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
+    persistPresets(newArr);
     AppLogger.log('BUILDER_PRESET_SAVED', {
       index: quickPromptTargetIndex !== -1 ? quickPromptTargetIndex : 'NEW',
       isOverwrite: quickPromptTargetIndex !== -1,

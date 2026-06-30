@@ -1,5 +1,7 @@
 import type { RGB } from './shared/engineTypes';
-import { hsvToRgb, 
+import { hexToRgb } from './shared/engineUtils';
+import { lerpRGB } from './shared/spatialMath';
+import { hsvToRgb,
   buildColorJump, buildStrobe, buildSingleDotChase, 
   buildWipeFill, buildCometChase, buildSinePulseWave, buildDashedMarquee, 
   buildBreathingWave, buildMeteorShower, buildRainbowMarquee, buildRainbowComet, 
@@ -12,18 +14,6 @@ import { hsvToRgb,
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
 
-export function hexToRgb(hex: string): RGB {
-  const h = hex.replace('#', '');
-  return { r: parseInt(h.slice(0, 2), 16) || 0, g: parseInt(h.slice(2, 4), 16) || 0, b: parseInt(h.slice(4, 6), 16) || 0 };
-}
-
-
-export function lerpRGBMusic(a: RGB, b: RGB, t: number): RGB {
-  t = Math.max(0, Math.min(1, t));
-  return { r: Math.round(a.r + (b.r - a.r) * t), g: Math.round(a.g + (b.g - a.g) * t), b: Math.round(a.b + (b.b - a.b) * t) };
-}
-
-
 export function getMusicPaletteAt(palette: RGB[], tick: number): RGB {
   if (palette.length === 0) return { r: 0, g: 0, b: 0 };
   return palette[Math.floor(tick * palette.length) % palette.length];
@@ -33,7 +23,7 @@ export function getMusicPaletteAt(palette: RGB[], tick: number): RGB {
 export function getMusicPaletteSmooth(palette: RGB[], tick: number): RGB {
   if (palette.length <= 1) return palette[0] ?? { r: 0, g: 0, b: 0 };
   const pos = (tick * palette.length) % palette.length;
-  return lerpRGBMusic(palette[Math.floor(pos) % palette.length], palette[(Math.floor(pos) + 1) % palette.length], pos - Math.floor(pos));
+  return lerpRGB(palette[Math.floor(pos) % palette.length], palette[(Math.floor(pos) + 1) % palette.length], pos - Math.floor(pos));
 }
 
 
@@ -73,7 +63,7 @@ export function getMusicVisualizerFrame(
   switch (musicPatternId) {
     case 1: { // Soft — whole strip breathe, depth = magnitude
       const breathe = 0.2 + mag * 0.8;
-      const color = lerpRGBMusic(black, base, breathe);
+      const color = lerpRGB(black, base, breathe);
       for (let i = 0; i < n; i++) { pixels[i] = { ...color }; opacities[i] = breathe; }
       break;
     }
