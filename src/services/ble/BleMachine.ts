@@ -9,6 +9,9 @@ import { disconnectService } from './DisconnectService';
 import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 
+/** R-16: named delay for the RESTORING → CONNECTING settle window (replaces inline 1000ms literal). */
+const BLE_RESTORING_TIMEOUT_MS = 1000;
+
 export const bleMachine = setup({
   types: {
     context: {} as BleMachineContext,
@@ -149,7 +152,7 @@ export const bleMachine = setup({
     },
     RESTORING: {
       after: {
-        1000: {
+        [BLE_RESTORING_TIMEOUT_MS]: {
           target: 'CONNECTING',
           actions: [{ type: 'logTransition', params: { from: 'RESTORING', to: 'CONNECTING', reason: 'restore_delay_elapsed' } }]
         }

@@ -207,7 +207,8 @@ export const connectService = fromPromise<
             await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => {
               AppLogger.warn('[BLE] cancelDeviceConnection failed during transient retry', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
             });
-            await new Promise(resolve => setTimeout(resolve, delay));
+            // R-01: route the retry backoff through the BLE write queue instead of a raw timer.
+            await enqueueDelay('critical', delay);
           } else {
             bleManager.cancelDeviceConnection(mac).catch(() => {});
             break;
@@ -243,7 +244,8 @@ export const connectService = fromPromise<
               if (negotiatedMtu > 23) break;
               AppLogger.warn(`[BLE] MTU glitch (23) for ${scrubPII(conn.id)}. Retrying...`, { payload_size: 0, ssi: 0 });
               const backoffMs = BLE_TIMING.MTU_RETRY_SETTLE_MS * Math.pow(2, mtuAttempt - 1);
-              await new Promise(res => setTimeout(res, jitteredDelay(backoffMs, 50)));
+              // R-01: route the MTU retry backoff through the BLE write queue.
+              await enqueueDelay('critical', jitteredDelay(backoffMs, 50));
             } catch (mtuErr: unknown) {
               const msg = mtuErr instanceof Error ? mtuErr.message : String(mtuErr);
               AppLogger.warn('[ConnectService] MTU negotiation attempt failed', {
@@ -254,7 +256,8 @@ export const connectService = fromPromise<
                 ssi: 0,
               });
               const backoffMs = BLE_TIMING.MTU_RETRY_SETTLE_MS * Math.pow(2, mtuAttempt - 1);
-              await new Promise(res => setTimeout(res, jitteredDelay(backoffMs, 50)));
+              // R-01: route the MTU retry backoff through the BLE write queue.
+              await enqueueDelay('critical', jitteredDelay(backoffMs, 50));
             }
           }
           mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);

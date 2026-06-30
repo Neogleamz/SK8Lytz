@@ -7,7 +7,7 @@ import type { BleMachineEvent } from './BleMachine.types';
 import { AppLogger } from '../appLogger';
 import { scrubPII } from '../../utils/piiScrubber';
 import { createGattSession } from '../BleSessionFactory';
-import { enqueueWrite, clearWriteQueue } from '../BleWriteQueue';
+import { enqueueWrite, clearWriteQueue, enqueueDelay } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 /** Total recovery budget: Phase 1 (12) + Phase 2 (5) = 17 */
@@ -75,7 +75,8 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
         const backoff = attempts <= BLE_TIMING.RECOVERY_PHASE_1_MAX_ATTEMPTS
           ? getRecoveryBackoffMs(attempts)
           : BLE_TIMING.RECOVERY_PHASE_2_BACKOFF_MS + Math.random() * BLE_TIMING.RECOVERY_BASE_MS;
-        await new Promise(r => setTimeout(r, backoff));
+        // R-01: route the reconnect backoff through the BLE write queue.
+        await enqueueDelay('critical', backoff);
 
         if (cancelled) break;
         attempts++;
