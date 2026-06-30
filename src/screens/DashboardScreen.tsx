@@ -238,6 +238,10 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   // Stable ref to retriggerAutoConnect — bridges the forward-reference since
   // useDashboardAutoConnect is declared after useDashboardGroups (hook order constraint).
   const retriggerAutoConnectRef = React.useRef<() => void>(() => {});
+  // Re-entrancy guard for the async checkNewDevice effect (Wave 9 REENTRANCY).
+  // Prevents overlapping checkDeviceClaimed() calls when pendingRegistrations/
+  // viewState churn during BLE state transitions.
+  const isCheckingNewDeviceRef = React.useRef(false);
 
 
 
@@ -456,18 +460,24 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     let isMounted = true;
     // Only check if we are in dashboard mode and a new untracked device appears
     const checkNewDevice = async () => {
+      if (isCheckingNewDeviceRef.current) return; // re-entrancy guard
       const first = pendingRegistrations[0];
       if (!first) return;
-      const status = await checkDeviceClaimed(first.device_mac, {
-        firmwareVer: first.firmware_ver,
-        productId:   first.product_id,
-      });
-      if (!isMounted) return;
-      // Allow registration for both unclaimed devices AND when we can't verify
-      // claim status due to being offline (BUG: offline_unknown was blocking post-FTUE device adds)
-      if (status === 'unclaimed' || status === 'offline_unknown') {
-        // Wait, pendingNewDevice was used for the "New Device Found" modal. Let's just log it.
-        AppLogger.log('BLE_STATE_CHANGE', { event: 'new_unclaimed_device_found', deviceId: scrubPII(first.device_mac) });
+      isCheckingNewDeviceRef.current = true;
+      try {
+        const status = await checkDeviceClaimed(first.device_mac, {
+          firmwareVer: first.firmware_ver,
+          productId:   first.product_id,
+        });
+        if (!isMounted) return;
+        // Allow registration for both unclaimed devices AND when we can't verify
+        // claim status due to being offline (BUG: offline_unknown was blocking post-FTUE device adds)
+        if (status === 'unclaimed' || status === 'offline_unknown') {
+          // Wait, pendingNewDevice was used for the "New Device Found" modal. Let's just log it.
+          AppLogger.log('BLE_STATE_CHANGE', { event: 'new_unclaimed_device_found', deviceId: scrubPII(first.device_mac) });
+        }
+      } finally {
+        isCheckingNewDeviceRef.current = false;
       }
     };
     

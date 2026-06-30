@@ -185,6 +185,10 @@ export function useVisualizerLeds(options: VisualizerLedsOptions) {
       hoistedMusicFrame = getMusicVisualizerFrame(patternId || 1, numLeds, animTick, audioMagnitude, color);
     }
 
+    // PERF: outer×inner looks O(n²) but `lastSampleIdx` resumes monotonically and
+    // pathSamples[].length is non-decreasing, so the inner scan sweeps pathSamples
+    // at most once total across all LEDs → aggregate O(renderLeds + numSamples).
+    // n ≤ 86 LEDs, numSamples = 5001. Acceptable; no Map precompute needed (Wave 9 REENTRANCY).
     for (let i = 0; i < renderLeds; i++) {
       let left = 0;
       let top = 0;
@@ -192,17 +196,16 @@ export function useVisualizerLeds(options: VisualizerLedsOptions) {
       const offset = outerDiam / 2;
 
       const targetLength = (i / renderLeds) * totalLength;
-      let p1 = pathSamples[lastSampleIdx];
-      let p2 = pathSamples[lastSampleIdx + 1] || p1;
 
-      for (let j = lastSampleIdx; j < pathSamples.length - 1; j++) {
-        if (pathSamples[j + 1].length >= targetLength) {
-          p1 = pathSamples[j];
-          p2 = pathSamples[j + 1];
-          lastSampleIdx = j;
-          break;
-        }
+      // Advance the resume pointer forward only; pathSamples[].length is monotonic.
+      while (
+        lastSampleIdx < pathSamples.length - 2 &&
+        pathSamples[lastSampleIdx + 1].length < targetLength
+      ) {
+        lastSampleIdx++;
       }
+      const p1 = pathSamples[lastSampleIdx];
+      const p2 = pathSamples[lastSampleIdx + 1] || p1;
 
       const segmentLength = p2.length - p1.length;
       const t = segmentLength <= 0.0001 ? 0 : (targetLength - p1.length) / segmentLength;
