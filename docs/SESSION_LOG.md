@@ -1,3 +1,17 @@
+### [MERGE] sweep/devops-secrets @ 60f2f33c — 2026-06-30
+
+Wave 1 security hardening. Removed hardcoded live Supabase JWT and plaintext password from `tools/createTestUser.js` (replaced with `process.env` reads). Fixed double `run()` execution in `tools/apply_migration.js:31`. Replaced 3 hardcoded `C:\Neogleamz\...` absolute paths in `ast_r11_scanner.js:5`, `ast_r14_scanner.js:5`, `find-r26.js:100` with `path.resolve(__dirname, '../src')`. Created `.env.local` placeholder.
+**Out-of-scope finding (follow-on task):** `ast_r11_scanner.js` has additional absolute paths at lines 183, 233, 275, 276 (output artifact destinations), `ast_r14_scanner.js` lines 80, 97, and `patch-supabase-types.js` also hardcoded. Not in plan scope.
+**User action required:** Rotate the Supabase anon key in the dashboard → update `.env.local`.
+
+---
+
+### [MERGE] sweep/pii-offline-first @ 5be04584 — 2026-06-30
+
+Wave 1 PII hardening. Patched `AppLoggerService.ts` `exportJSON()` to pipe `this.activeDevices` through `formatPayload` before JSON serialization — raw MACs were emitted unredacted in diagnostic bundles. Fixed `AppLoggerCloud.pushFastLaneError` payload type `Record<string,any>` → `Record<string,unknown>` with typeof-narrowed extractors. Boy Scout: `formatPayload` signature, `pendingLogQueue`, `getHostDeviceInfo` return type — all `any` → `unknown`. Pre-existing work confirmed in place: PII_KEY_PATTERNS expansion, array recursion in `obfuscate`, LocationService label omission, AndroidManifest build-time var.
+
+---
+
 ### [EVENT] 2026-06-26 — Session close: audit → intake → goal ×2 → ship v3.10.3 → wind-down
 
 **What shipped:**

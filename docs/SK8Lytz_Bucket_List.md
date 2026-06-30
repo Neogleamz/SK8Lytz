@@ -39,7 +39,8 @@
 > AST output: `total_collisions: 4` (all vs `chore/teardown-dead-code-sweep`), `total_waves: 2`. Wave 1: 4 worktrees (DockedController pair unified). Wave 2: 1 solo.
 > ✅ **Wave 1 MERGED** 2026-06-26 — master `1ad6db84`, full verify ✅ + madge 0 cycles. autoconnect `f576c431` · flatlist `9a6cabb2` · docked-pair `edefc352` (modal ✅ / handle ⚠️ partial — loadFavorite deferred → new TRIAGE) · break-circular-deps `1ad6db84`.
 > ✅ **Wave 2 MERGED** 2026-06-26 — chore/teardown-dead-code-sweep @ `ade1a45e`. 10/11 items done (1 N/A — TODO already gone post-Wave-1). 2 `_appLogger:any` eliminated, dead createDashboardStyles shim removed, dead getGroupCount removed. Full verify ✅.
-> Currently executing: none
+> Currently executing: sweep/type-safety (Wave 1 — [BATCH:deepdive-audit-2026-06-30])
+> Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅
 
 ---
 
@@ -218,16 +219,6 @@
 
 ---
 
-- [ ] **`sweep/devops-secrets`** ⚠️ EXECUTE FIRST — CREDENTIALS LIVE IN SOURCE
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DEVOPS]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:1]`
-  - **Goal:** Remove hardcoded live Supabase JWT + plaintext password from `tools/createTestUser.js`, fix double-execution in `apply_migration.js`, replace 3 absolute machine paths.
-  - **Decision Log:** 2026-06-30 audit found live credentials committed — `tools/createTestUser.js:4` (Supabase anon JWT `eyJ…`) + `:12` (plaintext `Password!2026`). Assume live until confirmed otherwise. MUST execute before any `git push`.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-DEVOPS_SECRETS · Plan: [PLAN-devops-secrets.md](./plans/PLAN-devops-secrets.md)
-    Key finding: "Hardcoded live JWT at `tools/createTestUser.js:4` + double-run() at `tools/apply_migration.js:31` + 3 absolute paths."
-    Rejected alternative: "Defer until next push — REJECTED. Credential sits in git history every day it is live."
-  - **Source of Truth:** 📖 [tools/createTestUser.js](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/createTestUser.js#L4)
-  - **Details:** Requires credential rotation in Supabase dashboard BEFORE the code change. `.env.local` placeholder must be created. Git history grep must confirm no prior JWT commits (out-of-scope BFG if found).
-
 - [ ] **`sweep/type-safety`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:1]`
   - **Goal:** Eliminate all `any` casts and `as unknown as` type laundering across hooks, dashboard components, and crew screens (118 findings across 3 plan files).
@@ -237,16 +228,6 @@
     Rejected alternative: "Suppress with `@ts-ignore` — REJECTED per No-any Law (S3, hard stop)."
   - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-TYPE_SAFETY
   - **Details:** 3 unified plans — sweep (protocol/BLE hooks), ui-layer (dashboard + crew screens), data-layer (supabase types + services). Parallel-safe with `sweep/pii-offline-first` (no shared files).
-
-- [ ] **`sweep/pii-offline-first`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:1]`
-  - **Goal:** Harden the AppLogger PII scrubber (exportJSON bypasses its own scrubber) and patch the offline-first cache gaps where Supabase calls skip AsyncStorage.
-  - **Decision Log:** 2026-06-30 audit flagged `AppLogger.exportJSON()` bypassing its own PII scrubber — raw emails/MACs exported to disk in diagnostic bundles. Critical GDPR/user-trust gap.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-PII · Plans: [PLAN-pii-scrubber-hardening.md](./plans/PLAN-pii-scrubber-hardening.md) · [PLAN-pii-logger-scrubber.md](./plans/PLAN-pii-logger-scrubber.md)
-    Key finding: "`AppLogger.exportJSON()` at `src/services/AppLogger.ts` bypasses `scrubPII()` — raw telemetry fields reach the export bundle unmasked."
-    Rejected alternative: "Remove exportJSON entirely — REJECTED, debug utility needed. Fix: pipe through scrubber."
-  - **Source of Truth:** 📖 [src/services/AppLogger.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts)
-  - **Details:** Two plans unified — scrubber hardening (AppLogger internals) + logger scrubber (call-site audit). Parallel-safe with `sweep/type-safety` (no shared files).
 
 - [ ] **`sweep/split-brain-dedup`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:2]`
