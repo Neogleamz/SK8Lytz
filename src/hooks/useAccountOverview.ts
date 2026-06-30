@@ -185,7 +185,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       Alert.alert('Saved', 'Profile updated successfully.');
       setStatus('success');
     } catch (e: unknown) {
-      AppLogger.error('[AccountOverview] handleSaveProfile failed', e, { payload_size: 0, ssi: 0 });
+      AppLogger.error('[AccountOverview] handleSaveProfile failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       Alert.alert('Error', (e instanceof Error ? e.message : String(e)) || 'Could not save profile');
       setStatus('error');
     } finally {
@@ -232,7 +232,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path, payload_size: 0, ssi: 0 });
       onProfileUpdated?.();
     } catch (e: unknown) {
-      AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', e, { payload_size: 0, ssi: 0 });
+      AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       Alert.alert('Upload failed', (e instanceof Error ? e.message : String(e)) ?? 'Could not upload photo. Try again.');
     } finally {
       isPickingPhotoRef.current = false;
@@ -336,7 +336,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setCrews(prev => prev.filter(c => c.id !== crewId));
       AppLogger.log('CREW_PERMANENT_LEFT', { crewId, payload_size: 0, ssi: 0 });
     } catch (e: unknown) { 
-      AppLogger.error('[AccountOverview] handleLeaveCrew failed', e, { crewId, payload_size: 0, ssi: 0 });
+      AppLogger.error('[AccountOverview] handleLeaveCrew failed', e instanceof Error ? e.message : String(e), { crewId, payload_size: 0, ssi: 0 });
       Alert.alert('Error', (e instanceof Error ? e.message : String(e))); 
     } finally {
       isCrewProcessingRef.current = false;
