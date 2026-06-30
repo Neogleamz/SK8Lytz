@@ -170,3 +170,9 @@ tools/observatory/raw/
 harvested_screenshot.png
 tools/sentinel/sweeper_screencap.png
 .test-attestation.json
+
+# Obsidian vault files (IDE generated)
+.obsidian/
+docs/.obsidian/
+Untitled.canvas
+docs/Untitled.canvas
