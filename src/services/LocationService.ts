@@ -9,6 +9,7 @@
  *     ("SkateCity OP", "Riverside Skatepark", "8th & Main St")
  */
 
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { AppLogger } from './appLogger';
 import { supabase } from './supabaseClient';
@@ -28,7 +29,7 @@ class LocationService {
    * should handle gracefully (session proceeds without location).
    */
   async getSessionLocation(): Promise<SessionLocation | null> {
-    if (require('react-native').Platform.OS === 'web') {
+    if (Platform.OS === 'web') {
       return { label: 'Web Demo Area', coords: { lat: 38.9, lng: -94.6 } };
     }
     try {
@@ -86,7 +87,7 @@ class LocationService {
       if (status !== 'granted') return null;
 
       // Use last known position for zero battery impact ambient scanning
-      if (require('react-native').Platform.OS === 'web') return null;
+      if (Platform.OS === 'web') return null;
       const pos = await Location.getLastKnownPositionAsync();
       if (pos) {
         return { lat: pos.coords.latitude, lng: pos.coords.longitude };
