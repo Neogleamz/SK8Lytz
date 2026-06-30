@@ -4297,4 +4297,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Parallel with Wave 1 — REJECTED, import-tree overlaps confirmed by AST collision tool."
   - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-DUPLICATION
   - **Details:** Wave 2 — solo. Waits for Wave 1 type-safety + devops merges before executing.
+
+
+- [x] **`sweep/pii-telemetry`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:3]`
+  - **Goal:** Hunt and remove PII leakage in telemetry payloads — 31 findings (7H/8M/16L) where emails/MACs/names reach AppLogger without scrubbing.
+  - **Decision Log:** 2026-06-30 audit found PII telemetry leaks distinct from the AppLogger exportJSON gap (Wave 1 fix) — call-site audit of all `AppLogger.*` invocations passing device IDs, user emails, or display names.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-PII_TELEMETRY · Plan: [PLAN-pii-scrub-sweep.md](./plans/PLAN-pii-scrub-sweep.md)
+    Key finding: "7 HIGH findings where MAC addresses or user emails logged directly without `scrubPII()` wrapper at call sites."
+    Rejected alternative: "Disable telemetry entirely — REJECTED, needed for diagnostics."
+  - **Source of Truth:** 📖 [src/services/AppLogger.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts)
+  - **Details:** Wave 3, parallel-safe with `sweep/animation-render-perf` and `sweep/ble-stability`.
 
