@@ -47,7 +47,8 @@
 > ✅ **Wave 5 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `4c0aa302` (pre-existing)
 > ✅ **Wave 6 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `ae192040` (3 catch blocks fixed in useAccountOverview.ts)
 > ✅ **Wave 7 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 2/2 merged (platform-guards @ `76cb2aa6` · async-storage-keys @ `ef458f73`)
-> Currently executing: sweep/state-matrix (Wave 8 — [BATCH:deepdive-audit-2026-06-30])
+> ✅ **Wave 8 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `68f2626b` (all R-14/R-16/R-24 targets pre-existing)
+> Currently executing: sweep/reentrancy-guards (Wave 9 — FINAL — [BATCH:deepdive-audit-2026-06-30])
 
 ---
 
@@ -225,16 +226,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/state-matrix`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:8]`
-  - **Goal:** Implement missing Loading/Error/Empty UI states in data-driven components — 20 findings (2H/9M/9L) across dashboard and crew screens.
-  - **Decision Log:** 2026-06-30 audit found 20 state-matrix violations — components rendering Success state only, with no Loading/Error/Empty branches. Users see blank screens or stale data on network failures.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-STATE_MATRIX · Plans: [PLAN-state-matrix-error-ui.md](./plans/PLAN-state-matrix-error-ui.md) · [PLAN-state-matrix-sweep.md](./plans/PLAN-state-matrix-sweep.md)
-    Key finding: "2 HIGH — crew and device list show blank on error with no feedback. 9 MEDIUM — loading skeletons missing across data views."
-    Rejected alternative: "Global skeleton provider — REJECTED (P4), per-component state machines are idiomatic."
-  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-STATE_MATRIX
-  - **Details:** Wave 8, solo. Runs after async-storage + platform-guards to avoid conflict with DashboardHeader changes from Wave 7.
 
 - [ ] **`sweep/reentrancy-guards`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[✅ L-RISK]` `[🍪 Snack]` `[LOW]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:9]`

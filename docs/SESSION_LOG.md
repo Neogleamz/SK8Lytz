@@ -1,3 +1,12 @@
+### [MERGE READY] sweep/reentrancy-guards — 262a5e59
+
+Files touched: src/screens/DashboardScreen.tsx, src/components/visualizer/VisualizerHooks.ts
+TSC: ✅  Jest: ✅
+Changes: isCheckingNewDeviceRef re-entrancy guard on checkNewDevice effect; for/break → while in useVisualizerLeds O(n+m) scan
+Verify-only: HeartbeatService.ts (already guarded ✅), SymphonyEngine.ts (no interval ✅)
+
+---
+
 ### [MERGE READY] sweep/state-matrix — ef458f73
 
 Files touched: none (all findings were NO-OPs — prior waves already resolved all targets)
