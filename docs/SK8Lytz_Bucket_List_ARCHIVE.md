@@ -4396,4 +4396,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Global skeleton provider — REJECTED (P4), per-component state machines are idiomatic."
   - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-STATE_MATRIX
   - **Details:** Wave 8, solo. Runs after async-storage + platform-guards to avoid conflict with DashboardHeader changes from Wave 7.
+
+
+- [x] **`sweep/reentrancy-guards`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[✅ L-RISK]` `[🍪 Snack]` `[LOW]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:9]`
+  - **Goal:** Add re-entrancy guards to 2 verified async effects — `DashboardScreen.tsx` checkNewDevice effect and `VisualizerHooks.ts` sample loop.
+  - **Decision Log:** 2026-06-30 audit listed 12 re-entrancy findings; Quinn P1-verified — 10 were phantom/stale citations (HeartbeatService already guarded, MusicModeService doesn't exist, SymphonyEngine has no setInterval). 2 real: DashboardScreen checkNewDevice async effect lacks re-entrancy flag; VisualizerHooks sample loop is O(n+m) but needs clarity refactor.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-REENTRANCY · Plan: [PLAN-reentrancy-guards.md](./plans/PLAN-reentrancy-guards.md)
+    Key finding: "`DashboardScreen.tsx:452-478` — `checkNewDevice` async effect in useEffect has `isMounted` guard but LACKS re-entrancy flag — can trigger parallel executions on rapid device connect events."
+    Rejected alternative: "useMemo Map in VisualizerHooks — REJECTED (P4), `lastSampleIdx` monotonic resume already makes it O(n+m); fix is a clarity comment."
+  - **Source of Truth:** 📖 [src/screens/DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx#L452) + [src/components/visualizer/VisualizerHooks.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/visualizer/VisualizerHooks.ts#L198)
+  - **Details:** Wave 9, solo. Final wave — lowest risk, all prior fixes merged. 10/12 audit citations were stale per P1 check.
 

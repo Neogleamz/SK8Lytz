@@ -1,9 +1,34 @@
-### [MERGE READY] sweep/reentrancy-guards — 262a5e59
+### [MERGE] sweep/reentrancy-guards → master @ a414a1c7 — 2026-06-30
 
 Files touched: src/screens/DashboardScreen.tsx, src/components/visualizer/VisualizerHooks.ts
 TSC: ✅  Jest: ✅
-Changes: isCheckingNewDeviceRef re-entrancy guard on checkNewDevice effect; for/break → while in useVisualizerLeds O(n+m) scan
+Changes: isCheckingNewDeviceRef re-entrancy guard on checkNewDevice effect; for/break → while in useVisualizerHooks O(n+m) scan
 Verify-only: HeartbeatService.ts (already guarded ✅), SymphonyEngine.ts (no interval ✅)
+
+---
+
+### [EVENT] 🏆 [BATCH:deepdive-audit-2026-06-30] GOAL COMPLETE — 2026-06-30
+
+**Batch:** [BATCH:deepdive-audit-2026-06-30]
+**Total waves:** 9 | **Total task clusters:** 14
+**Execution method:** `/goal` autonomous Wave Orchestrator
+
+| Wave | Task(s) | Result | Hash |
+|---|---|---|---|
+| 1 | devops-secrets · pii-offline-first · type-safety | ✅ merged | `662e099b` |
+| 2 | split-brain-dedup | ✅ merged | `7932f168` |
+| 3 | pii-telemetry · ble-stability · animation-render-perf | ✅ resolved | `831e35b6` |
+| 4 | onboarding-wizard-audit | ✅ verified (pre-existing) | `cd6a9c85` |
+| 5 | monolith-extraction-audit | ✅ verified (pre-existing) | `4c0aa302` |
+| 6 | error-handling-catch-blocks | ✅ merged (3 catch blocks) | `ae192040` |
+| 7 | platform-guards · async-storage-keys | ✅ merged | `76cb2aa6` · `ef458f73` |
+| 8 | state-matrix-sweep | ✅ verified (all pre-existing) | `68f2626b` |
+| 9 | reentrancy-guards | ✅ merged (re-entrancy + while loop) | `a414a1c7` |
+
+**Security:** hardcoded Supabase JWT removed from createTestUser.js (replaced with `process.env.SUPABASE_TEST_USER_JWT`) — rotated key in .env.local still required from user.
+**Master HEAD:** a414a1c7 — all gates green.
+
+Don't re-derive: Wave 4 and 8 were verification-only — all onboarding wizard + state-matrix targets were already compliant from prior sessions. Wave 3 pii-telemetry was also pre-existing. Net code changes: Waves 1, 2, 6, 7, 9.
 
 ---
 

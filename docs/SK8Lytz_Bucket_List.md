@@ -48,7 +48,9 @@
 > ✅ **Wave 6 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `ae192040` (3 catch blocks fixed in useAccountOverview.ts)
 > ✅ **Wave 7 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 2/2 merged (platform-guards @ `76cb2aa6` · async-storage-keys @ `ef458f73`)
 > ✅ **Wave 8 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `68f2626b` (all R-14/R-16/R-24 targets pre-existing)
-> Currently executing: sweep/reentrancy-guards (Wave 9 — FINAL — [BATCH:deepdive-audit-2026-06-30])
+> ✅ **Wave 9 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `a414a1c7` (re-entrancy guard on checkNewDevice + for/break→while in VisualizerHooks)
+> 🏆 **[BATCH:deepdive-audit-2026-06-30] GOAL COMPLETE** — all 9 waves, 14 task clusters resolved 2026-06-30. Master is green.
+> Currently executing: none
 
 ---
 
@@ -226,16 +228,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/reentrancy-guards`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[✅ L-RISK]` `[🍪 Snack]` `[LOW]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:9]`
-  - **Goal:** Add re-entrancy guards to 2 verified async effects — `DashboardScreen.tsx` checkNewDevice effect and `VisualizerHooks.ts` sample loop.
-  - **Decision Log:** 2026-06-30 audit listed 12 re-entrancy findings; Quinn P1-verified — 10 were phantom/stale citations (HeartbeatService already guarded, MusicModeService doesn't exist, SymphonyEngine has no setInterval). 2 real: DashboardScreen checkNewDevice async effect lacks re-entrancy flag; VisualizerHooks sample loop is O(n+m) but needs clarity refactor.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-REENTRANCY · Plan: [PLAN-reentrancy-guards.md](./plans/PLAN-reentrancy-guards.md)
-    Key finding: "`DashboardScreen.tsx:452-478` — `checkNewDevice` async effect in useEffect has `isMounted` guard but LACKS re-entrancy flag — can trigger parallel executions on rapid device connect events."
-    Rejected alternative: "useMemo Map in VisualizerHooks — REJECTED (P4), `lastSampleIdx` monotonic resume already makes it O(n+m); fix is a clarity comment."
-  - **Source of Truth:** 📖 [src/screens/DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx#L452) + [src/components/visualizer/VisualizerHooks.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/visualizer/VisualizerHooks.ts#L198)
-  - **Details:** Wave 9, solo. Final wave — lowest risk, all prior fixes merged. 10/12 audit citations were stale per P1 check.
 
 ---
 
