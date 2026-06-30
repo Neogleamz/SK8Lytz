@@ -14,6 +14,7 @@ import { AppLogger } from './appLogger';
 import { supabase } from './supabaseClient';
 import { openGlobalPermissionsModal, checkPermission } from './PermissionService';
 import { SkateSpotsService } from './SkateSpotsService';
+import type { Json } from '../types/supabase';
 
 export interface SessionLocation {
   label: string;          // "SkateCity OP, Olathe KS"
@@ -109,7 +110,8 @@ class LocationService {
       name: string;
       invite_code: string;
       location_label: string | null;
-      location_coords: { lat?: number; lng?: number } | null;
+      /** Stored as Json in Supabase — consumers narrow to { lat, lng } before use. */
+      location_coords: Json | null;
       scheduled_at: string | null;
       created_at: string;
       is_public: boolean;
@@ -121,7 +123,7 @@ class LocationService {
     const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_id, crew_members(count), crews(name, avatar_url, avatar_icon, avatar_color)';
 
     // ── Query 1: All active PUBLIC sessions (visible to everyone in radius) ──
-    let publicData: any[] | null = [];
+    let publicData: DB_CrewSession[] | null = [];
     try {
       const { data, error } = await supabase
         .from('crew_sessions')

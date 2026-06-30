@@ -71,7 +71,7 @@ export function AdminAuditLogViewer({
 
       if (error) throw error;
       
-      const fetchedLogs: AuditLogEntry[] = (data || []).map((row: any) => ({
+      const fetchedLogs: AuditLogEntry[] = (data || []).map((row) => ({
         id: String(row.id || ''),
         admin_id: String(row.admin_id || ''),
         target_user_id: row.target_user_id ? String(row.target_user_id) : null,

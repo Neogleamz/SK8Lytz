@@ -1,19 +1,23 @@
 import { supabase } from '../supabaseClient';
 import { AppLogger } from '../appLogger';
+import type { Tables } from '../../types/supabase';
 import type { RegisteredDevice } from './types';
+
+/** Supabase row shape for registered_devices — device_mac is nullable from the DB schema. */
+type CloudDeviceRow = Tables<'registered_devices'>;
 
 export class DeviceCloudSync {
   /**
    * Helper to perform the local-first smart merge logic.
    */
   static mergeCloudAndLocal(
-    cloudRows: any[],
+    cloudRows: CloudDeviceRow[],
     localDevices: RegisteredDevice[],
     tombstones: string[]
   ): RegisteredDevice[] {
     // Tombstone filter
-    const filteredCloud = cloudRows.filter((row: any) =>
-      !tombstones.includes(row.device_mac?.toUpperCase?.())
+    const filteredCloud = cloudRows.filter((row) =>
+      !tombstones.includes(row.device_mac?.toUpperCase?.() ?? '')
     );
 
     if (filteredCloud.length < cloudRows.length) {
@@ -23,7 +27,7 @@ export class DeviceCloudSync {
     }
 
     // Local-first smart merge
-    const merged: RegisteredDevice[] = filteredCloud.map((row: any) => {
+    const merged: RegisteredDevice[] = filteredCloud.map((row) => {
       const cloud = { ...row, is_pending_sync: false } as RegisteredDevice;
       const local = localDevices.find(
         (l) => l.device_mac.toUpperCase() === cloud.device_mac.toUpperCase()
@@ -77,7 +81,7 @@ export class DeviceCloudSync {
       (localD) =>
         !!localD.is_pending_sync &&
         !filteredCloud.some(
-          (cloudD: any) =>
+          (cloudD) =>
             cloudD.device_mac?.toUpperCase() === localD.device_mac.toUpperCase()
         )
     );
@@ -133,7 +137,7 @@ export class DeviceCloudSync {
   }
 
   /**
-   * Check if user has ANY registered devices.
+   * Check if user has at least one registered device.
    */
   static async hasRegistrations(localDevices: RegisteredDevice[], userId?: string): Promise<boolean> {
     if (localDevices.length > 0) return true;

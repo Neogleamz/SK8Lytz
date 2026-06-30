@@ -1,7 +1,7 @@
 ﻿import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_SCENES_CACHE, STORAGE_LOCAL_SCENES, STORAGE_LOCAL_SCENE_SYNC_QUEUE } from '../constants/storageKeys';
-import type { Database } from '../types/supabase';
+import type { Database, Json } from '../types/supabase';
 import { AppLogger } from './appLogger';
 import { scrubPII } from '../utils/piiScrubber';
 
@@ -316,8 +316,8 @@ class ScenesServiceClass {
         payload: {
           id: scene.id,
           name: scene.name,
-          // R-08: Fix double cast by serializing
-          nodes: structuredClone(scene.steps) as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          // R-08: JSON round-trip ensures plain JSON-serializable value assignable to Json column type.
+          nodes: JSON.parse(JSON.stringify(scene.steps)) as Json,
           fill_mode: 'SCENE',
           transition_type: 0,
           user_id: userId,

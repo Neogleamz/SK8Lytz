@@ -2,7 +2,7 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './appLogger';
-import type { Database } from '../types/supabase';
+import type { Database, Json } from '../types/supabase';
 import { BuilderNode, CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
 import { scrubPII } from '../utils/piiScrubber';
 
@@ -123,8 +123,8 @@ class GradientsServiceClass {
         const payload: Database['public']['Tables']['user_saved_presets']['Insert'] = {
           id: newPreset.id,
           name: newPreset.name,
-          // R-08: Fix double cast by serializing
-          nodes: structuredClone(newPreset.nodes) as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          // R-08: JSON round-trip ensures plain JSON-serializable value assignable to Json column type.
+          nodes: JSON.parse(JSON.stringify(newPreset.nodes)) as Json,
           fill_mode: newPreset.fill_mode || 'GRADIENT',
           transition_type: newPreset.transition_type || 0x01,
           user_id: userId,

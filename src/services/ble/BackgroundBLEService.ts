@@ -2,9 +2,7 @@ import BackgroundService from 'react-native-background-actions';
 import { Platform } from 'react-native';
 import { AppLogger } from '../appLogger';
 
-const sleep = (time: number) => new Promise<void>((resolve) => setTimeout(() => resolve(), time));
-
-const backgroundTask = async (taskDataArguments: any) => {
+const backgroundTask = async (_taskData?: { delay: number }) => {
     // Keep the service alive indefinitely
     await new Promise(() => {});
 };
