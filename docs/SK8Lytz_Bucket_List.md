@@ -40,8 +40,9 @@
 > ✅ **Wave 1 MERGED** 2026-06-26 — master `1ad6db84`, full verify ✅ + madge 0 cycles. autoconnect `f576c431` · flatlist `9a6cabb2` · docked-pair `edefc352` (modal ✅ / handle ⚠️ partial — loadFavorite deferred → new TRIAGE) · break-circular-deps `1ad6db84`.
 > ✅ **Wave 2 MERGED** 2026-06-26 — chore/teardown-dead-code-sweep @ `ade1a45e`. 10/11 items done (1 N/A — TODO already gone post-Wave-1). 2 `_appLogger:any` eliminated, dead createDashboardStyles shim removed, dead getGroupCount removed. Full verify ✅.
 > ✅ **Wave 1 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 3/3 tasks merged @ `662e099b`
-> Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅ · sweep/type-safety @ `662e099b` ✅
-> Currently executing: sweep/split-brain-dedup (Wave 2 — [BATCH:deepdive-audit-2026-06-30])
+> ✅ **Wave 2 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 task merged @ `7932f168`
+> Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅ · sweep/type-safety @ `662e099b` ✅ · sweep/split-brain-dedup @ `7932f168` ✅
+> Currently executing: Wave 3 (3-parallel) — sweep/animation-render-perf · sweep/ble-stability · sweep/pii-telemetry
 
 ---
 
@@ -219,16 +220,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/split-brain-dedup`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:2]`
-  - **Goal:** Eliminate duplicate business logic and split-brain state patterns — 41 findings (10H/15M/16L) where the same function, hook, or data-write exists in multiple places.
-  - **Decision Log:** 2026-06-30 audit structural sniper found duplicate hooks, services, and redundant API calls causing write-consistency bugs and UX divergence.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-DUPLICATION · Plan: [PLAN-split-brain-dedup.md](./plans/PLAN-split-brain-dedup.md)
-    Key finding: "41 split-brain findings — duplicate functions/hooks/state-vars and redundant API calls. Wave 1 type-safety work may touch shared files — Wave 2 sequencing required."
-    Rejected alternative: "Parallel with Wave 1 — REJECTED, import-tree overlaps confirmed by AST collision tool."
-  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-DUPLICATION
-  - **Details:** Wave 2 — solo. Waits for Wave 1 type-safety + devops merges before executing.
 
 - [ ] **`sweep/animation-render-perf`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:3]`

@@ -1,3 +1,9 @@
+### [MERGE] sweep/split-brain-dedup @ 7932f168 — 2026-06-30
+
+Wave 2 deduplication sweep. Eliminated 4 split-brain patterns: (1) `getHardwareConfigKey` now normalises to `.toUpperCase()` internally — `InterrogatorService` private `HW_CACHE_KEY` deleted; (2) `lerpRGBMusic` deleted from `SymphonyEngine`, replaced with `lerpRGB` from `shared/spatialMath`; (3) duplicate `hexToRgb` removed from `SymphonyEngine` and `PositionalMathBuffer`, all callers import from `shared/engineUtils`; (4) dual-writer `AsyncStorage.setItem` race in `QuickPresetModal` consolidated into single `persistPresets` helper. TSC ✅ Jest ✅ verify all 7 gates ✅.
+
+---
+
 ### [MERGE] sweep/type-safety @ 662e099b — 2026-06-30
 
 Files touched: `src/components/admin/tools/AdminAuditLogViewer.tsx`, `src/services/GradientsService.ts`, `src/services/LocationService.ts`, `src/services/ScenesService.ts`, `src/services/ble/BackgroundBLEService.ts`, `src/services/deviceRepository/DeviceCloudSync.ts`, `src/types/sk8lytz-watch-bridge.d.ts`
