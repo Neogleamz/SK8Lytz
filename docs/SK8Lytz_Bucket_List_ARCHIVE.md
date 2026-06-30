@@ -4275,4 +4275,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Remove exportJSON entirely — REJECTED, debug utility needed. Fix: pipe through scrubber."
   - **Source of Truth:** 📖 [src/services/AppLogger.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts)
   - **Details:** Two plans unified — scrubber hardening (AppLogger internals) + logger scrubber (call-site audit). Parallel-safe with `sweep/type-safety` (no shared files).
+
+
+- [x] **`sweep/type-safety`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[HIGH]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:1]`
+  - **Goal:** Eliminate all `any` casts and `as unknown as` type laundering across hooks, dashboard components, and crew screens (118 findings across 3 plan files).
+  - **Decision Log:** 2026-06-30 audit surfaced 48 `any` casts and `as unknown as` patterns across 36 files — compiler cannot catch data contract violations where these exist.
+  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-TYPE_SAFETY · Plans: [PLAN-type-safety-sweep.md](./plans/PLAN-type-safety-sweep.md) · [PLAN-type-safety-ui-layer.md](./plans/PLAN-type-safety-ui-layer.md) · [PLAN-type-safety-data-layer.md](./plans/PLAN-type-safety-data-layer.md)
+    Key finding: "27H/63M/28L findings — concentrated in hooks + dashboard + crew. Protocol hooks carry highest crash risk."
+    Rejected alternative: "Suppress with `@ts-ignore` — REJECTED per No-any Law (S3, hard stop)."
+  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-TYPE_SAFETY
+  - **Details:** 3 unified plans — sweep (protocol/BLE hooks), ui-layer (dashboard + crew screens), data-layer (supabase types + services). Parallel-safe with `sweep/pii-offline-first` (no shared files).
 
