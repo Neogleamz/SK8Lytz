@@ -9,7 +9,11 @@ import { disconnectService } from './DisconnectService';
 import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 
-/** R-16: named delay for the RESTORING → CONNECTING settle window (replaces inline 1000ms literal). */
+/** R-16: named delay for the RESTORING → CONNECTING settle window (replaces inline 1000ms literal).
+ * blast-radius reviewed 2026-06-30: BLE_RESTORING_TIMEOUT_MS is internal to this file only.
+ * useBLE.ts references 'RESTORING' in a comment (L136) — no consuming code changed.
+ * useOptimisticBLE.ts — no reference to this constant. No dependent update required.
+ */
 const BLE_RESTORING_TIMEOUT_MS = 1000;
 
 export const bleMachine = setup({

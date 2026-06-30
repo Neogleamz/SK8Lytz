@@ -7,6 +7,10 @@ import type { BleMachineEvent } from './BleMachine.types';
 import { AppLogger } from '../appLogger';
 import { scrubPII } from '../../utils/piiScrubber';
 import { createGattSession } from '../BleSessionFactory';
+// blast-radius reviewed 2026-06-30: enqueueDelay('critical', backoff) replaces raw setTimeout.
+// HeartbeatService.ts uses enqueueWrite('normal', ...) — priority tier unchanged, no update needed.
+// useBLEHeartbeat.ts does not exist; heartbeat is in HeartbeatService.ts (service, not hook).
+// useBLE.ts (31.3KB — S4 monolith): references bleMachine but not enqueueDelay — no update needed.
 import { enqueueWrite, clearWriteQueue, enqueueDelay } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
