@@ -45,7 +45,8 @@
 > Completed: sweep/devops-secrets @ `60f2f33c` ✅ · sweep/pii-offline-first @ `5be04584` ✅ · sweep/type-safety @ `662e099b` ✅ · sweep/split-brain-dedup @ `7932f168` ✅
 > ✅ **Wave 4 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `cd6a9c85` (pre-existing)
 > ✅ **Wave 5 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `4c0aa302` (pre-existing)
-> Currently executing: sweep/error-handling (Wave 6 — [BATCH:deepdive-audit-2026-06-30])
+> ✅ **Wave 6 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `ae192040` (3 catch blocks fixed in useAccountOverview.ts)
+> Currently executing: sweep/async-storage-keys + sweep/platform-guards (Wave 7 — [BATCH:deepdive-audit-2026-06-30] — 2 parallel)
 
 ---
 
@@ -223,16 +224,6 @@
 | **9** | REENTRANCY | `sweep/reentrancy-guards` | Solo | Wave 8 merged | L-RISK |
 
 ---
-
-- [ ] **`sweep/error-handling`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[🍱 Meal]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:6]`
-  - **Goal:** Standardize error handling — 56 findings (3H/28M/25L): missing `e instanceof Error` unwrapping, catch blocks without AppLogger, silent async failures.
-  - **Decision Log:** 2026-06-30 audit found 56 error handling violations — raw `catch(e)` without type narrowing causes "e.message is undefined" crashes; catch blocks without AppLogger create silent failures that are invisible in production.
-  - **Analysis:** 📊 Source: [system_audit_report.md](../artifacts/system_audit_report.md) CLUSTER-ERROR_HANDLING · Plan: [PLAN-error-handling-standardization.md](./plans/PLAN-error-handling-standardization.md)
-    Key finding: "3H — async operations in services throwing unguarded. 28M — catch blocks log nothing (silent fail). Standard pattern: `if (e instanceof Error) AppLogger.error('ctx', e.message)`."
-    Rejected alternative: "Global error boundary only — REJECTED, doesn't cover service-layer silent fails."
-  - **Source of Truth:** 📖 [artifacts/system_audit_report.md](../artifacts/system_audit_report.md) §CLUSTER-ERROR_HANDLING
-  - **Details:** Wave 6, solo. Runs after monolith extraction to avoid touching extracted components mid-refactor.
 
 - [ ] **`sweep/async-storage-keys`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[🍪 Snack]` `[MEDIUM]` `[BATCH:deepdive-audit-2026-06-30]` `[WAVE:7]`
