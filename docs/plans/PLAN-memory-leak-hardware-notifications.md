@@ -41,3 +41,10 @@ return () => {
 - TSC no-emit passes
 - Manual: Navigate away from and back to Dashboard 5× in dev mode. Metro `logcat` must NOT show "Cannot update state of an unmounted component" warnings
 - `npm run verify`
+
+## VERIFIED: pre-existing — sweep/memory-lifecycle 2026-06-30
+
+Both cleanup returns (`setOnDataReceived(() => {})` and `setOnHardwareProbed(() => {})`) were already
+present in `src/hooks/useHardwareNotifications.ts` (lines 208–210, 241–243) as of commit `c795df69`
+(`fix: complete memory-leak-sweep`, 2026-06-10). No code change required. Verification run confirmed
+TSC + Jest gates pass at HEAD `8421109b`.
