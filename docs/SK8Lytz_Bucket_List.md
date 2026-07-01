@@ -51,6 +51,7 @@
 > ✅ **Wave 9 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `a414a1c7` (re-entrancy guard on checkNewDevice + for/break→while in VisualizerHooks)
 > 🏆 **[BATCH:deepdive-audit-2026-06-30] GOAL COMPLETE** — all 9 waves, 14 task clusters resolved 2026-06-30. Master is green.
 > Currently executing: none
+> Completed: fix/ble-scan-filter-regression @ 21009456 ✅ (BLE scan un-filtered — hardware setup finds devices again)
 > Completed: chore/quick-preset-dead-writer-cleanup @ 19911657 ✅
 > Completed: fix/device-cloud-sync-null-mac-guard @ 6dcdda8a ✅
 

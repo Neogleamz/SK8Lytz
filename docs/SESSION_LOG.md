@@ -1,3 +1,12 @@
+### [MERGE] fix/ble-scan-filter-regression — `21009456` — 2026-07-01
+
+Files touched: `src/services/ble/BleMachine.ts`, `docs/SK8Lytz_App_Master_Reference.md`, `docs/KNOWN_ISSUES.md` (VS-013), `docs/plans/PLAN-feat-ble-scan-filter-uuid.md`, `docs/SESSION_LOG.md`
+TSC: ✅  Jest: ✅  Attestation: ✅ (verified fresh + matching commit at gatekeeper)
+Blast-radius: bypassed via `-IgnoreBlast` after confirming `useOptimisticBLE.ts` has zero scan-filter coupling and no state transitions changed.
+Impact: Fresh-install hardware setup can discover controllers again (was: spins forever, zero devices). ⚠️ Not yet confirmed on physical hardware — recommend on-device smoke test.
+
+---
+
 ### [DECISION] 2026-07-01 — Bug Fix: Hardware setup finds no devices ("searching forever")
 
 **Decision:** Reverted `BleMachine.ts` SCANNING-entry and SCAN_RESUME from a hardcoded OS-level scan filter `startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], …)` back to `startDeviceScan(context.scanServiceUUIDs, …)` (resolves to `null` = unfiltered). Removed the two now-dead UUID imports. Updated Master Reference §Platform Guards + state diagram, added KNOWN_ISSUES VS-013, annotated `PLAN-feat-ble-scan-filter-uuid.md` as HARMFUL.
