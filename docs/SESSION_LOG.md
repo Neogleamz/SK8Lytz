@@ -1,3 +1,10 @@
+### [MERGE READY] chore/quick-preset-dead-writer-cleanup — a191d6c3
+
+Files touched: src/hooks/useFavorites.ts
+TSC: ✅  Jest: ✅
+
+---
+
 ### [MERGE] fix/device-cloud-sync-null-mac-guard → master @ 6dcdda8a — 2026-07-01
 
 **Persona:** 🚀 Taylor (gatekeeper) → 📋 Casey (post-merge)

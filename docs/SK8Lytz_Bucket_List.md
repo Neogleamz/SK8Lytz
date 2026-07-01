@@ -50,7 +50,7 @@
 > ✅ **Wave 8 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `68f2626b` (all R-14/R-16/R-24 targets pre-existing)
 > ✅ **Wave 9 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `a414a1c7` (re-entrancy guard on checkNewDevice + for/break→while in VisualizerHooks)
 > 🏆 **[BATCH:deepdive-audit-2026-06-30] GOAL COMPLETE** — all 9 waves, 14 task clusters resolved 2026-06-30. Master is green.
-> Currently executing: none
+> Currently executing: chore/quick-preset-dead-writer-cleanup
 > Completed: fix/device-cloud-sync-null-mac-guard @ 6dcdda8a ✅
 
 ---
@@ -77,7 +77,7 @@
   - **Decision Log:** Logged by /health-sweep during /ship-it Phase 1. High security risk preventing release.
   - **Details:** 5 major flags including ERRORs on telemetry views and disabled RLS on spatial_ref_sys.
 
-- [ ] **`chore/quick-preset-dead-writer-cleanup`**
+- [/] **`chore/quick-preset-dead-writer-cleanup`**
   - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[UI]` `[LOW-RISK]` `[🍪 Snack]` `[🤖 FLASH]` `[LOW]` `[BATCH:none]` `[WAVE:1]`
   - **Goal:** Remove the *latent* dual-writer for `@Sk8lytz_QuickPresets` by deleting the dead `useFavorites.saveQuickPreset` storage writer, leaving `QuickPresetModal.persistPresets` (L81) as the single, documented writer.
   - **Decision Log:** 🎯 Jordan intake 2026-06-30, from a code-review report of R-21-004 (dual-writer race between `QuickPresetModal` and `useFavorites.saveQuickPreset`). **The reported fix (pass `onPresetsChanged={setQuickPresets}` in `DockedController`) is REJECTED — it would ship a data-loss regression.** Evidence: `QuickPresetModal.persistPresets` (`src/components/docked/QuickPresetModal.tsx:L76-89`) already calls `setQuickPresets` unconditionally at L77, then branches: delegate to `onPresetsChanged` (L78-79) OR write AsyncStorage (L81). Passing `setQuickPresets` as `onPresetsChanged` makes a modal save call `setQuickPresets` twice and write storage ZERO times → DockedController quick presets never persist, lost on restart. **Deeper finding (falsifies the premise):** `grep saveQuickPreset` across `src/` shows it has ZERO callers — it is dead code. The only LIVE writer to `@Sk8lytz_QuickPresets` is `QuickPresetModal.tsx:L81`. The R-21-004 "dual-writer race" is not live; the second writer is unreachable. Correct fix = delete the dead writer, not wire the prop.
