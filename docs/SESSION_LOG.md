@@ -1,3 +1,57 @@
+### [ARTIFACT] Jordan — PLAN-quick-preset-single-writer (R-21-004 CORRECTION) — 2026-06-30
+
+**Persona:** 🎯 Jordan (intake)
+**Artifact:** `docs/plans/PLAN-quick-preset-single-writer.md`
+**Task:** `chore/quick-preset-dead-writer-cleanup` → added to Bucket List 🚑 TRIAGE QUEUE (Performance, Stability & Security) as `[🕵️ SPIKE]`.
+**Source of Truth:** `src/hooks/useFavorites.ts:L133-144` + `:L165`, `src/components/docked/QuickPresetModal.tsx:L76-89`.
+
+**Why this SUPERSEDES `[DECISION] wiring-check investigation — 2026-06-30` Finding 1 (below):**
+Reyes's Finding 1 recommended `onPresetsChanged={saveQuickPreset}` (or, per the code-review intake, `={setQuickPresets}`) to close the R-21-004 dual-writer race. Both are REJECTED on P1 evidence:
+
+1. **The intake's `onPresetsChanged={setQuickPresets}` is a data-loss regression.** `persistPresets` (`QuickPresetModal.tsx:L76-89`) already calls `setQuickPresets` at L77, then delegates to `onPresetsChanged` at L79 INSTEAD of writing storage. Wiring `setQuickPresets` there = state set twice, zero storage write → DockedController presets lost on restart.
+2. **Reyes's `onPresetsChanged={saveQuickPreset}` does not type-check.** `onPresetsChanged?: (presets: QuickPreset[]) => void` (L48-49) vs `saveQuickPreset(index: number, preset: IQuickPreset)` (L133) — incompatible signatures.
+3. **The race is NOT live.** `Grep saveQuickPreset src/` → ONLY `useFavorites.ts:L133` (def) and `:L165` (export). **Zero call sites.** The lone live writer to `@Sk8lytz_QuickPresets` is `QuickPresetModal.tsx:L81`. The "second writer" (`saveQuickPreset`, L138) is unreachable dead code.
+
+**Correct fix:** Delete dead `saveQuickPreset` (L133-144) + its export (L165). Do NOT touch `DockedController.tsx`. Do NOT pass `onPresetsChanged` (leave the prop as future-proofing). Classed `[🕵️ SPIKE]` because it removes a public method from the `useFavorites` interface — `npm run verify` (TSC) is the zero-caller safety net.
+**Don't re-derive:** R-21-004 is a phantom race — one live writer, one dead writer. Any future attempt to "wire onPresetsChanged" against the current `persistPresets` shape will introduce data loss. If a caller of `saveQuickPreset` ever appears, re-open as a genuine single-writer wiring task.
+
+---
+
+### [ARTIFACT] Jordan — PLAN-device-cloud-sync-null-mac-guard — 2026-06-30
+
+**Persona:** 🎯 Jordan (intake)
+**Artifact:** `docs/plans/PLAN-device-cloud-sync-null-mac-guard.md`
+**Task:** `fix/device-cloud-sync-null-mac-guard` → added to Bucket List 🚑 TRIAGE QUEUE (Performance, Stability & Security).
+**Source of Truth:** `src/services/deviceRepository/DeviceCloudSync.ts:L13-34`
+**Origin:** Operationalizes Reyes VERIFIED Finding 2 in `[DECISION] wiring-check investigation — 2026-06-30` (below). Null `device_mac` survives the tombstone filter (coerced to `''`) and crashes `mergeCloudAndLocal` at L33 `cloud.device_mac.toUpperCase()`. Pre-existing crash path exposed by the Wave 1 type-safety fix (old `any` cast hid it).
+**Fix shape:** Type-narrowing `validCloud` filter (`row.device_mac != null`) ahead of the tombstone filter + merge loop; `AppLogger.warn` with `null_mac_filtered` count when rows are dropped.
+**Classification:** `[✅ READY]` `[✅ VERIFIED]` `[DB]` `[⚠️ M-RISK]` `[🍪 Snack]` `[LOW]` `[BATCH:none]` `[WAVE:1]` (placeholder — solo snack).
+
+---
+
+### [DECISION] wiring-check investigation — 2026-06-30
+
+**Investigator:** Reyes
+**Scope:** Two 24h-diff wiring checks
+
+**Finding 1 — `onPresetsChanged` prop is DEAD / dual-writer race NOT eliminated**
+
+- Source: `src/components/DockedController.tsx` L1195-1212 (call site), `src/components/docked/QuickPresetModal.tsx` L48-49 + L75-88, `src/hooks/useFavorites.ts` L138
+- Status: VERIFIED
+- `onPresetsChanged` is absent from the sole `<QuickPresetModal>` call site in `DockedController.tsx`. The `persistPresets` fallback therefore always fires `AsyncStorage.setItem(STORAGE_QUICK_PRESETS)` directly from inside the modal. `useFavorites.saveQuickPreset` (L138) independently writes the same key. Two concurrent writers on `@Sk8lytz_QuickPresets` — race R-21-004 is NOT closed.
+- Fix: Add `onPresetsChanged={saveQuickPreset}` to the `<QuickPresetModal>` call site in `DockedController.tsx` L1195 (where `saveQuickPreset` is already returned by `useFavorites`). One line, surgical.
+- Don't re-derive: The design intent is correct; the wiring glue was simply never committed.
+
+**Finding 2 — `?? ''` null-fallback is cosmetically identical AND masks a downstream crash**
+
+- Source: `src/services/deviceRepository/DeviceCloudSync.ts` L6-7 (nullable comment), L19-21 (filter), L33 (unchecked `.toUpperCase()`), `src/services/deviceRepository/types.ts` L10 (`device_mac: string` non-nullable on local type)
+- Status: VERIFIED
+- Both `undefined` and `''` are absent from the `tombstones` string array, so filter behavior is identical before and after the diff. The real bug is at L33: `cloud.device_mac.toUpperCase()` will throw `TypeError` on any null-mac row that survived the filter. Null `device_mac` = corrupt DB row (no legitimate device exists without a MAC) — it should be filtered out, not passed through.
+- Correct guard: `cloudRows.filter((row) => row.device_mac != null && !tombstones.includes(row.device_mac.toUpperCase()))`
+- Don't re-derive: The `?? ''` change closed zero issues; the null-exclusion guard is the actual fix needed.
+
+---
+
 ### [MERGE] sweep/reentrancy-guards → master @ a414a1c7 — 2026-06-30
 
 Files touched: src/screens/DashboardScreen.tsx, src/components/visualizer/VisualizerHooks.ts
