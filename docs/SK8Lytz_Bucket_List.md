@@ -60,11 +60,11 @@
 
 ### 🚑 TRIAGE QUEUE
 
-- [ ] **`fix/db-backup-pipeline-failing`**
-  - **Tags:** `[📝 NEEDS PLAN]` `[✅ VERIFIED]` `[OPS]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🤖 PRO-HIGH]`
-  - **Goal:** Repair `tools/backup_database.ps1` — it produces EMPTY dumps (no usable backup).
-  - **Decision Log:** /wind-down 2026-06-26 ran the backup: `schema_2026-06-26_19-41.sql` = **0 bytes**, `roles_*.sql` = 0.3 KB, and **NO `data_*.sql` produced**. The prior "backup" (`data_2026-06-13_02-21.sql`) was also 0 bytes — so backups have been silently failing since ≥ 2026-06-13. There is effectively NO working DB backup.
-  - **Details:** Likely cause: pg_dump version mismatch vs Supabase Postgres, or stale/invalid connection string / credentials in the script (it exits without error but writes empty files). Fix must (1) make the script FAIL LOUDLY on empty output, (2) restore a real data dump, (3) verify file sizes > 0. Highest-priority ops gap — a DB incident right now is unrecoverable.
+- [ ] **`chore/harden-backup-script`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[OPS]` `[⚠️ M-RISK]` `[🍪 Snack]` `[🤖 FLASH]`
+  - **Goal:** Harden `tools/backup_database.ps1` — add empty-check on all 3 output files, exit non-zero on failure, and add a restore-verify step.
+  - **Decision Log:** ⚠️ PREMISE CORRECTION (Reyes, 2026-07-01): The wind-down report from 2026-06-26 was wrong — the agent observed the directory during the cleanup pass (which deletes old files FIRST before dumping). All 3 files from that run exist on disk: `schema` = 453.5 KB, `data` = 6.2 MB, `roles` = 0.3 KB. The pipeline is NOT broken. Three real gaps exist: (1) only `$DataFile` is size-checked — schema/roles are never verified (L58-62); (2) script exits code 0 even on empty output, giving automation callers a false success signal; (3) no restore-verify script exists in `tools/`. Deprioritized 2026-07-01 — pipeline works, harden when time permits.
+  - **Details:** The script uses `npx supabase db dump` (not raw pg_dump). Connects via `postgresql://postgres.{PROJECT_ID}:{SUPABASE_DB_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:6543/postgres`. Writes to `backups/`. Cleanup at L22 deletes files older than 7 days BEFORE running the dump — explains the misleading observation window.
 
 - [ ] **`fix/discord-bridge-unhealthy`**
   - **Tags:** `[📝 NEEDS PLAN]` `[✅ VERIFIED]` `[OPS]` `[M-RISK]` `[🍪 Snack]` `[🤖 FLASH]`

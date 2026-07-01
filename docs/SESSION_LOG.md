@@ -1,3 +1,53 @@
+### [DECISION] fix/db-backup-pipeline-failing — Reyes investigation — 2026-07-01
+
+**Investigator:** Reyes
+**Scope:** Read-only audit of `tools/backup_database.ps1` and `backups/` output directory.
+
+**CRITICAL CORRECTION — The backup pipeline is NOT currently broken.**
+
+The Bucket List entry for `fix/db-backup-pipeline-failing` states:
+- `schema_2026-06-26_19-41.sql` = 0 bytes
+- `roles_*.sql` = 0.3 KB
+- NO `data_*.sql` produced
+
+The files on disk RIGHT NOW contradict this:
+- `backups/schema_2026-06-26_19-41.sql` = 453.5 KB (non-empty, valid pg_dump header confirmed at L4-14)
+- `backups/roles_2026-06-26_19-41.sql` = 0.3 KB (14 lines, valid role ALTER statements)
+- `backups/data_2026-06-26_19-41.sql` = 6.2 MB (non-empty, valid TABLE DATA dump confirmed at L1-30)
+
+The `data_2026-06-26_19-41.sql` file DOES exist. It is 6.2 MB. It contains a real pg_dump.
+The `schema_2026-06-26_19-41.sql` file is 453.5 KB — not 0 bytes.
+
+**How the script works (VERIFIED — `tools/backup_database.ps1`):**
+- Tool: `npx supabase db dump` (NOT `pg_dump` directly). Source: L49-55.
+- Connection: `postgresql://postgres.{PROJECT_ID}:{SUPABASE_DB_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:6543/postgres`. Source: L43.
+- Credential source: reads `SUPABASE_DB_PASSWORD` from env or `.env` file at L25-32. Var name confirmed: `SUPABASE_DB_PASSWORD`. Source: L26-29.
+- Output dir: `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\backups\`. Source: L12.
+- Emptiness check: L58-62 — checks if `$DataFile` exists AND `Length -gt 0`. Writes WARN to stdout but does NOT exit non-zero. Source: L58-62.
+- Cleanup: deletes `.sql` files older than 7 days on each run. Source: L22.
+
+**Root cause of the prior report (INFERRED):**
+The 2026-06-26 wind-down session likely observed the files mid-run or immediately after a prior failed run. The cleanup pass at L22 deletes old files first; if the script failed mid-run that night, the previously-generated files would have already been deleted and the new empty/absent ones would be what the agent saw. The current files on disk are from the SAME timestamp (19-41) and are valid — meaning the script ran successfully that night. The "0 bytes" report may have been an observation error or a different run's output.
+
+**Status of the pipeline NOW:**
+- The last backup run (`2026-06-26_19-41`) produced valid, non-empty output for all three dump types.
+- The `data_2026-06-13_02-21.sql` "0 bytes" claim from the Bucket List cannot be verified — that file is not present (7-day cleanup would have removed it).
+- No `backup_verify.ps1` or `restore.ps1` exists in `tools/`. Source: Glob search returned 0 results.
+
+**What IS still worth fixing (confirmed gaps):**
+1. The emptiness check (L58-62) only checks `$DataFile` — it does NOT check schema or roles file sizes.
+2. The check writes a warning string but does NOT exit with a non-zero code. A CI/automation caller would see "success."
+3. No verify/restore script exists to confirm a backup is restorable.
+4. The `SUPABASE_DB_PASSWORD` credential is stored in plaintext in `.env` (confirmed present). This is a pre-existing security gap tracked under `fix/supabase-db-security-advisors`.
+
+**Don't re-derive:**
+- The backup pipeline produced a valid 6.2 MB data dump as of 2026-06-26. It is NOT silently failing right now.
+- The Bucket List task description ("0 bytes", "no data dump") appears to reflect a misread from the prior session.
+- The task may still warrant a fix for: (a) check all three files, not just data, (b) exit non-zero on empty, (c) add a restore-verify script.
+- `pg_dump` is NOT called directly — the script delegates to `npx supabase db dump`. A `pg_dump --version` check is irrelevant to this pipeline.
+
+---
+
 ### [MERGE] chore/quick-preset-dead-writer-cleanup → master @ 19911657 — 2026-07-01
 
 **Persona:** 🚀 Taylor (gatekeeper) → 📋 Casey (post-merge)
