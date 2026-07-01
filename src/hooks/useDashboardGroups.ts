@@ -315,8 +315,33 @@ export function useDashboardGroups({
       AppLogger.error('[useDashboardGroups] saveAllRegisteredDevices failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
 
-    // Groups are derived automatically from registeredDevices via the useEffect derivation loop.
-    // Devices carry the correct group_id from the wizard — no manual group creation needed.
+    // Persist the GROUP entity itself. saveAllRegisteredDevices only writes DEVICES
+    // (with their group_ids stamped) — it does NOT create the group in GroupRepository,
+    // which is the SSOT that `customGroups` derives from. Without this, the dashboard
+    // shows no groups AND cloud auto-connect finds no registered_groups row to reconnect
+    // against, leaving the freshly-registered devices disconnected.
+    // (fix/ftue-group-not-persisted — the deleted runAutoProvisioning used to own this.)
+    try {
+      const groupMap = new Map<string, { name: string; macs: string[] }>();
+      for (const d of devices) {
+        const gIds = d.group_ids ?? [];
+        const gNames = d.group_names ?? [];
+        gIds.forEach((gId, idx) => {
+          if (!gId || gId === 'default-fleet') return;
+          if (!groupMap.has(gId)) groupMap.set(gId, { name: gNames[idx] || gId, macs: [] });
+          const mac = d.device_mac.toUpperCase();
+          const entry = groupMap.get(gId)!;
+          if (!entry.macs.includes(mac)) entry.macs.push(mac);
+        });
+      }
+      const groupRepo = GroupRepository.getInstance();
+      for (const [gId, { name, macs }] of groupMap) {
+        await groupRepo.saveGroupTransactional(gId, name, macs, 'device-fleet', user?.id);
+      }
+    } catch (e: unknown) {
+      AppLogger.error('[useDashboardGroups] group persistence failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+    }
+
     clearPendingRegistrations();
     onRegistrationComplete();
     } finally {

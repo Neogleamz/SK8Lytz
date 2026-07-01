@@ -189,3 +189,19 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 **Date**: 2026-07-01
 **Task**: fix/ble-scan-filter-regression
 **Severity**: Critical (fresh-install hardware setup completely non-functional; app unusable for every new user)
+
+---
+
+## 🏆 VS-014: FTUE Completion Never Persists the Group Entity — No Groups + Devices Disconnected (2026-07-01)
+
+**Symptom**: After completing the hardware-setup wizard, the dashboard shows NO groups, and the just-registered devices appear disconnected (never auto-connect).
+
+**Root Cause**: `handleRegistrationComplete` (`useDashboardGroups.ts`) called `saveAllRegisteredDevices(devices)` — which persists DEVICES only (with `group_ids` stamped) — and then relied on a comment claiming "groups are derived automatically from registeredDevices." That is false: the group-derivation effect (`useDashboardGroups.ts` Pass 1) reads exclusively from `GroupRepository.getGroups()`, and `GroupRepository.groups` is only ever populated by `saveGroupTransactional`/`setGroups`/storage-load. The FTUE path never called any of them, so the wizard's `group-<ts>` entity was never created — not in local RAM, not in the cloud `registered_groups` table. Consequences: (1) `customGroups` is empty → no groups shown; (2) auto-connect's cloud resolution requires a `registered_groups` row (`useDashboardAutoConnect.ts`) which never existed → device MACs never queued → devices stay disconnected. A secondary defect: `syncCloudAndAutoConnect` is captured under a `[isBluetoothSupported, isBluetoothEnabled]` effect, so its `registeredDevices` closure went stale, defeating the offline `buildOfflineGroupMap` fallback after `retriggerAutoConnect()`. Introduced when `runAutoProvisioning` was deleted ("the Setup Wizard now owns all device claiming", `DashboardScreen.tsx`) without moving the group-creation responsibility into the new path.
+
+**Fix Applied**: (1) `handleRegistrationComplete` now builds a group→MAC map from the finalized devices' `group_ids`/`group_names` and calls `GroupRepository.saveGroupTransactional(gId, name, macs, 'device-fleet', user?.id)` for each after saving devices — creating the group locally (repopulates `customGroups`) and in the cloud (`registered_groups` row that auto-connect keys off). (2) `useDashboardAutoConnect` now reads `registeredDevices` via a live `registeredDevicesRef` so a post-registration retrigger sees freshly-saved devices instead of a stale empty list.
+
+**⛔ Operational Rule**: The FTUE completion path MUST persist the GROUP entity to `GroupRepository`, not just the devices. `customGroups` derives from `GroupRepository`, and cloud auto-connect keys off `registered_groups` — stamping `group_ids` onto devices alone is insufficient.
+
+**Date**: 2026-07-01
+**Task**: fix/ftue-group-not-persisted
+**Severity**: High (every new user finishes setup to an empty, disconnected dashboard)

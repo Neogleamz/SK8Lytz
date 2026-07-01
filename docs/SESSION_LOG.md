@@ -1,3 +1,13 @@
+### [DECISION] 2026-07-01 — Bug Fix: Post-FTUE dashboard empty (no groups + devices disconnected)
+
+**Decision:** `handleRegistrationComplete` now persists the group entity via `GroupRepository.saveGroupTransactional` (per group_id found on the finalized devices) after saving devices. Also hardened `useDashboardAutoConnect` to read `registeredDevices` via a live ref so a post-registration retrigger isn't defeated by a stale closure.
+**Rejected:** Theory 3 (connect-gate/RSSI blocking) — doesn't explain "no groups" at all; the group-persistence gap explains both symptoms. Deriving `customGroups` directly from `registeredDevices` (bypassing GroupRepository) was rejected — GroupRepository is the SSOT and cloud auto-connect keys off `registered_groups`; both need the real group row.
+**Don't re-derive:** `customGroups` derives ONLY from `GroupRepository.getGroups()`, never from `registeredDevices`. `GroupRepository.groups` is populated only by `saveGroupTransactional`/`setGroups`/storage-load. Stamping `group_ids` onto devices does NOT create a group. The FTUE path must call `saveGroupTransactional`. Root gap introduced when `runAutoProvisioning` was deleted.
+**Source:** `src/hooks/useDashboardGroups.ts` handleRegistrationComplete (group persistence added); `src/hooks/useDashboardAutoConnect.ts:137` (registeredDevicesRef) + `:309` (read via ref).
+**Note:** VSCode format-on-save stripped pre-existing trailing whitespace in `useDashboardGroups.ts` (Boy-Scout); `git diff --ignore-all-space` = 27/2, confirming the logic change is isolated.
+
+---
+
 ### [MERGE] fix/ble-scan-filter-regression — `21009456` — 2026-07-01
 
 Files touched: `src/services/ble/BleMachine.ts`, `docs/SK8Lytz_App_Master_Reference.md`, `docs/KNOWN_ISSUES.md` (VS-013), `docs/plans/PLAN-feat-ble-scan-filter-uuid.md`, `docs/SESSION_LOG.md`

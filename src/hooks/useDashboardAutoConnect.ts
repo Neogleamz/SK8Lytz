@@ -128,7 +128,15 @@ export function useDashboardAutoConnect({
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
-  
+
+  // syncCloudAndAutoConnect is captured under a [isBluetoothSupported, isBluetoothEnabled]
+  // effect and stored in a ref, so its `registeredDevices` closure goes stale after the
+  // FTUE wizard saves devices. retriggerAutoConnect() (fired post-registration) would then
+  // build the offline group map from an EMPTY device list. Read the latest via this ref so
+  // the offline auto-connect path sees freshly-registered devices. (fix/ftue-group-not-persisted)
+  const registeredDevicesRef = useRef(registeredDevices);
+  registeredDevicesRef.current = registeredDevices;
+
   const hasAutoConnectedRef = useRef(false);
   const autoConnectIdsRef = useRef<string[]>([]);
   /** Tracks retry counts per MAC for failed auto-connect attempts. RC-02 */
@@ -296,8 +304,11 @@ export function useDashboardAutoConnect({
         groupsToProcess = buildOfflineGroupMap(devicesArray);
       };
 
-      if (registeredDevices && registeredDevices.length > 0) {
-        processLocalDevices(registeredDevices);
+      // Read via ref (not the closure var) so a retrigger after FTUE registration
+      // sees the freshly-saved devices rather than the stale empty list.
+      const currentRegisteredDevices = registeredDevicesRef.current;
+      if (currentRegisteredDevices && currentRegisteredDevices.length > 0) {
+        processLocalDevices(currentRegisteredDevices);
       } else {
         try {
           const localDevices = DeviceRepository.getInstance().getDevices();
