@@ -221,3 +221,35 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 **Date**: 2026-07-01
 **Task**: fix/fgs-type-crash
 **Severity**: Critical (force-close on first successful connection — every new user hits it immediately after setup)
+
+---
+
+## VS-016: handleGroupDelete Alert Mutex False Release (2026-07-01)
+
+**Symptom**: If a user double-taps a group delete action rapidly (two taps before the Alert modal appears), `isProcessingRef` is released by the `finally` block before any alert button is pressed — because `Alert.alert` is non-blocking. The second tap enters the function and fires a second Alert for the same group ID. Whichever button-press fires last wins, potentially issuing two `GroupRepository.deleteGroup` calls for the same ID.
+
+**Root Cause**: `useDashboardGroups.ts:357-405` — `isProcessingRef.current = true` at L359, `Alert.alert` fires at L364 (non-blocking, returns immediately), then `finally` at L402 resets `isProcessingRef.current = false` — all before the user presses any button. The mutex is therefore released while the async alert callbacks are still pending.
+
+**Fix Applied**: Not applied — discovered during ship-it smoke test QA. The gap is pre-existing and was not introduced by `fix/ftue-group-not-persisted`. Severity is Low because: (a) FTUE flow makes this scenario impossible for new users (groups only appear after wizard closes), (b) returning users would need sub-second double-tap precision to trigger it. Recommended fix: move `isProcessingRef.current = false` into each alert button's callback rather than the `finally` block.
+
+**Recommended Fix**: In `useDashboardGroups.ts`, move `isProcessingRef.current = false` from the `finally` block at L402 into each of the three alert button `onPress` callbacks (Cancel, Forget Group Only, Deregister Hardware), after their work completes. Remove the outer `try/finally` pattern from `handleGroupDelete`.
+
+**Date**: 2026-07-01
+**Task**: fix/ftue-group-not-persisted (discovered during ship-it smoke test)
+**Severity**: Low — no crash, no data loss. Race window requires sub-second double-tap. FTUE flow is unaffected.
+
+---
+
+## VS-017: Notifee Manifest Divergence — Committed vs Config Plugin (2026-07-01)
+
+**Symptom**: The committed `android/app/src/main/AndroidManifest.xml` at L36 declares `android:foregroundServiceType="location|connectedDevice"` for the `app.notifee.core.ForegroundService`. The `withWearOsModule.js` config plugin Step 3 would inject `location|health|connectedDevice|shortService|dataSync`. Since `build-apk.ps1` does not run `expo prebuild`, it uses the committed manifest. The committed manifest is authoritative for this build and is narrower than what the plugin declares.
+
+**Root Cause**: The notifee service entry in the committed manifest was patched manually at some prior point without running `expo prebuild` to apply the config plugin. The plugin and the committed file have drifted. The `RNBackgroundActionsTask` entry (the fix/fgs-type-crash target) is consistent between both sources. Only the notifee entry diverges.
+
+**Fix Applied**: Not applied — out of scope for fix/fgs-type-crash. The narrower type list on the committed manifest (`location|connectedDevice`) is functionally sufficient for current notifee usage (BLE-connected device notifications and location). No known crash tied to the missing types. Logged for cleanup.
+
+**Recommended Fix**: Either run `expo prebuild` and commit the generated manifest, or manually update `android/app/src/main/AndroidManifest.xml:36` to match the full type list in `withWearOsModule.js` Step 3. Prefer the config plugin as SSOT; remove the manual patch from the committed manifest if prebuild is adopted.
+
+**Date**: 2026-07-01
+**Task**: fix/fgs-type-crash (discovered during ship-it smoke test)
+**Severity**: Low — no current crash. Risk exists if a future notifee feature requires one of the missing types (health, shortService, dataSync) in a production build that skips prebuild.
