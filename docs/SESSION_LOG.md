@@ -1,3 +1,8 @@
+### [MERGE READY] fix/device-cloud-sync-null-mac-guard — 9b3d29ce
+
+Files touched: src/services/deviceRepository/DeviceCloudSync.ts
+TSC: ✅  Jest: ✅
+
 ### [ARTIFACT] Jordan — PLAN-quick-preset-single-writer (R-21-004 CORRECTION) — 2026-06-30
 
 **Persona:** 🎯 Jordan (intake)

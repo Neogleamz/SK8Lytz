@@ -50,7 +50,7 @@
 > ✅ **Wave 8 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `68f2626b` (all R-14/R-16/R-24 targets pre-existing)
 > ✅ **Wave 9 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `a414a1c7` (re-entrancy guard on checkNewDevice + for/break→while in VisualizerHooks)
 > 🏆 **[BATCH:deepdive-audit-2026-06-30] GOAL COMPLETE** — all 9 waves, 14 task clusters resolved 2026-06-30. Master is green.
-> Currently executing: none
+> Currently executing: fix/device-cloud-sync-null-mac-guard
 
 ---
 
@@ -76,7 +76,7 @@
   - **Decision Log:** Logged by /health-sweep during /ship-it Phase 1. High security risk preventing release.
   - **Details:** 5 major flags including ERRORs on telemetry views and disabled RLS on spatial_ref_sys.
 
-- [ ] **`fix/device-cloud-sync-null-mac-guard`**
+- [/] **`fix/device-cloud-sync-null-mac-guard`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DB]` `[⚠️ M-RISK]` `[🍪 Snack]` `[🤖 FLASH]` `[LOW]` `[BATCH:none]` `[WAVE:1]`
   - **Goal:** Guard `DeviceCloudSync.mergeCloudAndLocal` against null `device_mac` rows that crash at `device_mac.toUpperCase()`.
   - **Decision Log:** Null `device_mac` in a `registered_devices` row crashes `mergeCloudAndLocal` at `cloud.device_mac.toUpperCase()` (L33). The tombstone filter (L19-21) coerces null → `''`, which is absent from tombstones, so the row PASSES the filter and reaches the unguarded `.toUpperCase()`. The Wave 1 type-safety fix removed the old `any` cast that had hidden this — the crash path is PRE-EXISTING, not newly introduced. Corroborated by 🕵️ Reyes VERIFIED finding, `docs/SESSION_LOG.md` `[DECISION] wiring-check investigation — 2026-06-30`, Finding 2. Fix: filter out null-MAC rows (type-narrowing predicate) before the tombstone filter and merge loop; log a warn when any are dropped. `[WAVE:1]` is a placeholder — solo snack, no batch/wave coordination needed.
