@@ -130,19 +130,6 @@ export function useFavorites() {
     FavoritesService.deleteFavorite(id, user?.id);
   }, [favorites, activeFavoriteId, user]);
 
-  const saveQuickPreset = useCallback(async (index: number, preset: IQuickPreset) => {
-    const newArr = [...quickPresets];
-    newArr[index] = preset;
-    setQuickPresets(newArr);
-    try {
-      await AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr));
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('[Favorites] Local quick preset save failed', { error: msg, payload_size: 0, ssi: 0 });
-    }
-    closePrompt();
-  }, [quickPresets, closePrompt]);
-
   return {
     favorites,
     setFavorites,
@@ -162,7 +149,6 @@ export function useFavorites() {
     closePrompt,
     saveFavorite,
     deleteFavorite,
-    saveQuickPreset,
     status,
     errorMsg,
     // Legacy support
