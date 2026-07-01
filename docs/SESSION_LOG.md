@@ -1,3 +1,11 @@
+### [MERGE] fix/fgs-type-crash — `14eaf1f6` — 2026-07-01
+
+Files touched: `src/services/ble/BackgroundBLEService.ts`, `plugins/withWearOsModule.js`, `android/app/src/main/AndroidManifest.xml`, `docs/KNOWN_ISSUES.md` (VS-015), `docs/SESSION_LOG.md`
+TSC: ✅  Jest: ✅  Attestation: ✅ (fresh + matching at gatekeeper)
+Impact: BLE keep-alive FGS now declares `connectedDevice` type → no more force-close on connect. ⚠️ Requires native rebuild to confirm (build + deploy in progress).
+
+---
+
 ### [DECISION] 2026-07-01 — Bug Fix: FGS type `none` force-close on connect (targetSDK 36)
 
 **Decision:** Give `react-native-background-actions`' FGS a valid type in all three places the build path needs it: (1) runtime option `foregroundServiceType: ['connectedDevice' as const]` in `BackgroundBLEService`; (2) `withWearOsModule.js` Step 4 injects `android:foregroundServiceType="connectedDevice"` (tools:replace) for prebuilds; (3) mirrored into the committed `android/app/src/main/AndroidManifest.xml` because `build-apk.ps1` builds without `expo prebuild`.

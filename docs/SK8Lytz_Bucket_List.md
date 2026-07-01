@@ -51,6 +51,7 @@
 > ✅ **Wave 9 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `a414a1c7` (re-entrancy guard on checkNewDevice + for/break→while in VisualizerHooks)
 > 🏆 **[BATCH:deepdive-audit-2026-06-30] GOAL COMPLETE** — all 9 waves, 14 task clusters resolved 2026-06-30. Master is green.
 > Currently executing: none
+> Completed: fix/fgs-type-crash @ 14eaf1f6 ✅ (connectedDevice FGS type — no force-close on connect, targetSDK 36)
 > Completed: fix/ftue-group-not-persisted @ 1ae03e35 ✅ (FTUE persists group entity — dashboard shows fleet + auto-connects)
 > Completed: fix/ble-scan-filter-regression @ 21009456 ✅ (BLE scan un-filtered — hardware setup finds devices again)
 > Completed: chore/quick-preset-dead-writer-cleanup @ 19911657 ✅
