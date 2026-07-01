@@ -1,3 +1,12 @@
+### [DECISION] 2026-07-01 — Bug Fix: FGS type `none` force-close on connect (targetSDK 36)
+
+**Decision:** Give `react-native-background-actions`' FGS a valid type in all three places the build path needs it: (1) runtime option `foregroundServiceType: ['connectedDevice' as const]` in `BackgroundBLEService`; (2) `withWearOsModule.js` Step 4 injects `android:foregroundServiceType="connectedDevice"` (tools:replace) for prebuilds; (3) mirrored into the committed `android/app/src/main/AndroidManifest.xml` because `build-apk.ps1` builds without `expo prebuild`.
+**Rejected:** Theory 2 (background-start restriction) — trace was `InvalidForegroundServiceTypeException`, not `ForegroundServiceStartNotAllowedException`. Theory 3 (downgrade targetSDK to 33) — breaks Play Store targetSDK-34+ requirement. `dataSync` type — rejected in favor of `connectedDevice` (semantically correct for BLE; avoids Android 15's 6h dataSync cap).
+**Don't re-derive:** Android 14+ needs a valid FGS type in BOTH the runtime `startForeground` call AND the manifest `<service>`. `react-native-background-actions` reads the runtime type from `options.foregroundServiceType` (returns 0 if absent → crash) and its bundled manifest declares NO type. The build path does NOT prebuild, so committed `android/` manifest must carry the override too. Latent bug exposed by fix/ftue-group-not-persisted (devices now connect → startKeepAlive runs).
+**Source:** `src/services/ble/BackgroundBLEService.ts` options; `plugins/withWearOsModule.js` Step 4; `android/app/src/main/AndroidManifest.xml` RNBackgroundActionsTask service. Crash: `RNBackgroundActionsTask.onStartCommand` → `ServiceCompat.startForeground(…, getForegroundServiceType())`.
+
+---
+
 ### [MERGE] fix/ftue-group-not-persisted — `1ae03e35` — 2026-07-01
 
 Files touched: `src/hooks/useDashboardGroups.ts`, `src/hooks/useDashboardAutoConnect.ts`, `docs/KNOWN_ISSUES.md` (VS-014), `docs/SESSION_LOG.md`

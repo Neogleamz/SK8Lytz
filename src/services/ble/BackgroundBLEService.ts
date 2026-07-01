@@ -16,6 +16,13 @@ const options = {
         type: 'mipmap',
     },
     color: '#F79320', // SK8Lytz brand orange
+    // Android 14+ (targetSDK 34+) prohibits starting a foreground service with type `none`.
+    // react-native-background-actions passes this to startForeground(); omitting it sends 0
+    // → InvalidForegroundServiceTypeException → native force-close (bypasses JS try/catch).
+    // 'connectedDevice' matches the BLE keep-alive purpose; FOREGROUND_SERVICE_CONNECTED_DEVICE
+    // is declared in app.config.js, and the manifest <service> type is injected by
+    // plugins/withWearOsModule.js. (fix/fgs-type-crash)
+    foregroundServiceType: ['connectedDevice' as const],
     parameters: {
         delay: 1000,
     },

@@ -71,7 +71,39 @@ project(':sk8lytzWear').projectDir = new File(rootProject.projectDir, 'sk8lytzWe
       notifeeService.$['android:foregroundServiceType'] = 'location|health|connectedDevice|shortService|dataSync';
       notifeeService.$['tools:replace'] = 'android:foregroundServiceType';
     }
-    
+
+    return manifestConfig;
+  });
+
+  // Step 4: Inject foregroundServiceType on react-native-background-actions' service.
+  // The library's own manifest declares <service ...RNBackgroundActionsTask /> with NO
+  // foregroundServiceType. On targetSDK 34+ Android rejects starting it (type `none`) →
+  // InvalidForegroundServiceTypeException force-close. We add 'connectedDevice' (BLE keep-alive)
+  // here; the matching runtime type is passed from BackgroundBLEService options. (fix/fgs-type-crash)
+  config = withAndroidManifest(config, (manifestConfig) => {
+    const androidManifest = manifestConfig.modResults.manifest;
+    const application = androidManifest.application[0];
+
+    if (!application.service) {
+      application.service = [];
+    }
+
+    const BG_ACTIONS_SERVICE = 'com.asterinet.react.bgactions.RNBackgroundActionsTask';
+    const bgActionsService = application.service.find(s => s.$['android:name'] === BG_ACTIONS_SERVICE);
+
+    if (!bgActionsService) {
+      application.service.push({
+        $: {
+          'android:name': BG_ACTIONS_SERVICE,
+          'android:foregroundServiceType': 'connectedDevice',
+          'tools:replace': 'android:foregroundServiceType'
+        }
+      });
+    } else {
+      bgActionsService.$['android:foregroundServiceType'] = 'connectedDevice';
+      bgActionsService.$['tools:replace'] = 'android:foregroundServiceType';
+    }
+
     return manifestConfig;
   });
 

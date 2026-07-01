@@ -205,3 +205,19 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 **Date**: 2026-07-01
 **Task**: fix/ftue-group-not-persisted
 **Severity**: High (every new user finishes setup to an empty, disconnected dashboard)
+
+---
+
+## 🏆 VS-015: Foreground-Service Type `none` Force-Close on targetSDK 34+ (2026-07-01)
+
+**Symptom**: App force-closes (native `FATAL EXCEPTION: main`) the moment a device connects — i.e. right after finishing hardware setup. `java.lang.RuntimeException: Unable to start service RNBackgroundActionsTask … Caused by: android.app.InvalidForegroundServiceTypeException: Starting FGS with type none … targetSDK=36 has been prohibited`.
+
+**Root Cause**: `BackgroundBLEService.startKeepAlive()` (called from `useBLE.ts` when `connectedDevices.length > 0`) starts `react-native-background-actions`' foreground service. That library calls `ServiceCompat.startForeground(…, bgOptions.getForegroundServiceType())`; `getForegroundServiceType()` returns **0** when the `options.foregroundServiceType` field is absent — and our options omitted it. Additionally the library's own manifest declares `<service …RNBackgroundActionsTask />` with **no** `android:foregroundServiceType`. On Android 14+ (targetSDK 34+), starting a FGS with type `none` is prohibited → native crash. The library only catches `ForegroundServiceStartNotAllowedException` (Android-12 background-start), so it rethrows this one, and it's a native crash that bypasses the JS `try/catch` in `startKeepAlive`. **Latent bug exposed by fix/ftue-group-not-persisted**: before that fix, devices never connected, so `startKeepAlive` never ran.
+
+**Fix Applied**: (1) Added `foregroundServiceType: ['connectedDevice' as const]` to the `BackgroundBLEService` options (runtime type; `FOREGROUND_SERVICE_CONNECTED_DEVICE` already declared in `app.config.js`). (2) Added Step 4 to `plugins/withWearOsModule.js` injecting `android:foregroundServiceType="connectedDevice"` (with `tools:replace`) onto the `RNBackgroundActionsTask` service — the SSOT for prebuilds. (3) Since `build-apk.ps1` builds the committed `android/` without running `expo prebuild`, also added the matching `<service>` override to the committed `android/app/src/main/AndroidManifest.xml` (mirrors the existing notifee entry) so THIS build carries the type. Requires a native rebuild.
+
+**⛔ Operational Rule**: Any foreground service used on targetSDK 34+ needs a valid `foregroundServiceType` in BOTH the runtime `startForeground` call AND the manifest `<service>` element. For third-party libs whose manifest omits it, override via `tools:replace` in `withWearOsModule.js` (config plugin) — and mirror it into the committed `android/` manifest because the build path does not prebuild.
+
+**Date**: 2026-07-01
+**Task**: fix/fgs-type-crash
+**Severity**: Critical (force-close on first successful connection — every new user hits it immediately after setup)
