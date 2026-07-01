@@ -1,3 +1,34 @@
+### [DECISION] 2026-07-01 — Reyes deepdive-code-hunt regression sweep (post 3-fix merge)
+
+**Investigator:** Reyes
+**Scope:** Side-effect audit of fix/ble-scan-filter-regression, fix/ftue-group-not-persisted, fix/fgs-type-crash.
+
+**Domain 1 — BLE scanServiceUUIDs consumers: CLEAN**
+- Only one `startDeviceScan` call site exists outside `BleMachine.ts` tests: none in production code. `BleMachine.ts:118,145` both pass `context.scanServiceUUIDs`. `useBLE.ts:186` sets `scanServiceUUIDs: null` as the machine input — the single SSOT. No consumer reads `bleMachine.context.scanServiceUUIDs` directly.
+- `useBLEScanner.ts` (the scanCallback) uses `ZENGGE_SERVICE_UUID`/`BANLANX_SERVICE_UUID` only for in-JS filtering (L236-237), NOT as OS-level scan filter args. Correct — unaffected by the revert.
+- No hardcoded UUID array is passed to `startDeviceScan` anywhere in production code.
+
+**Domain 2 — GroupRepository consumers: CLEAN with one INFERRED note**
+- `handleRegistrationComplete` in `useDashboardGroups.ts:324-343` — GroupRepository import is live at L23, direct call to `groupRepo.saveGroupTransactional` at L339. No stale import.
+- `DeviceRepositoryService.ts:54` calls `GroupRepository.getInstance().initialize()` in parallel with device storage load — groups will be ready before any consumer reads them. No startup ordering gap.
+- `DeviceRepositoryService.ts:25-37` sets the delegate in constructor — called before `initialize()`, correct order.
+- INFERRED: Because `saveGroupTransactional` now fires during FTUE for the first time (via the fix), `flushPendingGroups` (called during cloud sync at `DeviceRepositoryService.ts:357`) could encounter a group that already exists in GroupRepository. `saveGroupTransactional` at `GroupRepository.ts:210-217` handles upsert (findIndex → splice-replace or push), so a duplicate group_id is safe.
+
+**Domain 3 — Background service consumers: FINDING**
+- `GlobalForegroundService.ts` (notifee-backed) uses `FOREGROUND_SERVICE_TYPE_LOCATION` (L40). Its manifest service entry at `AndroidManifest.xml:36` now declares `android:foregroundServiceType="location|connectedDevice"` — injected by fix/fgs-type-crash.
+- `FOREGROUND_SERVICE_CONNECTED_DEVICE` permission is present at `AndroidManifest.xml:12`.
+- `FOREGROUND_SERVICE_LOCATION` permission is present at `AndroidManifest.xml:11`.
+- `BackgroundBLEService` is the ONLY caller of `startKeepAlive`/`stopKeepAlive` (via `useBLE.ts:308,310`). Both methods have `Platform.OS !== 'android'` early-return guards at L33,44. iOS exposure: none.
+- FINDING: `GlobalForegroundService` uses notifee's `FOREGROUND_SERVICE_TYPE_LOCATION` type. The fix/fgs-type-crash added `connectedDevice` to the notifee `<service>` manifest entry (L36). This is additive — `location|connectedDevice` satisfies both services that could run under that service entry. Not a conflict, but needs awareness: notifee's FGS now advertises a type it doesn't use at runtime (connectedDevice). Low risk; `tools:replace` is present.
+
+**Domain 4 — TODO sweep and circular imports: CLEAN**
+- No `TODO:` comments found in any of the four touched files.
+- `BleMachine.ts` import chain: xstate, react-native-ble-plx (type only), BleMachine.types, AppLogger, ConnectService, RecoveryService, HeartbeatService, DisconnectService. None of those import BleMachine back. `useBLE.ts` imports BleMachine (one-way). No circular detected.
+
+**Don't re-derive:** `GlobalForegroundService` notifee service in manifest now carries `location|connectedDevice` — this is intentional (tools:replace) and non-conflicting. The `connectedDevice` type on the notifee entry is harmless but is a latent concern if Android ever penalizes declared-but-unused FGS types.
+
+---
+
 ### [MERGE] fix/fgs-type-crash — `14eaf1f6` — 2026-07-01
 
 Files touched: `src/services/ble/BackgroundBLEService.ts`, `plugins/withWearOsModule.js`, `android/app/src/main/AndroidManifest.xml`, `docs/KNOWN_ISSUES.md` (VS-015), `docs/SESSION_LOG.md`
