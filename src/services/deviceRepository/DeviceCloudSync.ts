@@ -15,14 +15,25 @@ export class DeviceCloudSync {
     localDevices: RegisteredDevice[],
     tombstones: string[]
   ): RegisteredDevice[] {
-    // Tombstone filter
-    const filteredCloud = cloudRows.filter((row) =>
-      !tombstones.includes(row.device_mac?.toUpperCase?.() ?? '')
+    // Null-MAC guard — corrupt DB rows (no legitimate device lacks a MAC)
+    const validCloud = cloudRows.filter(
+      (row): row is CloudDeviceRow & { device_mac: string } => row.device_mac != null
     );
 
-    if (filteredCloud.length < cloudRows.length) {
+    if (validCloud.length < cloudRows.length) {
+      AppLogger.warn('[DeviceCloudSync] mergeCloudAndLocal filtered null-mac rows', {
+        null_mac_filtered: cloudRows.length - validCloud.length,
+      });
+    }
+
+    // Tombstone filter
+    const filteredCloud = validCloud.filter(
+      (row) => !tombstones.includes(row.device_mac.toUpperCase())
+    );
+
+    if (filteredCloud.length < validCloud.length) {
       AppLogger.warn('[DeviceCloudSync] syncFromCloud tombstone filtered', {
-        skipped: cloudRows.length - filteredCloud.length,
+        skipped: validCloud.length - filteredCloud.length,
       });
     }
 
