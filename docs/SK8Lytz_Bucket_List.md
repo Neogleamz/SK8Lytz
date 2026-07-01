@@ -50,7 +50,8 @@
 > ✅ **Wave 8 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 verified @ `68f2626b` (all R-14/R-16/R-24 targets pre-existing)
 > ✅ **Wave 9 COMPLETE** — [BATCH:deepdive-audit-2026-06-30] — 1/1 merged @ `a414a1c7` (re-entrancy guard on checkNewDevice + for/break→while in VisualizerHooks)
 > 🏆 **[BATCH:deepdive-audit-2026-06-30] GOAL COMPLETE** — all 9 waves, 14 task clusters resolved 2026-06-30. Master is green.
-> Currently executing: chore/quick-preset-dead-writer-cleanup
+> Currently executing: none
+> Completed: chore/quick-preset-dead-writer-cleanup @ 19911657 ✅
 > Completed: fix/device-cloud-sync-null-mac-guard @ 6dcdda8a ✅
 
 ---
@@ -76,15 +77,6 @@
   - **Goal:** Fix Supabase security advisors: SECURITY DEFINER views, mutable search_path, RLS disabled on public.spatial_ref_sys, and always-true RLS policies.
   - **Decision Log:** Logged by /health-sweep during /ship-it Phase 1. High security risk preventing release.
   - **Details:** 5 major flags including ERRORs on telemetry views and disabled RLS on spatial_ref_sys.
-
-- [/] **`chore/quick-preset-dead-writer-cleanup`**
-  - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[UI]` `[LOW-RISK]` `[🍪 Snack]` `[🤖 FLASH]` `[LOW]` `[BATCH:none]` `[WAVE:1]`
-  - **Goal:** Remove the *latent* dual-writer for `@Sk8lytz_QuickPresets` by deleting the dead `useFavorites.saveQuickPreset` storage writer, leaving `QuickPresetModal.persistPresets` (L81) as the single, documented writer.
-  - **Decision Log:** 🎯 Jordan intake 2026-06-30, from a code-review report of R-21-004 (dual-writer race between `QuickPresetModal` and `useFavorites.saveQuickPreset`). **The reported fix (pass `onPresetsChanged={setQuickPresets}` in `DockedController`) is REJECTED — it would ship a data-loss regression.** Evidence: `QuickPresetModal.persistPresets` (`src/components/docked/QuickPresetModal.tsx:L76-89`) already calls `setQuickPresets` unconditionally at L77, then branches: delegate to `onPresetsChanged` (L78-79) OR write AsyncStorage (L81). Passing `setQuickPresets` as `onPresetsChanged` makes a modal save call `setQuickPresets` twice and write storage ZERO times → DockedController quick presets never persist, lost on restart. **Deeper finding (falsifies the premise):** `grep saveQuickPreset` across `src/` shows it has ZERO callers — it is dead code. The only LIVE writer to `@Sk8lytz_QuickPresets` is `QuickPresetModal.tsx:L81`. The R-21-004 "dual-writer race" is not live; the second writer is unreachable. Correct fix = delete the dead writer, not wire the prop.
-  - **Source of Truth:** `src/hooks/useFavorites.ts:L133-144` (dead `saveQuickPreset`) + `:L165` (dead export) + `src/components/docked/QuickPresetModal.tsx:L76-89` (single live writer) → `docs/plans/PLAN-quick-preset-single-writer.md`
-  - **Details:** SPIKE-classed because it deletes a public method from the `useFavorites` return interface — Sage must confirm zero callers at build time (`npm run verify` catches any missed reference). Recommended scope: (1) delete `saveQuickPreset` (`useFavorites.ts:L133-144`), (2) remove it from the return object (`:L165`), (3) delete now-unused `IQuickPreset` import ONLY if no other usage remains. Do NOT touch `DockedController.tsx` and do NOT pass `onPresetsChanged` — the modal's own L81 write is the intended single writer. Out of scope: adding a bulk storage-writer to `useFavorites`, changing `QuickPresetModal.persistPresets`, `FavoritesService`, the `onPresetsChanged` prop signature (leave it — it is future-proofing for a builder flow that may need delegation). If a caller of `saveQuickPreset` is discovered, HALT and re-open as a real single-writer wiring task.
-
-> **Source Analysis (tasks below):** 🕵️ Reyes monolith-teardown wiring audit 2026-06-25 — 4-agent read-only audit of C2/C3/C4/C14/C16 + `madge` cycle scan. Evidence in `docs/SESSION_LOG.md` `[ARTIFACT] Reyes — *Wiring Audit*` entries. All findings carry file:line proof. These are PRE-EXISTING teardown debts (not introduced by the deep-dive-w1 merges).
 
 ---
 

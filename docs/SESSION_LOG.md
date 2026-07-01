@@ -1,3 +1,13 @@
+### [MERGE] chore/quick-preset-dead-writer-cleanup → master @ 19911657 — 2026-07-01
+
+**Persona:** 🚀 Taylor (gatekeeper) → 📋 Casey (post-merge)
+**Files touched:** `src/hooks/useFavorites.ts`
+**What merged:** Deleted dead `saveQuickPreset` useCallback (L133-144) and its return-object export (L165). 14 deletions, 0 additions. `IQuickPreset` import retained (still in use at `useState<IQuickPreset[]>`). Single writer to `@Sk8lytz_QuickPresets` is now exclusively `QuickPresetModal.tsx:L81`.
+**Spike gate:** `grep saveQuickPreset src/` confirmed zero callers pre-delete. TSC confirmed zero missed references post-delete.
+**Gates:** TSC ✅ Jest ✅ Blast Radius ✅ Attestation ✅ FF-merge ✅ Worktree removed ✅
+
+---
+
 ### [MERGE READY] chore/quick-preset-dead-writer-cleanup — a191d6c3
 
 Files touched: src/hooks/useFavorites.ts
