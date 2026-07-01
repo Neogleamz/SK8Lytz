@@ -1,3 +1,11 @@
+### [MERGE] 2026-07-01T14:30 — fix/camera-worklets-missing → master @ 9b3b6970
+
+**What merged:** VC5 worklets runtime migration — installed `react-native-vision-camera-worklets@5.0.8` + `react-native-worklets@0.10.1`, removed `react-native-worklets-core`. Migrated `CameraTracker.tsx` `Worklets.createRunOnJS` → `runOnJS`. Updated `babel.config.js` plugin. Camera mode no longer throws on open.
+**Verify result:** TSC ✅, Jest ✅, all 9 gates ✅
+**Files touched:** `src/components/CameraTracker.tsx`, `babel.config.js`, `src/components/CameraTracker.web.tsx`, `src/mocks/react-native-worklets.web.js`, `package.json`, `package-lock.json`
+
+---
+
 ### [DECISION] 2026-07-01 — Reyes deepdive-code-hunt regression sweep (post 3-fix merge)
 
 **Investigator:** Reyes
