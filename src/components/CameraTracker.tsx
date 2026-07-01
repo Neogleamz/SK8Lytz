@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission, useFrameOutput, Frame } from 'react-native-vision-camera';
-import { Worklets } from 'react-native-worklets-core';
+import { runOnJS } from 'react-native-worklets';
 import { useResizer } from 'react-native-vision-camera-resizer';
 import { AppLogger } from '../services/appLogger';
 import { requestPermission } from '../services/PermissionService';
@@ -100,9 +100,9 @@ export default function CameraTracker({
   // to ensure the JSI compiler correctly binds the C++ host function call.
 
   // Memoize the JS dispatchers so they can be securely captured by the worklet
-  const dispatchSniperColorJS = React.useMemo(() => Worklets.createRunOnJS(dispatchSniperColor), [dispatchSniperColor]);
-  const dispatchVibePaletteJS = React.useMemo(() => Worklets.createRunOnJS(dispatchVibePalette), [dispatchVibePalette]);
-  const logFrameErrorJS = React.useMemo(() => Worklets.createRunOnJS((errMsg: string) => {
+  const dispatchSniperColorJS = React.useMemo(() => runOnJS(dispatchSniperColor), [dispatchSniperColor]);
+  const dispatchVibePaletteJS = React.useMemo(() => runOnJS(dispatchVibePalette), [dispatchVibePalette]);
+  const logFrameErrorJS = React.useMemo(() => runOnJS((errMsg: string) => {
     AppLogger.error('Camera Frame Processor Error', new Error(errMsg), { payload_size: 0, ssi: 0 });
   }), []);
 

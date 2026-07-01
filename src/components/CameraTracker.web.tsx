@@ -1,7 +1,7 @@
 /**
  * CameraTracker.web.tsx — Web Platform Stub
  *
- * react-native-vision-camera and react-native-worklets-core are native-only
+ * react-native-vision-camera and react-native-worklets are native-only
  * packages. Metro/Expo automatically picks this .web.tsx override instead of
  * CameraTracker.tsx when bundling for the web platform, preventing a crash.
  */

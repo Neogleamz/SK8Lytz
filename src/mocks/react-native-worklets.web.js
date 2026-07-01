@@ -1,7 +1,7 @@
 /**
- * Web stub for react-native-worklets-core.
+ * Web stub for react-native-worklets.
  *
- * react-native-worklets-core calls TurboModuleRegistry.getEnforcing('NativeWorklets')
+ * react-native-worklets calls TurboModuleRegistry.getEnforcing('NativeWorklets')
  * which is undefined on web, crashing the app at module load time.
  *
  * This no-op shim is aliased by metro.config.js when platform === 'web' so the
