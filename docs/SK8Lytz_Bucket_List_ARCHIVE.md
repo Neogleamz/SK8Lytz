@@ -4407,4 +4407,12 @@ pm run verify which includes QA tests.
     Rejected alternative: "useMemo Map in VisualizerHooks — REJECTED (P4), `lastSampleIdx` monotonic resume already makes it O(n+m); fix is a clarity comment."
   - **Source of Truth:** 📖 [src/screens/DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx#L452) + [src/components/visualizer/VisualizerHooks.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/visualizer/VisualizerHooks.ts#L198)
   - **Details:** Wave 9, solo. Final wave — lowest risk, all prior fixes merged. 10/12 audit citations were stale per P1 check.
+
+
+- [x] **`fix/device-cloud-sync-null-mac-guard`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[DB]` `[⚠️ M-RISK]` `[🍪 Snack]` `[🤖 FLASH]` `[LOW]` `[BATCH:none]` `[WAVE:1]`
+  - **Goal:** Guard `DeviceCloudSync.mergeCloudAndLocal` against null `device_mac` rows that crash at `device_mac.toUpperCase()`.
+  - **Decision Log:** Null `device_mac` in a `registered_devices` row crashes `mergeCloudAndLocal` at `cloud.device_mac.toUpperCase()` (L33). The tombstone filter (L19-21) coerces null → `''`, which is absent from tombstones, so the row PASSES the filter and reaches the unguarded `.toUpperCase()`. The Wave 1 type-safety fix removed the old `any` cast that had hidden this — the crash path is PRE-EXISTING, not newly introduced. Corroborated by 🕵️ Reyes VERIFIED finding, `docs/SESSION_LOG.md` `[DECISION] wiring-check investigation — 2026-06-30`, Finding 2. Fix: filter out null-MAC rows (type-narrowing predicate) before the tombstone filter and merge loop; log a warn when any are dropped. `[WAVE:1]` is a placeholder — solo snack, no batch/wave coordination needed.
+  - **Source of Truth:** `src/services/deviceRepository/DeviceCloudSync.ts:L13-34` → `docs/plans/PLAN-device-cloud-sync-null-mac-guard.md`
+  - **Details:** Solo snack. Add `const validCloud = cloudRows.filter((row): row is CloudDeviceRow & { device_mac: string } => row.device_mac != null);` at the top of `mergeCloudAndLocal`, rewire the tombstone filter + merge to consume `validCloud`, and `AppLogger.warn` a `null_mac_filtered` count when `validCloud.length < cloudRows.length`. Out of scope: DB schema changes, RLS policy changes, other `DeviceCloudSync` methods.
 

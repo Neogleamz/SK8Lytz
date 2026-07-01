@@ -1,3 +1,13 @@
+### [MERGE] fix/device-cloud-sync-null-mac-guard → master @ 6dcdda8a — 2026-07-01
+
+**Persona:** 🚀 Taylor (gatekeeper) → 📋 Casey (post-merge)
+**Files touched:** `src/services/deviceRepository/DeviceCloudSync.ts`
+**What merged:** Null-MAC guard in `mergeCloudAndLocal` — type-narrowing `validCloud` filter before tombstone pass eliminates `TypeError: Cannot read properties of null (reading 'toUpperCase')` on corrupt `registered_devices` rows. `AppLogger.warn` emitted when null-MAC rows are filtered. Tombstone filter rewired to consume `validCloud` (no optional chaining needed on narrowed `string`).
+**Gates:** TSC ✅ Jest ✅ Blast Radius ✅ Attestation ✅ FF-merge ✅ Worktree removed ✅
+**Security note:** Pre-existing crash path (not introduced by this session). The Wave 1 type-safety fix removed the `any` cast that had hidden it.
+
+---
+
 ### [MERGE READY] fix/device-cloud-sync-null-mac-guard — 9b3d29ce
 
 Files touched: src/services/deviceRepository/DeviceCloudSync.ts
