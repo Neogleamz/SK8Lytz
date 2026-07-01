@@ -1,3 +1,11 @@
+### [MERGE] fix/ftue-group-not-persisted — `1ae03e35` — 2026-07-01
+
+Files touched: `src/hooks/useDashboardGroups.ts`, `src/hooks/useDashboardAutoConnect.ts`, `docs/KNOWN_ISSUES.md` (VS-014), `docs/SESSION_LOG.md`
+TSC: ✅  Jest: ✅  Attestation: ✅ (fresh + matching at gatekeeper)
+Impact: FTUE now persists the group entity → dashboard shows the fleet and registered devices auto-connect. ⚠️ Pending on-device confirmation (build + deploy in progress).
+
+---
+
 ### [DECISION] 2026-07-01 — Bug Fix: Post-FTUE dashboard empty (no groups + devices disconnected)
 
 **Decision:** `handleRegistrationComplete` now persists the group entity via `GroupRepository.saveGroupTransactional` (per group_id found on the finalized devices) after saving devices. Also hardened `useDashboardAutoConnect` to read `registeredDevices` via a live ref so a post-registration retrigger isn't defeated by a stale closure.
