@@ -1,3 +1,12 @@
+### [DECISION] 2026-07-01 — Bug Fix: Hardware setup finds no devices ("searching forever")
+
+**Decision:** Reverted `BleMachine.ts` SCANNING-entry and SCAN_RESUME from a hardcoded OS-level scan filter `startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], …)` back to `startDeviceScan(context.scanServiceUUIDs, …)` (resolves to `null` = unfiltered). Removed the two now-dead UUID imports. Updated Master Reference §Platform Guards + state diagram, added KNOWN_ISSUES VS-013, annotated `PLAN-feat-ble-scan-filter-uuid.md` as HARMFUL.
+**Rejected:** Theory 2 (permission denial) — user reported active scanning, and denial would surface differently. Theory 3 (ProGuard stripping, VS-004) — release-only and already mitigated; doesn't explain a regression tied to a specific commit.
+**Don't re-derive:** Zengge/FCF1 controllers advertise their ID in `mServiceData`, NOT `mServiceUuids`, and only expose `FFFF` post-GATT. Any OS-level UUID filter on `startDeviceScan` drops them pre-GATT on a fresh install → zero devices found → wizard spins forever. The scan MUST stay unfiltered; filtering lives in `scanCallback`. Regression introduced by commit `3d422cb7` (bundled into an unrelated "connection state badges" commit).
+**Source:** `src/services/ble/BleMachine.ts:115` (SCANNING entry) + `:141` (SCAN_RESUME); intent documented at `src/hooks/useBLE.ts:180-186`.
+
+---
+
 ### [DECISION] fix/db-backup-pipeline-failing — Reyes investigation — 2026-07-01
 
 **Investigator:** Reyes

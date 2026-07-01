@@ -173,3 +173,19 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 **Date**: 2026-06-24
 **Task**: spike/watch-bridge-clean-install (discovered during QA)
 **Severity**: High — confirmed runtime crash on iOS for any consumer of `addWatchCommandListener` or `addWatchHealthListener`. Affects all watch-bridge-enabled sessions on iOS devices.
+
+---
+
+## 🏆 VS-013: OS-Level UUID Scan Filter Drops Pre-GATT Controllers — "Searching Forever" (2026-07-01)
+
+**Symptom**: During hardware setup (FTUE / fresh install), the wizard spins in "SEARCHING FOR SKATES…" indefinitely. No devices are ever surfaced. `scanCallback`'s FEF3/FCF1/name-prefix filtering never runs — the callback is never invoked at all.
+
+**Root Cause**: `BleMachine.ts` SCANNING-entry and SCAN_RESUME hardcoded an OS-level Service-UUID scan filter — `startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], …)` — ignoring the `context.scanServiceUUIDs` field (which `useBLE.ts` deliberately sets to `null` for an unfiltered scan). Fresh Zengge/FCF1 controllers broadcast their identifying UUID in `mServiceData`, NOT `mServiceUuids`, and only expose `FFFF` post-GATT-connection. With no cached GATT service on a fresh install, an OS-level UUID filter drops every controller before the JS `scanCallback` fires. This contradicts VS-006 and the documented unfiltered-scan requirement. The change was introduced by commit `3d422cb7` (bundled into an unrelated "connection state badges" commit, per `PLAN-feat-ble-scan-filter-uuid.md`), which is why it slipped past review.
+
+**Fix Applied**: Reverted both call sites to `startDeviceScan(context.scanServiceUUIDs, …)`. The context field resolves to `null`, restoring the mandatory unfiltered scan. Device filtering remains in `scanCallback` (JS layer), never at the OS layer. Removed now-dead `ZENGGE_SERVICE_UUID` / `BANLANX_SERVICE_UUID` imports from `BleMachine.ts`. `PLAN-feat-ble-scan-filter-uuid.md` annotated as HARMFUL — DO NOT RE-APPLY.
+
+**⛔ Operational Rule**: NEVER pass a hardcoded Service-UUID array to `startDeviceScan`. The scan MUST stay unfiltered (`scanServiceUUIDs: null`) because Zengge/FCF1 controllers advertise via `mServiceData`. If iOS background scanning ever requires a UUID filter, set it conditionally via the `scanServiceUUIDs` context input in `useBLE.ts` — never hardcode it in the machine.
+
+**Date**: 2026-07-01
+**Task**: fix/ble-scan-filter-regression
+**Severity**: Critical (fresh-install hardware setup completely non-functional; app unusable for every new user)

@@ -639,7 +639,7 @@ _Added: 2026-06-05 (iOS-01, iOS-03)_
 | Guard | File | Fix |
 | :--- | :--- | :--- |
 | **MTU Platform Guard** | `src/services/ble/ConnectService.ts` | `requestMTU()` wrapped in `Platform.OS === 'android'` block — iOS negotiates MTU automatically during GATT connection. Calling `requestMTU` on iOS throws. On iOS, `conn.mtu` is read directly. |
-| **UUID Filter in `startDeviceScan`** | `src/services/ble/BleMachine.ts` | `startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], ...)`. Enables iOS background scanning. BleMachine is the ONLY place `startDeviceScan` is called. |
+| **Unfiltered scan in `startDeviceScan`** | `src/services/ble/BleMachine.ts` | `startDeviceScan(context.scanServiceUUIDs, ...)` where `scanServiceUUIDs` is `null` (unfiltered) — set in `useBLE.ts`. Fresh Zengge/FCF1 controllers advertise their ID in `mServiceData`, NOT `mServiceUuids`; an OS-level UUID filter drops them pre-GATT and no devices are found during hardware setup (VS-006, regression fix/ble-scan-filter-regression). Device filtering happens in `scanCallback`, not the OS layer. BleMachine is the ONLY place `startDeviceScan` is called. |
 
 ### Android Platform Guards
 
@@ -1413,7 +1413,7 @@ stateDiagram-v2
     SCANNING --> DISCONNECTING: DISCONNECT_REQUEST
     SCANNING --> RECOVERING: RECOVERY_START
     note right of SCANNING
-        entry: startDeviceScan(ZENGGE+BANLANX UUIDs)
+        entry: startDeviceScan(scanServiceUUIDs — null/unfiltered)
         exit: stopDeviceScan()
         SCAN_PAUSE / SCAN_RESUME stay in SCANNING
     end note

@@ -1,5 +1,14 @@
 # Implementation Plan: feat/ble-scan-filter-uuid
 
+> ⛔ **HARMFUL — DO NOT RE-APPLY (reverted 2026-07-01, VS-013).**
+> This plan's premise is WRONG. Applying an OS-level Service-UUID scan filter drops fresh
+> Zengge/FCF1 controllers, which advertise their ID in `mServiceData` (NOT `mServiceUuids`)
+> and only expose `FFFF` post-GATT. The result: hardware setup finds zero devices and spins
+> forever ("searching for skates"). The scan MUST stay unfiltered (`scanServiceUUIDs: null`);
+> device filtering happens in `scanCallback`, not at the OS layer. See KNOWN_ISSUES.md VS-013
+> and VS-006. If iOS background scanning ever needs a filter, set it conditionally via the
+> `scanServiceUUIDs` context input in `useBLE.ts` — never hardcode it in `BleMachine.ts`.
+
 ## Problem
 The BleMachine's SCANNING state passes `null` as the first argument to `startDeviceScan()`, meaning no Service UUID filter is applied. This scans for ALL BLE devices, which is:
 1. **Wasteful** — we process every nearby BLE device even though we only care about Zengge/BanlanX controllers

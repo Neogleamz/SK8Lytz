@@ -6,8 +6,6 @@ import { connectService } from './ConnectService';
 import { recoveryService } from './RecoveryService';
 import { heartbeatService } from './HeartbeatService';
 import { disconnectService } from './DisconnectService';
-import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
-import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 
 /** R-16: named delay for the RESTORING → CONNECTING settle window (replaces inline 1000ms literal).
  * blast-radius reviewed 2026-06-30: BLE_RESTORING_TIMEOUT_MS is internal to this file only.
@@ -112,8 +110,13 @@ export const bleMachine = setup({
     SCANNING: {
       entry: [
         ({ context }) => {
+          // Honor context.scanServiceUUIDs (null = unfiltered). A hardcoded UUID array here
+          // caused fix/ble-scan-filter-regression: fresh Zengge/FCF1 controllers advertise their
+          // ID in mServiceData (NOT mServiceUuids), so an OS-level UUID filter drops them pre-GATT
+          // and no devices are ever found during hardware setup (VS-006). Filtering is done in
+          // scanCallback, not at the OS layer.
           context.bleManager?.startDeviceScan(
-            [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID],
+            context.scanServiceUUIDs,
             { allowDuplicates: false, scanMode: context.scanMode },
             context.scanCallback
           );
@@ -138,8 +141,9 @@ export const bleMachine = setup({
           actions: ({ context }) => context.bleManager?.stopDeviceScan()
         },
         SCAN_RESUME: {
+          // Unfiltered resume — mirrors the SCANNING entry. See fix/ble-scan-filter-regression note above.
           actions: ({ context }) => context.bleManager?.startDeviceScan(
-            [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID],
+            context.scanServiceUUIDs,
             { allowDuplicates: false, scanMode: context.scanMode },
             context.scanCallback
           )
