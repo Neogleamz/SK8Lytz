@@ -1,3 +1,11 @@
+### [MERGE] 2026-10-01T00:36 — retire-graphrag-exporter → master @ fe085186
+
+**What merged:** Marked the GraphRAG DB exporter retired in both copies (`.claude/commands/graphrag-db-exporter.md` and `.agents/workflows/graphrag-db-exporter.md`). The local GraphRAG brain (GRAPHRAG_BRAIN_DIR, formerly D:\graphrag-brain) no longer exists and its HQ screen was removed; project knowledge now lives in the HQ Brain (Neogleamz HQ > Reference > Brain), which indexes `docs/`. The `.agents` workflow was `trigger: always_on`; it is now `manual` and says not to run.
+**Verify result:** blast-radius scan ✅ (2 markdown files, no code dependencies). TSC and Jest not run: markdown-only change and no node_modules on this machine. Merged by hand with --ff-only (the gatekeeper only handles worktrees under SK8Lytz-worktrees or C:/W).
+**Files touched:** `.claude/commands/graphrag-db-exporter.md`, `.agents/workflows/graphrag-db-exporter.md`
+
+---
+
 ### [MERGE] 2026-07-01T14:30 — fix/camera-worklets-missing → master @ 9b3b6970
 
 **What merged:** VC5 worklets runtime migration — installed `react-native-vision-camera-worklets@5.0.8` + `react-native-worklets@0.10.1`, removed `react-native-worklets-core`. Migrated `CameraTracker.tsx` `Worklets.createRunOnJS` → `runOnJS`. Updated `babel.config.js` plugin. Camera mode no longer throws on open.
