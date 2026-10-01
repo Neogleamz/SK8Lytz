@@ -1,5 +1,9 @@
 # /graphrag-db-exporter — GraphRAG DB Exporter
 
+> **RETIRED 2026-09-30.** The local GraphRAG brain (`GRAPHRAG_BRAIN_DIR`, formerly `D:\graphrag-brain`) no longer exists and
+> its HQ screen was removed. Project knowledge now lives in the **HQ Brain** (Neogleamz HQ > Reference > Brain), which indexes
+> `docs/` automatically. Do not run this command. Design: `C:\Neogleamz\neogleamz-hq\docs\brain\BRAIN_PLAN.md`.
+
 **Description:** Export SK8Lytz scraper SQLite DB and Cloud Supabase DB into markdown for GraphRAG indexing.
 **Persona:** 💾 Data Engineer
 

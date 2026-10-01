@@ -1,9 +1,13 @@
 ---
-description: "GraphRAG DB Exporter: Export SK8Lytz scraper SQLite DB and Cloud Supabase DB into markdown for GraphRAG indexing"
-trigger: always_on
+description: "RETIRED 2026-09-30, do not run. GraphRAG DB Exporter (replaced by the HQ Brain)"
+trigger: manual
 persona_entry: "💾 Data Engineer"
 team_roster: .agents/rules/team-roster.md
 ---
+
+> **RETIRED 2026-09-30.** The local GraphRAG brain no longer exists and its HQ screen was removed. Project knowledge now
+> lives in the **HQ Brain** (Neogleamz HQ > Reference > Brain). Do not run this workflow.
+> Design: `C:\Neogleamz\neogleamz-hq\docs\brain\BRAIN_PLAN.md`.
 
 > **💾 Data Engineer | GraphRAG DB Exporter**
 > *Keep the GraphRAG indexer fed with fresh, structured data from the scraper database and the cloud Supabase database.*
