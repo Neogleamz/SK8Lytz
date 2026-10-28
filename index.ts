@@ -12,7 +12,7 @@ if (Platform.OS === 'web') {
 }
 
 if (Platform.OS !== 'web') {
-  require('react-native-worklets-core');
+  require('react-native-worklets');
 }
 
 const { registerRootComponent } = require('expo');
