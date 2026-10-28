@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$workspaceDir = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+$workspaceDir = "C:\Neogleamz\SK8Lytz"
 $healerScript = Join-Path $workspaceDir "tools\sentinel\telemetry_healer.py"
 
 Write-Host "Triggering Proactive SDE Telemetry Healing sweep..." -ForegroundColor Cyan

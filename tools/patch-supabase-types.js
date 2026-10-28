@@ -1,7 +1,7 @@
 const fs = require('fs');
 const paths = [
-  'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz-worktrees/feat-crash-telemetry/tools/command-center/src/types/supabase.ts',
-  'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz-worktrees/feat-crash-telemetry/src/types/supabase.ts'
+  'C:/Neogleamz/SK8Lytz-worktrees/feat-crash-telemetry/tools/command-center/src/types/supabase.ts',
+  'C:/Neogleamz/SK8Lytz-worktrees/feat-crash-telemetry/src/types/supabase.ts'
 ];
 
 const newTableString = `

@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$workspaceDir = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+$workspaceDir = "C:\Neogleamz\SK8Lytz"
 $analyzerScript = Join-Path $workspaceDir "tools\sentinel\friction_analyzer.py"
 $rulesGuardScript = Join-Path $workspaceDir "tools\sentinel-rules-guard.ps1"
 $amendmentFile = Join-Path $workspaceDir ".agents\rules\friction-rule-amendments.md"

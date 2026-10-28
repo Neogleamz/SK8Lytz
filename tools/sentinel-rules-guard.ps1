@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$workspaceDir = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+$workspaceDir = "C:\Neogleamz\SK8Lytz"
 $workspaceRulesDir = Join-Path $workspaceDir ".agents\rules"
 $globalBackupDir = Join-Path $workspaceDir "artifacts\rules-backup"
 

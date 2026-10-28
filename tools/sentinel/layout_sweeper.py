@@ -21,7 +21,7 @@ class LayoutSweeper:
         self.screencap_temp = os.path.join(workspace_path, "tools", "sentinel", "sweeper_screencap.png")
         
         # ADB Constant Path
-        self.adb_path = r"C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\.local-builder\android-sdk\platform-tools\adb.exe"
+        self.adb_path = r"C:\Neogleamz\SK8Lytz\.local-builder\android-sdk\platform-tools\adb.exe"
 
     def log(self, message):
         print(f"[LAYOUT-SWEEPER] {message}")

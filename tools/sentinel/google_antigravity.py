@@ -212,7 +212,7 @@ class SpawnerAgent:
 We will implement an optimistic write queue debouncer inside `src/hooks/useBLE.ts` to manage high-frequency color slider dispatches.
 
 ## Proposed Changes
-### [MODIFY] [useBLE.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts)
+### [MODIFY] [useBLE.ts](file:///C:/Neogleamz/SK8Lytz/src/hooks/useBLE.ts)
 - Add a local module-level `writeQueuePromise` to serialize outstanding BLE packets.
 - Implement a 40ms trailing edge debounce interval to ignore redundant intermediate values.
 """

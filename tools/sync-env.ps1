@@ -6,7 +6,7 @@ if (-not $WorktreeDir) {
     $WorktreeDir = (Get-Location).Path
 }
 
-$MasterEnvPath = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\.env"
+$MasterEnvPath = "C:\Neogleamz\SK8Lytz\.env"
 $WorktreeEnvPath = Join-Path $WorktreeDir ".env"
 
 if (-not (Test-Path $WorktreeEnvPath)) {

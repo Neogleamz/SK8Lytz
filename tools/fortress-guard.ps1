@@ -1,4 +1,4 @@
-$RootPath = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+$RootPath = "C:\Neogleamz\SK8Lytz"
 $CurrentPath = (Get-Location).Path
 
 # Only check if they are in the master fortress directory

@@ -37,7 +37,7 @@ import { db, updateLocalSpot } from './core/LocalDB';
 const envPaths = [
   path.resolve(__dirname, '../../.env'),
   path.resolve(process.cwd(), '.env'),
-  'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.env',
+  'C:/Neogleamz/SK8Lytz/.env',
 ];
 for (const p of envPaths) { const r = dotenv.config({ path: p }); if (!r.error) break; }
 

@@ -180,7 +180,7 @@ function analyzeFile(filePath) {
                     
                     findings.push({
                         id: `R-11-${String(findingIdCounter).padStart(3, '0')}`,
-                        file: filePath.replace(/\\/g, '/').replace('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/', ''),
+                        file: filePath.replace(/\\/g, '/').replace('C:/Neogleamz/SK8Lytz/', ''),
                         line: line,
                         rule_violated: "R-11",
                         severity: "HIGH",
@@ -230,7 +230,7 @@ function analyzeFile(filePath) {
                             
                             findings.push({
                                 id: `R-11-${String(findingIdCounter).padStart(3, '0')}`,
-                                file: filePath.replace(/\\/g, '/').replace('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/', ''),
+                                file: filePath.replace(/\\/g, '/').replace('C:/Neogleamz/SK8Lytz/', ''),
                                 line: line,
                                 rule_violated: "R-11",
                                 severity: "MEDIUM",
@@ -272,5 +272,5 @@ const result = {
     }
 };
 
-fs.writeFileSync('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-11_findings.json', JSON.stringify(result, null, 2));
-console.log('Result written to C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-11_findings.json');
+fs.writeFileSync('C:/Neogleamz/SK8Lytz/artifacts/deepdive_raw/R-11_findings.json', JSON.stringify(result, null, 2));
+console.log('Result written to C:/Neogleamz/SK8Lytz/artifacts/deepdive_raw/R-11_findings.json');

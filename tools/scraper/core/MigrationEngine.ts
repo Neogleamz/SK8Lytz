@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 
 const envPaths = [
   path.resolve(__dirname, '../../../.env'), // worktree root
-  'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.env', // absolute fallback to master
+  'C:/Neogleamz/SK8Lytz/.env', // absolute fallback to master
 ];
 for (const p of envPaths) {
   const result = dotenv.config({ path: p });

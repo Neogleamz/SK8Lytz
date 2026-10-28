@@ -49,5 +49,5 @@ function processDir(dir, results) {
 }
 
 const results = [];
-processDir('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src', results);
+processDir('C:/Neogleamz/SK8Lytz/src', results);
 console.log(JSON.stringify(results, null, 2));

@@ -24,7 +24,7 @@ const DOMAIN_FILES = [
   "src/context/BLEContext.tsx"
 ];
 
-const ROOT_DIR = 'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz';
+const ROOT_DIR = 'C:/Neogleamz/SK8Lytz';
 
 const findings = [];
 let findingIdCounter = 1;

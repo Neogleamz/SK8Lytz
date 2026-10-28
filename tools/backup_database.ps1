@@ -9,7 +9,7 @@
 #>
 
 $ProjectID = "qefmeivpjyaukbwadgaz"
-$BackupDir = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\backups"
+$BackupDir = "C:\Neogleamz\SK8Lytz\backups"
 
 # Ensure backup directory exists
 if (!(Test-Path -Path $BackupDir)) {
@@ -23,7 +23,7 @@ Get-ChildItem -Path $BackupDir -Filter "*.sql" | Where-Object { $_.CreationTime 
 
 # Read password from environment or .env
 if (-not $env:SUPABASE_DB_PASSWORD) {
-    $envFile = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\.env"
+    $envFile = "C:\Neogleamz\SK8Lytz\.env"
     if (Test-Path $envFile) {
         Get-Content $envFile | Where-Object { $_ -match "^SUPABASE_DB_PASSWORD=(.*)" } | ForEach-Object {
             $env:SUPABASE_DB_PASSWORD = $matches[1].Trim()

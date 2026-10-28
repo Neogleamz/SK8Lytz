@@ -77,7 +77,7 @@ function analyzeFile(filePath) {
             
             findings.push({
                 id: `R-14-${String(findingIdCounter).padStart(3, '0')}`,
-                file: filePath.replace(/\\/g, '/').replace('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/', ''),
+                file: filePath.replace(/\\/g, '/').replace('C:/Neogleamz/SK8Lytz/', ''),
                 line: fetchLine,
                 rule_violated: "R-14",
                 severity: "HIGH",
@@ -94,7 +94,7 @@ function analyzeFile(filePath) {
 walk(srcPath, analyzeFile);
 
 // Ensure directory exists
-const outDir = path.join('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz', 'artifacts', 'deepdive_raw');
+const outDir = path.join('C:/Neogleamz/SK8Lytz', 'artifacts', 'deepdive_raw');
 if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
 }

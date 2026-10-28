@@ -8,7 +8,7 @@ param (
 )
 
 $ErrorActionPreference = "Stop"
-$FORTRESS_ROOT = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+$FORTRESS_ROOT = "C:\Neogleamz\SK8Lytz"
 
 if ((Get-Location).Path -ne $FORTRESS_ROOT) {
     Write-Host "GATEKEEPER HALT: Must be run from the master root directory: $FORTRESS_ROOT" -ForegroundColor Red

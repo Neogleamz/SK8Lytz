@@ -1,4 +1,4 @@
-$MasterRoot = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+$MasterRoot = "C:\Neogleamz\SK8Lytz"
 $JdkPath = Join-Path $MasterRoot ".local-builder\jdk\jdk-17.0.10+7"
 $SdkPath = Join-Path $MasterRoot ".local-builder\android-sdk"
 
