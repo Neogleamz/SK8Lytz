@@ -99,7 +99,7 @@ ${serverLog}`);
   while (Date.now() - start < BUNDLE_TIMEOUT_MS) {
     if (exited) return fail('expo start --web exited before serving a bundle. Nothing healthy answered.');
     try {
-      const res = await httpGetText(bundleUrl, 120000);
+      const res = await httpGetText(bundleUrl, Math.max(5000, Math.min(120000, BUNDLE_TIMEOUT_MS - (Date.now() - start))));
       if (res.status === 200) { bundle = res.body; break; }
       // Metro answers 500 with a TransformError when the checkout cannot build (missing module etc.)
       return fail(`Bundle request returned HTTP ${res.status} (this checkout does not build for web):
@@ -114,6 +114,9 @@ ${res.body.slice(0, 1500)}`);
   // bundle that was built from another workspace.
   if (/AG_SK8Lytz_App/i.test(bundle)) {
     return fail('Served bundle references the retired AG_SK8Lytz_App workspace, not this checkout. Refusing.');
+  }
+  if (!serverLog.includes(`:${SERVER_PORT}`)) {
+    return fail(`Metro output never named port ${SERVER_PORT}; cannot trust the answering server. Refusing.`);
   }
   logMsg('INFO', `Bundle served from this checkout (${Math.round(bundle.length / 1024)} KB, port ${SERVER_PORT}).`);
 }
@@ -346,20 +349,26 @@ function cleanupAndExit(exitCode) {
     } catch (e) {}
   }
   
-  if (chromeProcess) {
-    try {
-      // Direct process kill as safety fallback
-      chromeProcess.kill('SIGKILL');
-    } catch (e) {}
-  }
-
-  killTree(serverProcess);
-  if (userDataDir) {
-    try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch (e) {}
-  }
-  
+  killProcesses();
+  removeProfile();
   process.exit(exitCode);
 }
+
+// Whole trees: on Windows chrome.exe children hold the profile and Metro workers outlive their parent.
+function killProcesses() {
+  killTree(chromeProcess);
+  killTree(serverProcess);
+}
+
+function removeProfile() {
+  if (!userDataDir) return;
+  try { fs.rmSync(userDataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }); } catch (e) {}
+  userDataDir = null;
+}
+
+// Ctrl-C or a killed parent must not leave Metro, Chrome or the temp profile behind.
+['SIGINT', 'SIGTERM', 'SIGBREAK'].forEach((sig) => process.on(sig, () => cleanupAndExit(130)));
+process.on('exit', () => { killProcesses(); removeProfile(); });
 
 run().catch((err) => {
   console.error(`❌ Harvester crashed: ${err.message}`);
