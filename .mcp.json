@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "hq-brain": {
+      "type": "http",
+      "url": "https://lwercbzktneesehqdscu.supabase.co/functions/v1/brain-mcp",
+      "headers": { "Authorization": "Bearer ${HQ_BRAIN_MCP_TOKEN}" }
+    }
+  }
+}
